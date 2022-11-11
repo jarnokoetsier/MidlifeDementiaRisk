@@ -198,9 +198,33 @@ ggplot() +
 optAlpha <- trainResults$alpha[which.min(trainResults$MSE)]
 optLambda <- trainResults$lambda[which.min(trainResults$MSE)]
 
-test <- as.matrix(coef(fit$finalModel))
+test <- as.data.frame(as.matrix(coef(fit$finalModel)))
+test <- colSums(abs(test))
 
+coefs <- matrix(NA, ncol(X_train)+1, nfold*nrep)
+count = 0
+for (r in 1:nrep){
+  folds <- createFolds(1:nrow(X_train), k = nfold)
+  for (f in 1:nfold){
+    count = count + 1
+    en_model_cv <- glmnet(x = X_train[-folds[[f]],], 
+                          y = Y_train[-folds[[f]]], 
+                          family = "gaussian",
+                          alpha = optAlpha, 
+                          lambda = optLambda,
+                          standardize = TRUE)
+    coefs[,count] <- as.matrix(coef(en_model_cv))
+  }
+}
 
+coefs1 <- coefs[-1,]
+coefs1 <- coefs[rowSums(coefs) != 0,]
+coefPlot <- gather(as.data.frame(coefs1))
+coefPlot$cpg <- rep(1:nrow(coefs1), ncol(coefs1))
+
+ggplot(coefPlot, aes(x = cpg, y = key, fill = value)) +
+  geom_tile()+
+  scale_fill_viridis_c()
 
 test <- varImp(fit$finalModel)
 
