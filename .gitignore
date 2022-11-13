@@ -1,0 +1,14 @@
+# Ignore excel files
+*.xlsx
+
+# Ignore png images
+*.png
+
+# Ignore html files
+*.html
+
+# Ignore RData files
+*.RData
+
+# Ignore .Rhistory files
+.Rhistory

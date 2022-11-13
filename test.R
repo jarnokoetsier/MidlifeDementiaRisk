@@ -11,6 +11,7 @@ library(prospectr)
 library(doParallel)
 library(tidyverse)
 library(ggrepel)
+library(ggpubr)
 
 #*****************************************************************************#
 # Data Preparation
@@ -120,7 +121,7 @@ outputDir <- dataDir
 load(paste0(dataDir, "/splitData.RData"))
 
 # Set number of folds and repeats
-nfold = 5
+nfold = 10
 nrep = 10
 
 # Settings for repeated cross-validation
@@ -151,6 +152,7 @@ cl <- makeCluster(nCores)
 registerDoParallel(cl)
 
 # Actual training
+set.seed(123)
 fit <- train(x = X_train,
              y = Y_train,
              metric= performance_metric,
@@ -165,23 +167,32 @@ stopCluster(cl)
 # Save model
 save(fit, file = paste0(dataDir,"/fit.RData"))
 
+
+#*****************************************************************************#
+# Evaluate model performance
+#*****************************************************************************#
+# Load model
+load(paste0(dataDir,"/fit.RData"))
+
+# Get results
 trainResults <- fit$results
 
-# Evaluate CV performance
-ggplot() +
+# Make heatmap plot of alpha vs lambda and their corresponding RMSE
+RMSE_heatmap <- ggplot() +
   geom_tile(data = trainResults, 
             aes(x = log(lambda), y = alpha, fill = RMSE)) +
   geom_point(data = trainResults[which.min(trainResults$MSE),], 
              aes(x = log(lambda), y = alpha), 
              color = 'red', size = 3) +
-  geom_text_repel(data = trainResults[which.min(trainResults$MSE),], 
+  geom_label_repel(data = trainResults[which.min(trainResults$MSE),], 
                    aes(x = log(lambda), y = alpha, label = paste0("Alpha: ", round(alpha,2), "\n",
                                                                   "Lambda: ", round(lambda,2), "\n",
                                                                   "Mean RMSE: ", round(RMSE,2), "\n",
                                                                   "SD RMSE: ", round(RMSESD,2))), 
-                   color = "white", alpha = 0.9) +
-  xlab("log Lambda") +
-  ylab("Alpha") +
+                   color = "black", fill = "white", alpha = 1) +
+  xlab("log \u03bb") +
+  ylab("\u03b1") +
+  scale_y_continuous(breaks = alphaCV[c(TRUE, FALSE)]) +
   ggtitle("RMSE in Repeated Cross-Validation") +
   scale_fill_viridis_c() +
   theme_classic() +
@@ -193,14 +204,144 @@ ggplot() +
         plot.caption = element_text(hjust = 0.5,
                                     size = 10,
                                     face = "italic"))
-    
 
+ggsave(RMSE_heatmap, file = "RMSE_heatmap.png", width = 8, height = 6)
+
+# Make heatmap plot of alpha vs lambda and their corresponding RMSE SE
+SE_RMSE_heatmap <- ggplot() +
+  geom_tile(data = trainResults, 
+            aes(x = log(lambda), y = alpha, fill = RMSESD/sqrt(nrep*nfold))) +
+  geom_point(data = trainResults[which.min(trainResults$RMSESD),], 
+             aes(x = log(lambda), y = alpha), 
+             color = 'red', size = 3) +
+  geom_label_repel(data = trainResults[which.min(trainResults$RMSESD),], 
+                   aes(x = log(lambda), y = alpha, label = paste0("Alpha: ", round(alpha,2), "\n",
+                                                                  "Lambda: ", round(lambda,2), "\n",
+                                                                  "Mean RMSE: ", round(RMSE,2), "\n",
+                                                                  "SD RMSE: ", round(RMSESD,2))),
+                   color = "black", fill = "white", alpha = 1) +
+  xlab("log \u03bb") +
+  ylab("\u03b1") +
+  scale_y_continuous(breaks = alphaCV[c(TRUE, FALSE)]) +
+  labs(fill = "SE RMSE") +
+  ggtitle("SE RMSE in Repeated Cross-Validation") +
+  scale_fill_viridis_c() +
+  theme_classic() +
+  theme(legend.title = element_text(),
+        legend.position = "right",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.caption = element_text(hjust = 0.5,
+                                    size = 10,
+                                    face = "italic"))
+
+ggsave(SE_RMSE_heatmap, file = "SE_RMSE_heatmap.png", width = 8, height = 6)
+
+
+# Make heatmap plot of alpha vs lambda and their corresponding RMSE + SE
+RMSEplusSE_heatmap <- ggplot() +
+  geom_tile(data = trainResults, 
+            aes(x = log(lambda), y = alpha, fill = RMSE + RMSESD/sqrt(nrep*nfold))) +
+  geom_point(data = trainResults[which.min(trainResults$RMSE + (trainResults$RMSESD)/sqrt(nrep*nfold)),], 
+             aes(x = log(lambda), y = alpha), 
+             color = 'red', size = 3) +
+  geom_label_repel(data = trainResults[which.min(trainResults$RMSE + (trainResults$RMSESD)/sqrt(nrep*nfold)),], 
+                   aes(x = log(lambda), y = alpha, label = paste0("Alpha: ", round(alpha,2), "\n",
+                                                                  "Lambda: ", round(lambda,2), "\n",
+                                                                  "Mean RMSE: ", round(RMSE,2), "\n",
+                                                                  "SD RMSE: ", round(RMSESD,2))), 
+                   color = "black", fill = "white", alpha = 1) +
+  xlab("log \u03bb") +
+  ylab("\u03b1") +
+  scale_y_continuous(breaks = alphaCV[c(TRUE, FALSE)]) +
+  labs(fill = "RMSE + SE") +
+  ggtitle("RMSE + SE in Repeated Cross-Validation") +
+  scale_fill_viridis_c() +
+  theme_classic() +
+  theme(legend.title = element_text(),
+        legend.position = "right",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.caption = element_text(hjust = 0.5,
+                                    size = 10,
+                                    face = "italic"))
+
+ggsave(RMSEplusSE_heatmap, file = "RMSEplusSE_heatmap.png", width = 8, height = 6)
+
+
+    
+# Get optimal lambda and alpha
 optAlpha <- trainResults$alpha[which.min(trainResults$MSE)]
 optLambda <- trainResults$lambda[which.min(trainResults$MSE)]
 
-test <- as.data.frame(as.matrix(coef(fit$finalModel)))
-test <- colSums(abs(test))
+# Get final model
+finalModel <- glmnet(x = X_train, 
+                     y = Y_train, 
+                     family = "gaussian",
+                     alpha = optAlpha, 
+                     lambda = optLambda,
+                     standardize = TRUE)
 
+# Get predictions of training set
+pred_train <- data.frame(pred = predict(finalModel, X_train)[,1],
+                         obs = Y_train,
+                         error = abs(predict(finalModel, X_train)[,1] - Y_train))
+
+trainPlot <- ggplot(pred_train, aes(x = obs, y = pred, color = error)) +
+  geom_point(size = 2, alpha = 0.7) +
+  xlab("Observed value") +
+  ylab("Predicted value") +
+  ggtitle(label = "Training: Observed vs Predicted",
+          subtitle = paste0("R-squared: ", round(R2(pred_train$pred,pred_train$obs),2))) +
+  labs(color = "Absolute \nError") +
+  scale_color_viridis_c() +
+  theme_classic() +
+  theme(legend.title = element_text(),
+        legend.position = "right",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic"))
+
+ggsave(trainPlot, file = "trainPlot.png", width = 8, height = 6)
+
+
+# Get predictions of test set
+pred_test <- data.frame(pred = predict(finalModel, X_test)[,1],
+                         obs = Y_test,
+                         error = abs(predict(finalModel, X_test)[,1] - Y_test))
+
+testPlot <- ggplot(pred_test, aes(x = obs, y = pred, color = error)) +
+  geom_point(size = 2, alpha = 0.7) +
+  xlab("Observed value") +
+  ylab("Predicted value") +
+  ggtitle(label = "Test: Observed vs Predicted",
+          subtitle = paste0("R-squared: ", round(R2(pred_test$pred,pred_test$obs),2))) +
+  labs(color = "Absolute \nError") +
+  scale_color_viridis_c() +
+  theme_classic() +
+  theme(legend.title = element_text(),
+        legend.position = "right",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic"))
+
+ggsave(testPlot, file = "testPlot.png", width = 8, height = 6)
+
+
+
+
+# Evaluate stability of regression coefficients
+coefs_finalModel <- as.data.frame(as.matrix(coef(finalModel)))
+
+# Get coefficient value during the repeated CV
 coefs <- matrix(NA, ncol(X_train)+1, nfold*nrep)
 count = 0
 for (r in 1:nrep){
@@ -217,14 +358,54 @@ for (r in 1:nrep){
   }
 }
 
-coefs1 <- coefs[-1,]
-coefs1 <- coefs[rowSums(coefs) != 0,]
-coefPlot <- gather(as.data.frame(coefs1))
-coefPlot$cpg <- rep(1:nrow(coefs1), ncol(coefs1))
+# only look at features in final model
+rownames(coefs) <- rownames(coefs_finalModel)
+coefs1 <- coefs[coefs_finalModel[,1] != 0,]
 
-ggplot(coefPlot, aes(x = cpg, y = key, fill = value)) +
+# remove intercept
+coefs1 <- coefs1[-1,]
+
+hist(coefs_finalModel[coefs_finalModel[,1] != 0,1],100)
+hist(rowMeans(coefs1), 100)
+
+coefPlot <- gather(as.data.frame(coefs1))
+coefPlot$cpg <- rep(rownames(coefs1), ncol(coefs1))
+coefPlot$avgValue <- rep(rowMeans(coefs1), ncol(coefs1))
+coefPlot$finalModel <- rep(coefs_finalModel[-c(1,which(coefs_finalModel[,1] == 0)),1], ncol(coefs1))
+
+main <- ggplot(coefPlot, aes(x = fct_reorder(cpg, avgValue), y = key, fill = value)) +
   geom_tile()+
-  scale_fill_viridis_c()
+  xlab("CpG sites") +
+  ylab("Folds in\nrepeated CV") +
+  labs(fill = "Regression \nCoefficient") +
+  scale_fill_viridis_c(limits = c(-20, 20), oob = scales::squish) +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "bottom")
+
+top <- ggplot(coefPlot) +
+  #geom_point(aes(x = fct_reorder(cpg, avgValue), y = avgValue), color = "blue") +
+  geom_point(aes(x = fct_reorder(cpg, avgValue), y = finalModel, color = finalModel)) +
+  ylab("Coefficients\nFinal Model") +
+  scale_color_viridis_c(limits = c(-20, 20), oob = scales::squish) +
+  scale_fill_viridis_c(limits = c(-20, 20), oob = scales::squish) +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+
+ggarrange(top,
+          main,
+          heights = c(2,8), 
+          nrow = 2,
+          ncol = 1,
+          align = "v")
+
+
+
+
 
 test <- varImp(fit$finalModel)
 
