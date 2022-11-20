@@ -31,6 +31,31 @@ length(intersect(cpg_selected_var, cpg_selected_S))
 # Kennard-Stone-like feature selection
 #*****************************************************************************#
 
+# load annotation
+load("E:/Thesis/MLData/probe_annotation.RData")
+library(tidyverse)
+unique(probe_annotation$Regulatory_Group)
+
+
+
+body <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "Body")]
+tss200 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "TSS200")]
+tss1500 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "TSS1500")]
+utr5 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "5'UTR")]
+utr3 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "3'UTR")]
+exon1 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "1stExon")]
+
+promotor <- unique(c(tss200,tss1500))
+geneBody <- setdiff(unique(c(utr5,exon1, body, utr3)),promotor)
+interGenic <- setdiff(probe_annotation$ID, unique(c(promotor, geneBody)))
+
+probe_annotation$Class <- NA
+probe_annotation$Class[probe_annotation$ID %in% promotor] <- "Promotor"
+probe_annotation$Class[probe_annotation$ID %in% geneBody] <- "Gene Body"
+probe_annotation$Class[probe_annotation$ID %in% interGenic] <- "Intergenic"
+
+save(probe_annotation,file = "E:/Thesis/MLData/probe_annotation.RData")
+
 # Convert to M-values
 mydat1_fil <- mydat1[rowSums((mydat1 > 0) & (mydat1 < 1)) == 919, ]
 mydat_M <- log2(mydat1_fil/(1 + mydat1_fil))
