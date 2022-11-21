@@ -1,5 +1,6 @@
 library(doParallel)
 library(foreach)
+library(ggvenn)
 
 # Set working directory
 setwd("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA")
@@ -38,19 +39,21 @@ dataMatrix <- mydat1
 dataMatrix_fil <- mydat1[rowSums((dataMatrix > 0) & (dataMatrix < 1)) == ncol(dataMatrix), ]
 dataMatrix_M <- log2(dataMatrix_fil/(1 + dataMatrix_fil))
 
-# Number of features to select
-nFeatures <- c(200,200,100)
-
 # Groups
 load("E:/Thesis/MLData/probe_annotation.RData")
 Group <- data.frame(CpG = probe_annotation$ID,
                     Group = probe_annotation$Class)
 
+# Number of features to select
+n <- 5000
+nFeatures <- rep(NA, length(unique(Group$Group)))
+for (i in 1:length(unique(Group$Group))){
+  nFeatures[i] <- round(n*(table(Group$Group)[unique(Group$Group)[i]]/sum(table(Group$Group))))
+}
+nFeatures[which.max(nFeatures)] <- nFeatures[which.max(nFeatures)]-(n - sum(nFeatures))
+
 # Make copy of data
 dataMatrix_copy <- dataMatrix_M
-
-# Make list for selected probes
-selectedProbes <- list()
 
 # Make clusters
 nCores = 3
@@ -61,8 +64,6 @@ registerDoParallel(cl)
 t_start <- Sys.time()
 
 uniqueGroups <- unique(Group[,2])
-
-
 
 # For each parameter combination....
 output <- foreach(i =  1:length(uniqueGroups), .inorder = FALSE) %dopar% {
@@ -104,6 +105,27 @@ t_end <- Sys.time()
 
 # Give run time
 t_end-t_start
+
+
+
+selectionKS <- function(dataMatrix, n = 5000, Group = NULL, nCores = 3){
+  
+}
+
+cpg_selected_KS <- unlist(output)
+
+probeList <- list(Var = cpg_selected_var,
+                  S = cpg_selected_S,
+                  KS = cpg_selected_KS)
+
+
+p <- ggvenn(probeList)
+ggsave(p, file = "vennDiagram.png")
+
+save(probeList, file = "probeList.RData")
+
+
+
 
 
 
