@@ -1,6 +1,7 @@
 library(doParallel)
 library(foreach)
 library(ggvenn)
+source("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA/MachineLearning/FUN_MachineLearning.R")
 
 # Set working directory
 setwd("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA")
@@ -9,11 +10,12 @@ setwd("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA")
 load("E:/Thesis/MLData/mydat1.RData")
 load("E:/Thesis/MLData/pheno.RData")
 
+dataMatrix <- unique(mydat1)
 #*****************************************************************************#
 # Select most variable features
 #*****************************************************************************#
 
-cpg_var <- apply(mydat1, 1, var)
+cpg_var <- apply(dataMatrix, 1, var)
 cpg_selected_var <- names(tail(sort(cpg_var), 5000))
 
 
@@ -25,7 +27,7 @@ calculate_S <- function(x){
   S = abs(mean(x)- 0.5)/var(x)
 }
 
-cpg_S <- apply(mydat1, 1, calculate_S)
+cpg_S <- apply(dataMatrix, 1, calculate_S)
 cpg_selected_S <- names(tail(sort(cpg_S),5000))
 
 length(intersect(cpg_selected_var, cpg_selected_S))
@@ -33,24 +35,26 @@ length(intersect(cpg_selected_var, cpg_selected_S))
 #*****************************************************************************#
 # Kennard-Stone-like feature selection
 #*****************************************************************************#
-dataMatrix <- mydat1
 
 # Convert to M-values
-dataMatrix_fil <- mydat1[rowSums((dataMatrix > 0) & (dataMatrix < 1)) == ncol(dataMatrix), ]
+dataMatrix_fil <- dataMatrix[rowSums((dataMatrix > 0) & (dataMatrix < 1)) == ncol(dataMatrix), ]
 dataMatrix_M <- log2(dataMatrix_fil/(1 + dataMatrix_fil))
 
-# Groups
+# Get groups: for each of these groups were are going the select the
+# most representative features
 load("E:/Thesis/MLData/probe_annotation.RData")
 Group <- data.frame(CpG = probe_annotation$ID,
                     Group = probe_annotation$Class)
 
-# Number of features to select
+# Number of features to select from each group
 n <- 5000
-nFeatures <- rep(NA, length(unique(Group$Group)))
-for (i in 1:length(unique(Group$Group))){
-  nFeatures[i] <- round(n*(table(Group$Group)[unique(Group$Group)[i]]/sum(table(Group$Group))))
+uniqueGroups <- unique(Group$Group)
+nFeatures <- rep(NA, length(uniqueGroups))
+for (i in 1:length(uniqueGroups)){
+  nFeatures[i] <- round(n*(table(Group$Group)[uniqueGroups[i]]/sum(table(Group$Group))))
 }
 nFeatures[which.max(nFeatures)] <- nFeatures[which.max(nFeatures)]-(n - sum(nFeatures))
+names(nFeatures) <- uniqueGroups
 
 # Make copy of data
 dataMatrix_copy <- dataMatrix_M
@@ -63,7 +67,81 @@ registerDoParallel(cl)
 # Record start time
 t_start <- Sys.time()
 
-uniqueGroups <- unique(Group[,2])
+# For each Group we are going to perform feature selection:
+output <- foreach(i =  1:length(uniqueGroups), .inorder = FALSE) %dopar% {
+  
+  # Filter data for CpG in group
+  dataMatrix_copy_fil <- dataMatrix_copy[rownames(dataMatrix_copy) %in% Group$CpG[Group$Group == uniqueGroups[i]],]   
+  
+  # Seed probe (most variable probe)
+  cpg_var <- apply(dataMatrix_copy_fil, 1, var)
+  seedProbe <- names(cpg_var)[which.max(cpg_var)]
+  
+  # perform feature selection
+  probes <- selectionKS(dataMatrix = dataMatrix_copy_fil,
+              nFeatures = nFeatures[i],
+              seedProbe = seedProbe)
+  
+  return(probes)
+}
+#Stop clusters
+stopCluster(cl)
+
+# Record end time
+t_end <- Sys.time()
+
+# Give run time
+t_end-t_start
+
+
+#*****************************************************************************#
+# Compare methods
+#*****************************************************************************#
+
+# Get selection probes from KS algortihm
+cpg_selected_KS <- unlist(output)
+
+# Combine probes
+probeList <- list(Var = cpg_selected_var,
+                  S = cpg_selected_S,
+                  KS = cpg_selected_KS)
+
+# Save object
+save(probeList, file = "probeList.RData")
+
+# Make venn diagram
+p <- ggvenn(probeList, show_percentage = FALSE)
+
+# Save plot
+ggsave(p, file = "vennDiagram.png")
+
+
+load("probeList.RData")
+
+
+formula <- paste0("cbind(",paste(rownames(dataMatrix), collapse = ", "),") ~ ", paste(probeList$KS, collapse = " + "))
+model <- lm(as.formula(formula), data = as.data.frame(t(dataMatrix)))
+fittedValues <- fitted(model)
+residualValues <- residuals(model)
+
+ssr <- sum(colSums(residualValues^2))
+sse <- sum(colSums(fittedValues^2))
+
+
+formula <- paste0("cbind(",paste(rownames(dataMatrix), collapse = ", "),") ~ 0 +", paste(probeList$S[1:3], collapse = " + "))
+model <- lm(as.formula(formula), data = as.data.frame(t(dataMatrix)))
+fittedValues <- fitted(model)
+residualValues <- residuals(model)
+
+ssr <- sum(colSums(residualValues^2))
+sse <- sum(colSums(fittedValues^2))
+
+
+(sse)/(ssr + sse)
+
+
+
+
 
 # For each parameter combination....
 output <- foreach(i =  1:length(uniqueGroups), .inorder = FALSE) %dopar% {

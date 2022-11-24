@@ -36,3 +36,39 @@ regressionSummary <- function (data, lev = NULL, model = NULL){
   return(out)
 }
 
+#*****************************************************************************#
+# selectionKS
+#*****************************************************************************#
+
+# Select features using a Kennard-Stone like algorithm:
+
+# dataMatrix: M-values
+# nFeatures: Number of features to select
+# seedProbe: which probe should the algorithm start with
+
+selectionKS <- function(dataMatrix, nFeatures = 5000, seedProbe = NULL) {
+  
+  # Make matrix to save correlations
+  cor_matrix <- matrix(NA, nrow(dataMatrix), nFeatures-1)
+  rownames(cor_matrix) <- rownames(dataMatrix)
+  
+  # Make vector to save feature set
+  newProbe <- rep(NA, nFeatures)
+  newProbe[1] <- seedProbe
+  
+  # Start selecting features
+  for (j in 1:(nFeatures - 1)){
+    
+    # Calculate correlations between seed probe and all other probes
+    cor_matrix[,j] <- apply(dataMatrix,1,function(x){cor(x,dataMatrix[newProbe[j],])})
+    
+    # Add most uncorrelated probe to feature set
+    newProbe[j+1] <- rownames(cor_matrix)[which.min(abs(cor_matrix[,j]))]
+    
+    # Remove all highly correlated probes: keep probes with cor < 0.9
+    cor_matrix <- cor_matrix[abs(cor_matrix[,j]) < 0.5,]
+    dataMatrix <- dataMatrix[rownames(cor_matrix),]
+  }
+  return(newProbe)
+}
+
