@@ -22,8 +22,9 @@ load(paste0(dataDir, "/mydat1.RData"))
 load(paste0(dataDir, "/pheno.RData"))
 
 # Prepare data
+all(colnames(mydat1) == pheno$X)
 all_X <- as.matrix(t(mydat1))[!is.na(pheno$SmokingScore),]
-all_Y <- pheno$SmokingScore[!is.na(pheno$SmokingScore)]
+all_Y <- pheno[!is.na(pheno$SmokingScore),]
 
 # Split data into training and test set
 selectedSamples <- prospectr::kenStone(
@@ -36,10 +37,10 @@ selectedSamples <- prospectr::kenStone(
 
 # Make training and test data
 X_train <- t(all_X[selectedSamples$model,])
-Y_train <- all_Y[selectedSamples$model]
+Y_train <- all_Y[selectedSamples$model,]
 
 X_test <- t(all_X[selectedSamples$test,])
-Y_test <- all_Y[selectedSamples$test]
+Y_test <- all_Y[selectedSamples$test,]
 
 # Save data
 save(X_train, Y_train, X_test, Y_test, file = paste0(dataDir, "/splitData.RData"))
