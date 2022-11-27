@@ -38,7 +38,7 @@ length(intersect(cpg_selected_var, cpg_selected_S))
 
 # Convert to M-values
 dataMatrix_fil <- dataMatrix[rowSums((dataMatrix > 0) & (dataMatrix < 1)) == ncol(dataMatrix), ]
-dataMatrix_M <- log2(dataMatrix_fil/(1 + dataMatrix_fil))
+dataMatrix_M <- log2(dataMatrix_fil/(1 - dataMatrix_fil))
 
 # Get groups: for each of these groups were are going the select the
 # most representative features
