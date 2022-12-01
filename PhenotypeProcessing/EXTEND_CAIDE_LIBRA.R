@@ -98,10 +98,10 @@ table(dat$PHYSICAL_c)
 #*****************************************************************************#
 # Calculate scores
 #*****************************************************************************#
-CAIDE <- dat[,c(1:8,11,12,151:156)]
+CAIDE <- dat[,c(1:8,11,12,151:157)]
 CAIDE$X <- NULL
 
-CAIDE$CAIDE <- rowSums(CAIDE[,10:15])
+CAIDE$CAIDE <- rowSums(CAIDE[,10:16])
 hist(CAIDE$CAIDE,10)
 
 # Save data
@@ -286,6 +286,7 @@ dat$HYPERTENSTION<-ifelse (dat$MeanSysBP >= 140 | dat$MeanDiaBP >= 90,1.6,0)
 dat <- dat[!is.na(dat$HDL_unloged),]
 dat$HDL_unloged <- as.numeric(dat$HDL_unloged)
 
+
 #https://academic.oup.com/view-large/figure/342663278/cvab164f2.tif
 dat$Highcholesterol<-ifelse(dat$HDL_unloged > 2.2, 1,0)
 table(dat$Highcholesterol)
@@ -346,6 +347,8 @@ save(EPILIBRA, file="EPILIBRA.Rdata")
 ###############################################################################
 library(ggpubr)
 library(grid)
+load("CAIDE.Rdata")
+load("EPILIBRA.Rdata")
 
 # Combine scores into data frame
 scoreAll <- inner_join(CAIDE, EPILIBRA, by = c("ID" = "ID"))
@@ -353,7 +356,7 @@ scaleLIBRA <- (scoreAll$LIBRA - mean(scoreAll$LIBRA))/sd(scoreAll$LIBRA)
 scaleCAIDE <- (scoreAll$CAIDE - mean(scoreAll$CAIDE))/sd(scoreAll$CAIDE)
 scoreAll$RiskAll <- scaleLIBRA + scaleCAIDE
 
-cor(scoreAll$LIBRA, scoreAll$CAIDE)
+cor.test(scoreAll$LIBRA, scoreAll$CAIDE)
 
 # Make scatter plot
 scatter <- ggplot() +

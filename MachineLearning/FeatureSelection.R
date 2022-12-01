@@ -16,8 +16,10 @@ dataMatrix <- unique(mydat1)
 #*****************************************************************************#
 
 cpg_var <- apply(dataMatrix, 1, var)
-cpg_selected_var <- names(tail(sort(cpg_var), 5000))
+cpg_selected_var <- names(tail(sort(cpg_var), 10000))
 
+dataMatrix_var <- dataMatrix[cpg_selected_var, ]
+save(dataMatrix_var, file = "dataMatrix_var_CAIDE1.RData")
 
 #*****************************************************************************#
 # Select most variable features

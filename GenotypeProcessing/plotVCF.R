@@ -35,6 +35,16 @@ e2 <- str_detect(hap1, "TT") + str_detect(hap2, "TT")
 e3 <- str_detect(hap1, "TC") + str_detect(hap2, "TC")
 e4 <- str_detect(hap1, "CC") + str_detect(hap2, "CC")
 
+output <- data.frame(sampleID = names(gt_rs429358)[-1],
+                     e1 = e1,
+                     e2 = e2,
+                     e3 = e3,
+                     e4 = e4)
+
+write.csv(output, file = "APOE_status.csv", row.names = FALSE)
+
+all(rowSums(output[,2:5]) == 2)
+
 
 P_rs429358 <- unlist(lapply(str_split(gt_rs429358, ":"), `[[`, 4))[-1]
 P_rs429358_00 <- as.numeric(unlist(lapply(str_split(P_rs429358, ","), `[[`, 1)))
