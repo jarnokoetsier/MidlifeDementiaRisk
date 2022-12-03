@@ -2,10 +2,23 @@
 setwd("E:/Thesis/EXTEND/Methylation")
 
 # Load data
-load("dataMatrix_S.RData")
-load("dataMatrix_var.RData")
 load("cellType.RData")
 load("E:/Thesis/EXTEND/Phenotypes/metaData_ageFil.RData")
+files <- list.files('Y')
+for (f in files){
+  load(paste0("Y/",f))
+}
+
+# Load S-scored data
+files <- list.files('X_S')
+for (f in files){
+  load(paste0("X_S/",f))
+}
+# Load var data
+files <- list.files('X_var')
+for (f in files){
+  load(paste0("X_var/",f))
+}
 
 # Load packages
 library(tidyverse)
@@ -17,12 +30,43 @@ library(tidyverse)
 
 ###############################################################################
 
+
+
+#*****************************************************************************#
+# Beta vs sd
+#*****************************************************************************#
+Mvalues_S <- log2(X_nonTest_S/(1 - X_nonTest_S))
+Mvalues_var <- log2(X_nonTest_var/(1 - X_nonTest_var))
+
+plot_S <- data.frame(
+  meanBeta = rowMeans(X_nonTest_S),
+  sdBeta = apply(X_nonTest_S, 1, sd),
+  meanM  = rowMeans(Mvalues_S),
+  sdM = apply(Mvalues_S, 1, sd)
+)
+
+plotVar <- data.frame(
+  meanBeta = rowMeans(X_nonTest_var),
+  sdBeta = apply(X_nonTest_var, 1, sd),
+  meanM  = rowMeans(Mvalues_var),
+  sdM = apply(Mvalues_var, 1, sd)
+)
+
+ggplot() +
+  geom_point(data = plot_S, aes(x = meanBeta, y = sdBeta, color = "S-score")) +
+  geom_point(data = plotVar, aes(x = meanBeta, y = sdBeta, color = "Variance")) +
+  scale_color_brewer(palette = "Dark2")
+
+ggplot() +
+  geom_point(data = plot_S, aes(x = meanM, y = sdM, color = "S-score")) +
+  geom_point(data = plotVar, aes(x = meanM, y = sdM, color = "Variance")) +
+  scale_color_brewer(palette = "Dark2")
 #*****************************************************************************#
 # PCA
 #*****************************************************************************#
 
 # Perform PCA
-pcaList <-  prcomp(t(dataMatrix_S),        
+pcaList <-  prcomp(t(X_nonTest_S),        
                    retx = TRUE,
                    center =TRUE,
                    scale = TRUE,
@@ -100,7 +144,7 @@ p <- ggplot() +
   geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
   labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
   guides(size = "none") +
-  ggtitle("S-score") +
+  ggtitle("S-score Selection") +
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
@@ -121,12 +165,17 @@ ggsave(p,file = "correlationPlot_S.png", width = 8, height = 6)
 
 ###############################################################################
 
+# Load S-scored data
+files <- list.files('X_var')
+for (f in files){
+  load(paste0("X_var/",f))
+}
 #*****************************************************************************#
 # PCA
 #*****************************************************************************#
 
 # Perform PCA
-pcaList_var <-  prcomp(t(dataMatrix_var),        
+pcaList_var <-  prcomp(t(X_nonTest_var),        
                    retx = TRUE,
                    center =TRUE,
                    scale = TRUE,
@@ -151,22 +200,18 @@ explVar_var <- round(((pcaList_var$sdev^2)/sum(pcaList_var$sdev^2))*100,1)
 #=============================================================================#
 
 # Make PCA score: PC1 vs PC2
+PCAscores_var$Sex <- ifelse(PCAscores_var$Sex == 1, "Male", "Female")
 p_12 <- ggplot(data = PCAscores_var, aes(x = PC1, y = PC2)) +
   stat_ellipse(geom = "polygon",
-               fill = "red",
+               aes(fill = factor(Sex)),
                type = "norm", 
                alpha = 0.25,
-               level = 0.95) +
-  stat_ellipse(geom = "polygon",
-               color = "red",
-               alpha = 0,
-               linetype = 2,
-               type = "norm",
                level = 0.99) +
-  geom_point(alpha = 0.9, size = 2, aes(color = Sex)) +
+  geom_point(alpha = 0.9, size = 2, aes(color = Neu)) +
   xlab(paste0("PC1 (", explVar_var[1],"%)")) +
   ylab(paste0("PC2 (", explVar_var[2],"%)")) +
-  labs(color = "CD8 T-cells") +
+  ggtitle("Variance Selection") +
+  labs(color = "Neutrophils", fill = "Sex") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
@@ -175,10 +220,11 @@ p_12 <- ggplot(data = PCAscores_var, aes(x = PC1, y = PC2)) +
                                      size = 10),
         legend.position = "bottom",
         legend.title = element_text()) +
-  scale_color_viridis_c()
+  scale_color_viridis_c() +
+  scale_fill_brewer(palette = "Set1")
 
 # save plot
-ggsave(p_12, file = "PCAplot_1vs2.png", width = 8, height = 6)
+ggsave(p_12, file = "PCAplot_1vs2_var.png", width = 8, height = 6)
 
 #=============================================================================#
 # PCA correlations
@@ -188,7 +234,7 @@ PCs <- PCAscores_var[,1:5]
 colnames(PCs) <- paste0(colnames(PCs), " (", explVar_var[1:5], "%)")
 meta <- PCAscores_var[,c("Age", "Sex", colnames(cellType))]
 meta <- meta[,-c(9,10)]
-#meta$Sex <- ifelse(meta$Sex == "Male", 0,1)
+meta$Sex <- ifelse(meta$Sex == "Male", 0,1)
 colnames(meta) <- c("Age", "Sex", "CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", "Monocytes",
                     "Neutrophils")
 
@@ -203,7 +249,7 @@ p <- ggplot() +
   geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
   labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
   guides(size = "none") +
-  ggtitle("Variance") +
+  ggtitle("Variance Selection") +
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +

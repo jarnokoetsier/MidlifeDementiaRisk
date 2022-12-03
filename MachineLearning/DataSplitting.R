@@ -1,3 +1,13 @@
+# File: DataSplitting.R
+# Author: Jarno Koetsier
+# Date: November 27, 2022
+
+###############################################################################
+
+# 0. Package and data management
+
+###############################################################################
+
 # Clear workspace and console
 rm(list = ls())
 cat("\014") 
@@ -18,6 +28,12 @@ load("methSet_allNorm_fil.RData")
 load("cellType.RData")
 load("gt_results.RData")
 
+###############################################################################
+
+# 1. Splitting the data
+
+###############################################################################
+
 #*****************************************************************************#
 # 1.1. Apply Kennard-Stone algorithm to split the data
 #*****************************************************************************#
@@ -35,6 +51,7 @@ all(CAIDE1_samples %in% all_samples)
 CAIDE2 <- CAIDE[CAIDE$ID %in% unique(names(gt_rs7412)),]
 CAIDE2_samples <- unique(names(gt_rs7412)[names(gt_rs7412) %in% CAIDE1_samples])
 all(CAIDE2_samples %in% all_samples)
+save(CAIDE2,file = "CAIDE2.Rdata")
 
 # LIBRA samples
 LIBRA_samples <- EPILIBRA$ID
@@ -46,7 +63,6 @@ intersect_samples <- intersect(intersect(CAIDE1_samples, CAIDE2_samples),LIBRA_s
 # Get Basename instead of ID
 intersect_samples <- dat$Basename[dat$ID %in% intersect_samples]
 
-
 # Prepare data
 all_X <- as.matrix(t(methSet_allNorm_fil))[intersect_samples,]
 all_Y <- dat[dat$Basename %in% intersect_samples, 
@@ -54,7 +70,9 @@ all_Y <- dat[dat$Basename %in% intersect_samples,
 all_Y <- inner_join(all_Y, cellType, by = c("Basename" = "ID"))
 all(rownames(all_X) == all_Y$Basename)
 
-# Split data into training and test set
+# Split data into training and test set:
+
+# Male
 nTrain_male <- round(0.8*nrow(all_X[all_Y$Sex == 1,]))
 selectedSamples_male <- prospectr::kenStone(
   X = all_X[all_Y$Sex == 1,], 
@@ -64,6 +82,7 @@ selectedSamples_male <- prospectr::kenStone(
   .scale = TRUE
 )
 
+# Female
 nTrain_female <- round(0.8*nrow(all_X[all_Y$Sex == 2,]))
 selectedSamples_female <- prospectr::kenStone(
   X = all_X[all_Y$Sex == 2,], 
@@ -73,6 +92,7 @@ selectedSamples_female <- prospectr::kenStone(
   .scale = TRUE
 )
 
+# Combine into single train and test set
 female_Y <- all_Y[all_Y$Sex == 2,]
 male_Y <- all_Y[all_Y$Sex == 1,]
 TestTrain <- list(Train = c(male_Y$Basename[selectedSamples_male$model], female_Y$Basename[selectedSamples_female$model]),
@@ -81,13 +101,13 @@ TestTrain <- list(Train = c(male_Y$Basename[selectedSamples_male$model], female_
 # Save outcome
 save(TestTrain, file = "TestTrain.RData")
 
-# Make training and test data
-load("TestTrain.RData")
-
 
 #*****************************************************************************#
 # 1.2. Make all data combinations
 #*****************************************************************************#
+
+# load data
+load("TestTrain.RData")
 
 # All
 all_X <- as.matrix(t(methSet_allNorm_fil))
@@ -99,6 +119,7 @@ all(rownames(all_X) == all_Y$Basename)
 length(intersect(CAIDE$Basename, TestTrain$Test)) == length(TestTrain$Test)
 X_CAIDE1 <- t(all_X[setdiff(CAIDE$Basename, TestTrain$Test),])
 Y_CAIDE1 <- all_Y[all_Y$Basename %in% setdiff(CAIDE$Basename, TestTrain$Test),]
+Y_CAIDE1 <- inner_join(Y_CAIDE1, CAIDE[,c(1,10:17)], by = c("ID" = "ID"))
 all(colnames(X_CAIDE1) == Y_CAIDE1$Basename)
 
 # CAIDE2
@@ -111,6 +132,7 @@ all(colnames(X_CAIDE2) == Y_CAIDE2$Basename)
 length(intersect(EPILIBRA$Basename, TestTrain$Test)) == length(TestTrain$Test)
 X_LIBRA <- t(all_X[setdiff(EPILIBRA$Basename, TestTrain$Test),])
 Y_LIBRA <- all_Y[all_Y$Basename %in% setdiff(EPILIBRA$Basename, TestTrain$Test),]
+Y_LIBRA <- inner_join(Y_LIBRA, EPILIBRA[,c(1,10:21)], by = c("ID" = "ID"))
 all(colnames(X_LIBRA) == Y_LIBRA$Basename)
 
 # Non-test
@@ -122,6 +144,11 @@ all(colnames(X_nonTest) == Y_nonTest$Basename)
 # Test
 X_test <- t(all_X[TestTrain$Test,])
 Y_test <- all_Y[all_Y$Basename %in% TestTrain$Test,]
+Y_test <- inner_join(Y_test, EPILIBRA[,c(1,10:21)], by = c("ID" = "ID"))
+Y_test <- inner_join(Y_test, CAIDE[,c(1,10:17)], by = c("ID" = "ID"))
+
+X_test <- X_test[,Y_test$Basename]
+all(colnames(X_test) == Y_test$Basename)
 
 
 
@@ -130,7 +157,7 @@ Y_test <- all_Y[all_Y$Basename %in% TestTrain$Test,]
 #*****************************************************************************#
 
 #=============================================================================#
-# Which samples belong where
+# Overap between the different test and training sets
 #=============================================================================#
 
 # Make data frame for plotting
@@ -171,7 +198,8 @@ ggsave(overlap_plot, file = "OverlapPlot.png", width = 8, height = 6)
 #=============================================================================#
 # Age
 #=============================================================================#
-plotData <- rbind.data.frame(Y_test, Y_nonTest, Y_CAIDE1, Y_CAIDE2, Y_LIBRA)
+plotData <- rbind.data.frame(Y_test[,1:13], Y_nonTest[,1:13], Y_CAIDE1[,1:13], 
+                             Y_CAIDE2[,1:13], Y_LIBRA[,1:13])
 plotData$Set <- c(rep("Test", nrow(Y_test)),
                   rep("Training All", nrow(Y_nonTest)),
                   rep("Training CAIDE1", nrow(Y_CAIDE1)),

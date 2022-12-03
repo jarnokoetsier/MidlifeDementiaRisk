@@ -181,7 +181,7 @@ load("methSet_allNorm1.RData")
 # 1) Remove probes with high detection p-value:
 
 # Get detection p-value
-lumi_dpval <- detectionP(RGset1, type = "m+u")
+lumi_dpval <- detectionP(RGset, type = "m+u")
 
 # remove probes above detection p-value
 lumi_failed <- lumi_dpval > 0.01
@@ -198,7 +198,7 @@ methSet_allNorm_fil <- methSet_allNorm[rownames(methSet_allNorm) %in% lumi_dpval
 # 2) Remove probes with SNPs
 # drop the probes containing a SNP at the CpG interrogation and/or at the single nucleotide
 # extension, for any minor allele frequency
-snps <- getSnpInfo(RGset1)
+snps <- getSnpInfo(RGset)
 keep <- snps@rownames[!(isTRUE(snps@listData$CpG_maf > 0) | isTRUE(snps@listData$SBE_maf > 0))]
 methSet_allNorm_fil <- methSet_allNorm_fil[rownames(methSet_allNorm_fil) %in% keep,]
 
@@ -602,8 +602,45 @@ for (i in 1:nrow(corDF)){
 p <- ggplot() +
   geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
   labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
-  scale_color_viridis_c(limits = c(-1, 1), oob = scales::squish) +
+  scale_color_viridis_c(limits = c(-0.7, 0.7), oob = scales::squish) +
   theme(axis.title = element_blank())
 
 ggsave(p,file = "correlationPlot.png", width = 8, height = 6)
+
+
+###############################################################################
+
+# 5. M-values
+
+###############################################################################
+
+Mvalues <- log2(methSet_allNorm_fil/(1 - methSet_allNorm_fil))
+
+plotDensity_M <- gather(as.data.frame(Mvalues))
+densityNorm <- ggplot(plotDensity_M) +
+  geom_density(aes(x = value, color = key)) +
+  xlim(c(-10,10)) +
+  xlab("M-value") +
+  ylab("Density") +
+  ggtitle("Post-normalization") +
+  scale_color_viridis_d() +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16)) 
+# Save plot
+ggsave(densityNorm, file = "densityNorm_Mvalue.png", width = 8, height = 6)
+
+# Get variance
+MvsB <- data.frame(
+  sd_M = apply(Mvalues, 1, sd),
+  mean_M = rowMeans(Mvalues),
+  sd_B = apply(methSet_allNorm_fil, 1, sd),
+  mean_B = rowMeans(methSet_allNorm_fil)
+)
+
+ggplot() +
+  stat_bin_hex(data = MvsB, aes(x = mean_M, y = sd_M), bins = 100)
+
 
