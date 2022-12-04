@@ -73,8 +73,8 @@ pcaList <-  prcomp(t(X_nonTest_S),
                    rank. = 10)
 
 # Save pcaList object
-save(pcaList, file = "pcaList_S.RData")
-load("pcaList_S.RData")
+#save(pcaList, file = "pcaList_S.RData")
+#load("pcaList_S.RData")
 
 # Get PCA scores
 PCAscores <- as.data.frame(pcaList$x)
@@ -144,7 +144,7 @@ p <- ggplot() +
   geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
   labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
   guides(size = "none") +
-  ggtitle("S-score Selection") +
+  ggtitle("S-score-based Feature Selection") +
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
@@ -182,7 +182,7 @@ pcaList_var <-  prcomp(t(X_nonTest_var),
                    rank. = 10)
 
 # Save pcaList object
-save(pcaList_var, file = "pcaList_var.RData")
+#save(pcaList_var, file = "pcaList_var.RData")
 
 # Get PCA scores
 PCAscores_var <- as.data.frame(pcaList_var$x)
@@ -210,7 +210,7 @@ p_12 <- ggplot(data = PCAscores_var, aes(x = PC1, y = PC2)) +
   geom_point(alpha = 0.9, size = 2, aes(color = Neu)) +
   xlab(paste0("PC1 (", explVar_var[1],"%)")) +
   ylab(paste0("PC2 (", explVar_var[2],"%)")) +
-  ggtitle("Variance Selection") +
+  ggtitle("Variance (\u03b2)-based Feature Selection") +
   labs(color = "Neutrophils", fill = "Sex") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5,
@@ -234,7 +234,7 @@ PCs <- PCAscores_var[,1:5]
 colnames(PCs) <- paste0(colnames(PCs), " (", explVar_var[1:5], "%)")
 meta <- PCAscores_var[,c("Age", "Sex", colnames(cellType))]
 meta <- meta[,-c(9,10)]
-meta$Sex <- ifelse(meta$Sex == "Male", 0,1)
+meta$Sex <- ifelse(meta$Sex == "Male", 1,2)
 colnames(meta) <- c("Age", "Sex", "CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", "Monocytes",
                     "Neutrophils")
 
@@ -249,7 +249,7 @@ p <- ggplot() +
   geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
   labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
   guides(size = "none") +
-  ggtitle("Variance Selection") +
+  ggtitle("Variance (\u03b2)-based Feature Selection") +
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
