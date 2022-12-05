@@ -35,6 +35,12 @@ for (f in files){
   load(paste0("X_var/",f))
 }
 
+# Load varM data
+files <- list.files('X_varM')
+for (f in files){
+  load(paste0("X_varM/",f))
+}
+
 
 #*****************************************************************************#
 # Model training
@@ -46,10 +52,10 @@ for (f in files){
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "var"
+FeatureSelection = "varM"
 
 # Prepare data (M-values)
-X_train = log2(X_CAIDE1_var/(1-X_CAIDE1_var))
+X_train = log2(X_CAIDE1_varM/(1-X_CAIDE1_varM))
 Y_train = Y_CAIDE1$CAIDE
 
 # Test if samples are in correct order
@@ -60,7 +66,6 @@ nfold = 5
 nrep = 5
 
 #=============================================================================#
-
 
 # Settings for repeated cross-validation
 fitControl <- trainControl(method = "repeatedcv", 
@@ -187,7 +192,9 @@ RMSE_heatmap <- ggplot() +
   ylab("\u03b1") +
   labs(fill = "Mean\nRMSE") +
   scale_y_continuous(breaks = alphaCV[c(TRUE, FALSE)]) +
-  ggtitle(Score, subtitle = "Variance (\u03b2)-based Feature Selection") +
+  ggtitle(Score, subtitle = "No Feature Selection") +
+  #ggtitle(Score, subtitle = "Variance (M)-based Feature Selection") +
+  #ggtitle(Score, subtitle = "Variance (\u03b2)-based Feature Selection") +
   #ggtitle(Score, subtitle = "S-score-based Feature Selection") +
   scale_fill_viridis_c() +
   theme_classic() +
@@ -210,7 +217,10 @@ ggsave(RMSE_heatmap, file = paste0(Score, "_", FeatureSelection, "_RMSE_heatmap.
 ObsVsPred <- ggplot(ObsPred_CV) +
   geom_bin2d(aes(x = Observed, y = Predicted), bins = 100) +
   #ggtitle(Score, subtitle = "S-score-based Feature Selection") +
-  ggtitle(Score, subtitle = "Variance (\u03b2)-based Feature Selection") +
+  #ggtitle(Score, subtitle = "Variance (\u03b2)-based Feature Selection") +
+  #ggtitle(Score, subtitle = "Variance (M)-based Feature Selection") +
+  ggtitle(Score, subtitle = "No Feature Selection") +
+  geom_abline(aes(intercept = 0, slope = 1), color = "red", linetype = "dashed", linewidth = 1.5) +
   scale_fill_viridis_c() +
   theme_classic() +
   theme(legend.position = "none",
