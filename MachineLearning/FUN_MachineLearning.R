@@ -60,7 +60,7 @@ selectionKS <- function(dataMatrix, nFeatures = 5000, seedProbe = NULL) {
   for (j in 1:(nFeatures - 1)){
     
     # Calculate correlations between seed probe and all other probes
-    cor_matrix[,j] <- apply(dataMatrix,1,function(x){cor(x,dataMatrix[newProbe[j],])})
+    cor_matrix[,j] <- apply(dataMatrix,1,function(x){cor(x,dataMatrix[newProbe[j],], method = "spearman")})
     
     # Add most uncorrelated probe to feature set
     newProbe[j+1] <- rownames(cor_matrix)[which.min(abs(cor_matrix[,j]))]

@@ -45,8 +45,14 @@ dataMatrix_M <- log2(dataMatrix_fil/(1 - dataMatrix_fil))
 # Get groups: for each of these groups were are going the select the
 # most representative features
 load("E:/Thesis/MLData/probe_annotation.RData")
+probe_annotation$Relation_to_Island[(probe_annotation$Relation_to_Island != "Island") &
+                                      (probe_annotation$Relation_to_Island != "OpenSea")] <- "ShelforShore"
 Group <- data.frame(CpG = probe_annotation$ID,
-                    Group = probe_annotation$Class)
+                    Group = paste(probe_annotation$Class,
+                                  probe_annotation$Relation_to_Island, 
+                                  probe_annotation$Type, sep = "_"))
+
+Group <- Group[Group$CpG %in% rownames(dataMatrix_M),]
 
 # Number of features to select from each group
 n <- 5000

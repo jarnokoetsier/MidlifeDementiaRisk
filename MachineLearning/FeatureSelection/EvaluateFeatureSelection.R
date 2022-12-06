@@ -39,11 +39,20 @@ library(tidyverse)
 #*****************************************************************************#
 # Beta vs sd
 #*****************************************************************************#
+
+# Load all beta/M and their sd
+load("plot_all.RData")
+
+# Load betas of probes in final model
+load("X_coefs.RData")
+
 Mvalues_S <- log2(X_nonTest_S/(1 - X_nonTest_S))
 Mvalues_var <- log2(X_nonTest_var/(1 - X_nonTest_var))
 Mvalues_varM <- log2(X_nonTest_varM/(1 - X_nonTest_varM))
+Mvalues_coefs <- log2(X_coefs/(1 - X_coefs))
 
 plot_S <- data.frame(
+  ID = rownames(X_nonTest_S),
   meanBeta = rowMeans(X_nonTest_S),
   sdBeta = apply(X_nonTest_S, 1, sd),
   meanM  = rowMeans(Mvalues_S),
@@ -51,6 +60,7 @@ plot_S <- data.frame(
 )
 
 plotVar <- data.frame(
+  ID = rownames(X_nonTest_var),
   meanBeta = rowMeans(X_nonTest_var),
   sdBeta = apply(X_nonTest_var, 1, sd),
   meanM  = rowMeans(Mvalues_var),
@@ -65,7 +75,19 @@ plotVarM <- data.frame(
   sdM = apply(Mvalues_varM, 1, sd)
 )
 
+plotCoefs <- data.frame(
+  ID = rownames(X_coefs),
+  meanBeta = rowMeans(X_coefs),
+  sdBeta = apply(X_coefs, 1, sd),
+  meanM  = rowMeans(Mvalues_coefs),
+  sdM = apply(Mvalues_coefs, 1, sd)
+)
+
+plot_all$ID <- rownames(plot_all)
+
 p_S <- ggplot() +
+  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
+             color = "lightgrey", alpha = 0.5) +
   geom_point(data = plot_S, aes(x = meanBeta, y = sdBeta), 
              color = RColorBrewer::brewer.pal(3, "Dark2")[1], alpha = 0.5) +
   xlim(c(0,1)) +
@@ -82,8 +104,12 @@ p_S <- ggplot() +
         legend.position = "none",
         legend.title = element_text())
 
+ggsave(p_S, file = "MeanVsSD_S.png", width = 8, height = 6)
+
 
 p_Var <- ggplot() +
+  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
+             color = "lightgrey", alpha = 0.5) +
   geom_point(data = plotVar, aes(x = meanBeta, y = sdBeta), 
              color = RColorBrewer::brewer.pal(3, "Dark2")[2], alpha = 0.5) +
   xlim(c(0,1)) +
@@ -100,7 +126,34 @@ p_Var <- ggplot() +
         legend.position = "none",
         legend.title = element_text())
 
+ggsave(p_Var, file = "MeanVsSD_var.png", width = 8, height = 6)
+
+
+p_coefs <- ggplot() +
+  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
+             color = "lightgrey", alpha = 0.5) +
+  geom_point(data = plotCoefs, aes(x = meanBeta, y = sdBeta), 
+             color = RColorBrewer::brewer.pal(4, "Dark2")[4], alpha = 0.5) +
+  xlim(c(0,1)) +
+  ylim(c(0,0.5)) +
+  xlab("Mean of \u03b2-values") +
+  ylab("Standard Deviation of \u03b2-values") +
+  ggtitle("Features in Final Model") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10),
+        legend.position = "none",
+        legend.title = element_text())
+  
+ggsave(p_coefs, file = "MeanVsSD_coefs.png", width = 8, height = 6)
+
+
 p_VarM <- ggplot() +
+  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
+             color = "lightgrey", alpha = 0.5) +
   geom_point(data = plotVarM, aes(x = meanBeta, y = sdBeta), 
              color = RColorBrewer::brewer.pal(3, "Dark2")[3], alpha = 0.5) +
   xlim(c(0,1)) +
@@ -116,29 +169,108 @@ p_VarM <- ggplot() +
                                      size = 10),
         legend.position = "none",
         legend.title = element_text())
-  
 
-
+ggsave(p_VarM, file = "MeanVsSD_varM.png", width = 8, height = 6)
 
 
 
 load("E:/Thesis/MLData/probe_annotation.RData")
 
-plotVarM <- inner_join(plotVarM, probe_annotation, by = c("ID" = "ID"))
+plot_all<- inner_join(plot_all, probe_annotation, by = c("ID" = "ID"))
 
-ggplot() +
-  geom_point(data = plotVarM, aes(x = meanBeta, y = sdBeta, color = Relation_to_Island), alpha = 0.5) +
-  scale_color_brewer(palette = "Dark2")
+p_island <- ggplot() +
+  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta, color = Relation_to_Island), alpha = 0.5) +
+  scale_color_brewer(palette = "Dark2") +
+  xlim(c(0,1)) +
+  ylim(c(0,0.5)) +
+  xlab("Mean of \u03b2-values") +
+  ylab("Standard Deviation of \u03b2-values") +
+  ggtitle("Relation to CpG Island") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10),
+        legend.position = "right",
+        legend.title = element_blank())
+
+ggsave(p_island, file = "MeanVsSD_island.png", width = 8, height = 6)
+
 
 ggplot() +
   geom_point(data = plotVarM[plotVarM$Class == "Promotor",], aes(x = meanBeta, y = sdBeta, color = Class), alpha = 0.5) +
   scale_color_brewer(palette = "Dark2")
 
-ggplot() +
-  geom_point(data = plotVarM[plotVarM$Chr == "chrX",], aes(x = meanBeta, y = sdBeta, color ="ChrX"), alpha = 0.5) +
-  geom_point(data = plotVarM[plotVarM$Chr != "chrX",], aes(x = meanBeta, y = sdBeta, color =  "Other"), alpha = 0.5) +
-  scale_color_brewer(palette = "Dark2")
+p_chrX <- ggplot() +
+  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
+             color = "lightgrey", alpha = 0.5) +
+  geom_point(data = plot_all[plot_all$Chr == "chrX",], aes(x = meanBeta, y = sdBeta, color ="ChrX"), 
+             color = RColorBrewer::brewer.pal(5, "Dark2")[5], alpha = 0.5) +
+  xlim(c(0,1)) +
+  ylim(c(0,0.5)) +
+  xlab("Mean of \u03b2-values") +
+  ylab("Standard Deviation of \u03b2-values") +
+  ggtitle("X-Chromosomal Probes") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10),
+        legend.position = "none",
+        legend.title = element_text())
 
+ggsave(p_chrX, file = "MeanVsSD_chrX.png", width = 8, height = 6)
+
+
+#*****************************************************************************#
+# Multiple regression to get cell type probes
+#*****************************************************************************#
+features <- rownames(X_nonTest_varM)
+
+formula <- paste0("cbind(",paste(features, collapse = ", "),") ~ ", 
+                  paste0("0 + ", paste(colnames(Y_nonTest[,7:12]), collapse = " + ")))
+
+# Make data matrix
+
+# Scale data matrix
+#dataMatrix_scaled <- t((X_nonTest_varM - rowMeans(X_nonTest_varM))/(apply(X_nonTest_varM,1,sd)))
+dataMatrix <- cbind(t(X_nonTest_varM),Y_nonTest[,7:12])
+model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+
+fittedValues <- fitted(model)
+residualValues <- residuals(model)
+
+sse <- colSums(residualValues^2)
+ssr <- colSums(fittedValues^2)
+
+Rsquared <- ssr/(ssr + sse)
+
+cellFeatures <- names(Rsquared)[Rsquared > 0.9]
+
+X_nonTest_cell <- X_nonTest_varM[setdiff(cellFeatures, probe_annotation$ID[probe_annotation$Chr == "chrX"]),]
+
+p_cellType <- ggplot() +
+  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
+             color = "lightgrey", alpha = 0.5) +
+  geom_point(data = plot_all[plot_all$ID %in% cellFeatures,], aes(x = meanBeta, y = sdBeta, color ='"Cell Type"-probes'), 
+             color = RColorBrewer::brewer.pal(6, "Dark2")[6], alpha = 0.5) +
+  xlim(c(0,1)) +
+  ylim(c(0,0.5)) +
+  xlab("Mean of \u03b2-values") +
+  ylab("Standard Deviation of \u03b2-values") +
+  ggtitle('"Cell Type"-probes') +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10),
+        legend.position = "none",
+        legend.title = element_text())
+
+ggsave(p_cellType, file = "MeanVsSD_cellType.png", width = 8, height = 6)
 
 #*****************************************************************************#
 # Venn Diagram
@@ -369,7 +501,7 @@ for (f in files){
 #*****************************************************************************#
 
 # Perform PCA
-pcaList_var <-  prcomp(t(X_nonTest_var),        
+pcaList_var <-  prcomp(t(X_nonTest_cell),        
                    retx = TRUE,
                    center =TRUE,
                    scale = TRUE,
@@ -384,7 +516,7 @@ PCAscores_var$ID <- rownames(PCAscores_var)
 PCAscores_var <- inner_join(PCAscores_var, dat, by = c("ID" = "Basename"))
 
 # Combine with cell type composition
-PCAscores_varM<- inner_join(PCAscores_var,cellType, by = c("ID" = "ID"))
+PCAscores_var<- inner_join(PCAscores_var,cellType, by = c("ID" = "ID"))
 
 # Get explained variance
 explVar_var <- round(((pcaList_var$sdev^2)/sum(pcaList_var$sdev^2))*100,1)
@@ -428,7 +560,7 @@ PCs <- PCAscores_var[,1:5]
 colnames(PCs) <- paste0(colnames(PCs), " (", explVar_var[1:5], "%)")
 meta <- PCAscores_var[,c("Age", "Sex", colnames(cellType))]
 meta <- meta[,-c(9,10)]
-meta$Sex <- ifelse(meta$Sex == "Male", 1,2)
+#meta$Sex <- ifelse(meta$Sex == "Male", 1,2)
 colnames(meta) <- c("Age", "Sex", "CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", "Monocytes",
                     "Neutrophils")
 

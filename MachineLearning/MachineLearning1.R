@@ -233,6 +233,32 @@ ObsVsPred <- ggplot(ObsPred_CV) +
 
 ggsave(ObsVsPred, file = paste0(Score, "_", FeatureSelection, "_ObsVsPred.png"), width = 8, height = 6)
 
+ObsPred_CV$Class <- rep("Intermediate Risk (4-7)",nrow(ObsPred_CV))
+ObsPred_CV$Class[ObsPred_CV$Observed <= 3] <- "Low Risk (0-3)"
+ObsPred_CV$Class[ObsPred_CV$Observed >= 8] <- "High Risk (8-14)"
+ObsPred_CV$Class <- factor(ObsPred_CV$Class, levels = c("Low Risk (0-3)", 
+                                                        "Intermediate Risk (4-7)",
+                                                        "High Risk (8-14)"))
+
+ObsVsPred_box <- ggplot(ObsPred_CV) +
+  geom_jitter(aes(x = Class, y = Predicted, color = Class), alpha = 0.3) +
+  geom_boxplot(aes(x = Class, y = Predicted, fill = Class), alpha = 0.5) +
+  xlab(NULL) +
+  ylab("Predicted CAIDE1 Score") +
+  ggtitle(Score, subtitle = "No Feature Selection") +
+  scale_fill_brewer(palette = "Reds") +
+  scale_color_brewer(palette = "Reds") +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic")) 
+
+ggsave(ObsVsPred_box, file = paste0(Score, "_", FeatureSelection, "_ObsVsPred_box.png"), width = 8, height = 6)
+
 
 R2(ObsPred_CV$Predicted, ObsPred_CV$Observed)
 
@@ -292,6 +318,172 @@ ggsave(p, file = paste0(Score, "_", FeatureSelection, "_coefPlot.png"), width = 
 
 
 
+
+#*****************************************************************************#
+# PCA on selected features
+#*****************************************************************************#
+load("X_coefs.RData")
+
+# Perform PCA
+pcaList <-  prcomp(t(X_coefs),        
+                   retx = TRUE,
+                   center =TRUE,
+                   scale = TRUE,
+                   rank. = 10)
+
+# Save pcaList object
+#save(pcaList, file = "pcaList_S.RData")
+#load("pcaList_S.RData")
+
+# Get PCA scores
+PCAscores <- as.data.frame(pcaList$x)
+PCAscores$ID <- rownames(PCAscores)
+
+# Combine with sample info
+PCAscores <- inner_join(PCAscores, dat, by = c("ID" = "Basename"))
+
+# Combine with cell type composition
+PCAscores <- inner_join(PCAscores,cellType, by = c("ID" = "ID"))
+
+# Combine with cAIDE
+load("E:/Thesis/EXTEND/Phenotypes/CAIDE.Rdata")
+PCAscores <- inner_join(PCAscores,CAIDE, by = c("ID" = "Basename"))
+
+# Get explained variance
+explVar <- round(((pcaList$sdev^2)/sum(pcaList$sdev^2))*100,2)
+
+
+
+p_12 <- ggplot(data = PCAscores, aes(x = PC1, y = PC2)) +
+  geom_point(alpha = 0.9, size = 2, aes(color = Age.x)) +
+  xlab(paste0("PC1 (", explVar[1],"%)")) +
+  ylab(paste0("PC2 (", explVar[2],"%)")) +
+  labs(color = "CD8 T-cells") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10),
+        legend.position = "bottom",
+        legend.title = element_text()) +
+  scale_color_viridis_c()
+
+
+
+# Get Principal Components
+PCs <- PCAscores[,1:5]
+colnames(PCs) <- paste0(colnames(PCs), " (", explVar[1:5], "%)")
+
+# Get sample information
+meta_cell <- PCAscores[,colnames(cellType)[-c(7,8)]]
+meta_caide <- PCAscores[,176:183]
+
+colnames(meta_cell) <- c("CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", "Monocytes",
+                    "Neutrophils")
+
+colnames(meta_caide) <- c("Age", "Sex", "Education", "Blood Pressure", "BMI",
+                         "Serum HDL", "Physical Activity", "CAIDE1")
+
+meta <- cbind.data.frame(meta_caide, meta_cell)
+
+# Get correlations
+corDF <- expand.grid(colnames(PCs), colnames(meta))
+colnames(corDF) <- c("PCs", "Meta")
+corDF$Correlation <- rep(NA, nrow(corDF))
+for (i in 1:nrow(corDF)){
+  corDF$Correlation[i] <- cor(PCs[,corDF$PCs[i]], meta[,corDF$Meta[i]], method = "spearman")
+}
+
+corDF$Class <- ifelse(corDF$Meta %in% colnames(meta_cell), "Cell Types", "CAIDE1 Factors")
+
+# Make plot
+p <- ggplot() +
+  geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
+  facet_grid(rows =  vars(Class), scales = "free", space = "free") +
+  labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
+  guides(size = "none") +
+  ggtitle("Features in Final Model") +
+  scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+                        limits = c(-1,1)) +
+  scale_size_continuous(limits = c(0,1)) +
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10),
+        strip.background = element_rect(
+          color="black", fill="#1B9E77", linewidth = 1.5, linetype="solid"
+        ))
+
+ggsave(p,file = "correlationPlot_coefsModel.png", width = 8, height = 6)
+
+
+#*****************************************************************************#
+# Multiple regression
+#*****************************************************************************#
+# Multiple regression
+X_CAIDE1_coefs <- X_coefs[,Y_CAIDE1$Basename] 
+features <- rownames(X_CAIDE1_coefs)
+cellType_coefs <- cellType[colnames(X_CAIDE1_coefs),]
+formula <- paste0("cbind(",paste(features, collapse = ", "),") ~ ", 
+                  paste0("0 + ", paste(colnames(cellType_coefs[,1:6]), collapse = " + ")))
+
+# Add factors
+X_coefs_scaled <- (X_CAIDE1_coefs - rowMeans(X_CAIDE1_coefs))/(apply(X_CAIDE1_coefs, 1,sd))
+dataMatrix <- cbind(t(X_coefs_scaled),cellType_coefs[,1:6])
+
+# Fit model
+model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+coeff <- coef(model)
+
+fittedValues <- fitted(model)
+residualValues <- residuals(model)
+
+sse <- colSums(residualValues^2)
+ssr <- colSums(fittedValues^2)
+
+plotDF <- data.frame(Rsquared = ssr/(ssr + sse),
+                     Probe = names(ssr))
+
+ggplot(plotDF) +
+  geom_histogram(aes(x = Rsquared), color = "white", bins = 20) +
+  xlab(expression(R^2))+
+  ylab("Count") +
+  theme_classic()
+
+
+
+
+# Multiple regression  (CAIDE factors)
+X_CAIDE1_coefs <- X_coefs[,Y_CAIDE1$Basename] 
+features <- rownames(X_CAIDE1_coefs)
+formula <- paste0("cbind(",paste(features, collapse = ", "),") ~ ", 
+                  paste0("0 + ", paste(colnames(Y_CAIDE1[,14:20]), collapse = " + ")))
+
+# Add factors
+X_coefs_scaled <- (X_CAIDE1_coefs - rowMeans(X_CAIDE1_coefs))/(apply(X_CAIDE1_coefs, 1,sd))
+dataMatrix <- cbind(t(X_coefs_scaled),Y_CAIDE1[,14:20])
+
+# Fit model
+model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+
+fittedValues <- fitted(model)
+residualValues <- residuals(model)
+
+sse <- colSums(residualValues^2)
+ssr <- colSums(fittedValues^2)
+
+plotDF <- data.frame(Rsquared = ssr/(ssr + sse),
+                     Probe = names(ssr))
+
+ggplot(plotDF) +
+  geom_histogram(aes(x = Rsquared), color = "white", bins = 20) +
+  xlab(expression(R^2))+
+  ylab("Count") +
+  theme_classic()
 #*****************************************************************************#
 # Performance in CV
 #*****************************************************************************#
