@@ -436,3 +436,60 @@ p_coefs <- ggplot() +
 # Save plot
 ggsave(p_coefs, file = "MeanVsSD_coefs.png", width = 8, height = 6)
 
+
+
+
+################################################################################
+
+# Compare performances of feature selection approaches
+
+################################################################################
+
+
+# Score and feature selection method
+Score = "CAIDE1"
+methods = c("S", "var", "varM", "Non", "KS")
+
+# Retrieve performance in CV for the different feature selection methods
+Performances <- list()
+for (i in 1:length(methods)){
+  
+  # load output
+  load(paste0("CV_", Score, "_", methods[i],".RData"))
+  
+  # Put performance into list
+  Performances[[i]] <- perf
+}
+names(Performances) <- methods
+
+# Combine into single data frame
+performanceDF <- data.frame(
+  RMSE = unlist(Performances),
+  FeatureSelection = c(rep("S-score-based Feature Selection", 25),
+                       rep("Variance (\u03b2)-based Feature Selection", 25),
+                       rep("Variance (M)-based Feature Selection", 25),
+                       rep("No Feature Selection", 25),
+                       rep("Kennard-Stone-like Feature Selection", 25)),
+)
+
+# Make plot
+p <- ggplot(performanceDF) +
+  geom_boxplot(aes(x = FeatureSelection, y = RMSE, fill = FeatureSelection), alpha = 0.3) +
+  geom_point(aes(x = FeatureSelection, y = RMSE, color = FeatureSelection), 
+             position=position_jitterdodge(jitter.width = 0.2), size = 2) +
+  xlab("Feature Selection Method") +
+  ggtitle(Score) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic"))
+
+ggsave(ObsVsPred, file = paste0(Score, "_RMSE_boxplot.png"), width = 8, height = 6)
+
