@@ -1,6 +1,11 @@
+# Load packages
 library(doParallel)
 library(foreach)
 library(ggvenn)
+library(glmnet)
+library(caret)
+
+# Load machine learning functions
 source("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA/MachineLearning/FUN_MachineLearning.R")
 
 # Set working directory
@@ -9,44 +14,85 @@ setwd("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA")
 # Load normalized training data
 load("E:/Thesis/MLData/mydat1.RData")
 load("E:/Thesis/MLData/pheno.RData")
-
 dataMatrix <- unique(mydat1)
-#*****************************************************************************#
-# Select most variable features
-#*****************************************************************************#
 
+###############################################################################
+
+# Most variable features (Beta-values)
+
+###############################################################################
+
+# Calculate variance
 cpg_var <- apply(dataMatrix, 1, var)
+
+# Get 10,000 probes with highest variance
 cpg_selected_var <- names(tail(sort(cpg_var), 10000))
 
+# Select the probes in the data matrix
 dataMatrix_var <- dataMatrix[cpg_selected_var, ]
-save(dataMatrix_var, file = "dataMatrix_var_CAIDE1.RData")
 
-#*****************************************************************************#
-# Select most variable features
-#*****************************************************************************#
+# Save output
+save(dataMatrix_var, file = "dataMatrix_var.RData")
 
+###############################################################################
+
+# Most variable features (M-values)
+
+###############################################################################
+
+# Calculate variance
+cpg_varM <- apply(dataMatrix_M, 1, var)
+
+# Get 10,000 probes with highest variance
+cpg_selected_varM <- names(tail(sort(cpg_varM), 10000))
+
+# Select the probes in the data matrix
+dataMatrix_varM <- dataMatrix[cpg_selected_varM, ]
+
+# Save output
+save(dataMatrix_varM, file = "dataMatrix_var.RData")
+
+
+###############################################################################
+
+# Features with highest S-score
+
+###############################################################################
+
+# Function of S-score
 calculate_S <- function(x){
   S = abs(mean(x)- 0.5)/var(x)
 }
 
+# Calculate S-score
 cpg_S <- apply(dataMatrix, 1, calculate_S)
-cpg_selected_S <- names(tail(sort(cpg_S),5000))
 
-length(intersect(cpg_selected_var, cpg_selected_S))
+# Get 10,000 probes with highest S-score
+cpg_selected_S <- names(tail(sort(cpg_S),10000))
 
-#*****************************************************************************#
-# Kennard-Stone-like feature selection
-#*****************************************************************************#
 
-# Convert to M-values
+###############################################################################
+
+# Kennard-Stone algorithm
+
+###############################################################################
+
+# Convert beta-values to M-values
 dataMatrix_fil <- dataMatrix[rowSums((dataMatrix > 0) & (dataMatrix < 1)) == ncol(dataMatrix), ]
 dataMatrix_M <- log2(dataMatrix_fil/(1 - dataMatrix_fil))
 
 # Get groups: for each of these groups were are going the select the
 # most representative features
+
+# Load annotation data
 load("E:/Thesis/MLData/probe_annotation.RData")
+
+# Location with respect to CpG islands
 probe_annotation$Relation_to_Island[(probe_annotation$Relation_to_Island != "Island") &
                                       (probe_annotation$Relation_to_Island != "OpenSea")] <- "ShelforShore"
+
+# 18 groups based on location with respect to genes, location with respect to
+# CpG islands, and probe type
 Group <- data.frame(CpG = probe_annotation$ID,
                     Group = paste(probe_annotation$Class,
                                   probe_annotation$Relation_to_Island, 
@@ -54,7 +100,8 @@ Group <- data.frame(CpG = probe_annotation$ID,
 
 Group <- Group[Group$CpG %in% rownames(dataMatrix_M),]
 
-# Number of features to select from each group
+# Calculate the number of features to select from each group
+# The larger the group, the more features to select
 n <- 5000
 uniqueGroups <- unique(Group$Group)
 nFeatures <- rep(NA, length(uniqueGroups))
@@ -102,258 +149,88 @@ t_end <- Sys.time()
 t_end-t_start
 
 
-#*****************************************************************************#
-# Compare methods
-#*****************************************************************************#
+###############################################################################
 
-# Get selection probes from KS algortihm
-cpg_selected_KS <- unlist(output)
+# Unsupervised LASSO
 
-# Combine probes
-probeList <- list(Var = cpg_selected_var,
-                  S = cpg_selected_S,
-                  KS = cpg_selected_KS)
+###############################################################################
 
-# Save object
-save(probeList, file = "probeList.RData")
+# Convert beta-values to M-values
+dataMatrix_fil <- dataMatrix[rowSums((dataMatrix > 0) & (dataMatrix < 1)) == ncol(dataMatrix), ]
+dataMatrix_M <- log2(dataMatrix_fil/(1 - dataMatrix_fil))
 
-# Make venn diagram
-p <- ggvenn(probeList, show_percentage = FALSE)
+# Scale the data
+dataMatrix_scaled <- (dataMatrix_M - rowMeans(dataMatrix_M))/(apply(dataMatrix_M, 1, sd))
 
-# Save plot
-ggsave(p, file = "vennDiagram.png")
+# Perform permutation
+switch <- function(x) {sample(x, length(x), replace = FALSE)}
+dataMatrix_perm <- t(apply(dataMatrix_scaled,1,switch))
+dataMatrix_perm <- apply(dataMatrix_perm,2,switch)
+dataMatrix_all <- cbind(dataMatrix_scaled, dataMatrix_perm)
 
 
-load("probeList.RData")
+# Settings for repeated cross-validation
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 5, 
+                           repeats = 5, 
+                           search = "grid", 
+                           savePredictions = FALSE)
 
+# Set grid for lambda (2.5 for CAIDE)
+lambdaCV <- exp(seq(log(0.001),log(1),length.out = 50))
 
-formula <- paste0("cbind(",paste(rownames(dataMatrix), collapse = ", "),") ~ ", paste(probeList$KS, collapse = " + "))
-model <- lm(as.formula(formula), data = as.data.frame(t(dataMatrix)))
-fittedValues <- fitted(model)
-residualValues <- residuals(model)
+# Set grid for alpha
+alphaCV <- 1
 
-ssr <- sum(colSums(residualValues^2))
-sse <- sum(colSums(fittedValues^2))
+# Combine into a single data frame
+parameterGrid <- expand.grid(alphaCV, lambdaCV)
+colnames(parameterGrid) <- c(".alpha", ".lambda")
 
+# Use MSE as performance metric
+performance_metric = "Accuracy"
+MLmethod = "glmnet"
 
-formula <- paste0("cbind(",paste(rownames(dataMatrix), collapse = ", "),") ~ 0 +", paste(probeList$S[1:3], collapse = " + "))
-model <- lm(as.formula(formula), data = as.data.frame(t(dataMatrix)))
-fittedValues <- fitted(model)
-residualValues <- residuals(model)
+# Register cores for parallel computing
+#detectCores()
+#nCores <- 3
+#cl <- makeCluster(nCores)
+#registerDoParallel(cl)
 
-ssr <- sum(colSums(residualValues^2))
-sse <- sum(colSums(fittedValues^2))
+# Actual training
+set.seed(123)
+fit <- train(x = t(dataMatrix_all), 
+             y = factor(c(rep("Normal", ncol(dataMatrix_scaled)), 
+                          rep("Permuted", ncol(dataMatrix_perm)))), 
+             metric= performance_metric,
+             method = MLmethod,
+             tuneGrid = parameterGrid,
+             trControl = fitControl,
+             maximize = TRUE)
 
+# Stop clusters
+#stopCluster(cl)
 
-(sse)/(ssr + sse)
+test <- as.matrix(coef(fit$finalModel))
+coeffs <- test[-1, which.min(abs(colSums(test != 0) - 10000))]
+probes <- coeffs[coeffs != 0]
 
-
-
+# Get results
+trainResults <- fit$results
 
+# Get optimal lambda and alpha
+optAlpha <- fit$bestTune$alpha
+optLambda <- fit$bestTune$lambda
 
-# For each parameter combination....
-output <- foreach(i =  1:length(uniqueGroups), .inorder = FALSE) %dopar% {
-  
-  # Filter data for Group
-  dataMatrix_copy_fil <- dataMatrix_copy[rownames(dataMatrix_copy) %in% Group$CpG[Group$Group == uniqueGroups[i]],]   
-  
-  # Seed probe
-  cpg_var <- apply(dataMatrix_copy_fil, 1, var)
-  seedProbe <- names(cpg_var)[which.max(cpg_var)]
-  
-  # Make matrix to save correlations
-  cor_matrix <- matrix(NA, nrow(dataMatrix_copy_fil), nFeatures[i]-1)
-  rownames(cor_matrix) <- rownames(dataMatrix_copy_fil)
-  
-  # Make vector to save feature set
-  newProbe <- rep(NA, nFeatures[i])
-  newProbe[1] <- seedProbe
-  
-  # Start selecting features
-  for (j in 1:(nFeatures[i] - 1)){
-    # Calculate correlations between seed probe and all other probes
-    cor_matrix[,j] <- apply(dataMatrix_copy_fil,1,function(x){cor(x,dataMatrix_copy_fil[newProbe[j],])})
-    
-    # Add most uncorrelated probe to feature set
-    newProbe[j+1] <- rownames(cor_matrix)[which.min(abs(cor_matrix[,j]))]
-    
-    # Remove all highly correlated probes: keep probes with cor < 0.9
-    cor_matrix <- cor_matrix[abs(cor_matrix[,j]) < 0.5,]
-    dataMatrix_copy_fil <- dataMatrix_copy_fil[rownames(cor_matrix),]
-  }
-  return(newProbe)
-}
-#Stop clusters
-stopCluster(cl)
+finalModel <- glmnet(x = t(dataMatrix_all), 
+                      y = factor(c(rep("Normal", ncol(dataMatrix_scaled)), 
+                                   rep("Permuted", ncol(dataMatrix_perm)))), 
+                      family = "binomial",
+                      alpha = optAlpha, 
+                      lambda = optLambda,
+                      standardize = TRUE)
 
-# Record end time
-t_end <- Sys.time()
+test <- as.matrix(coef(finalModel))
 
-# Give run time
-t_end-t_start
 
 
 
-selectionKS <- function(dataMatrix, n = 5000, Group = NULL, nCores = 3){
-  
-}
-
-cpg_selected_KS <- unlist(output)
-
-probeList <- list(Var = cpg_selected_var,
-                  S = cpg_selected_S,
-                  KS = cpg_selected_KS)
-
-
-p <- ggvenn(probeList)
-ggsave(p, file = "vennDiagram.png")
-
-save(probeList, file = "probeList.RData")
-
-
-
-
-
-
-for (i in 1:length(uniqueGroups)) {
- 
-  # Filter data for Group
-  dataMatrix_copy_fil <- dataMatrix_copy[rownames(dataMatrix_copy) %in% Group$CpG[Group$Group == uniqueGroups[i]],]   
-  
-  # Seed probe
-  cpg_var <- apply(dataMatrix_copy_fil, 1, var)
-  seedProbe <- names(cpg_var)[which.max(cpg_var)]
-  
-  # Make matrix to save correlations
-  cor_matrix <- matrix(NA, nrow(dataMatrix_copy_fil), nFeatures[i]-1)
-  rownames(cor_matrix) <- rownames(dataMatrix_copy_fil)
-  
-  # Make vector to save feature set
-  newProbe <- rep(NA, nFeatures[i])
-  newProbe[1] <- seedProbe
-  
-  # Start selecting features
-  for (j in 1:(nFeatures[i] - 1)){
-    # Calculate correlations between seed probe and all other probes
-    cor_matrix[,j] <- apply(dataMatrix_copy_fil,1,function(x){cor(x,dataMatrix_copy_fil[newProbe[j],])})
-    
-    # Add most uncorrelated probe to feature set
-    newProbe[j+1] <- rownames(cor_matrix)[which.min(abs(cor_matrix[,j]))]
-    
-    # Remove all highly correlated probes: keep probes with cor < 0.9
-    cor_matrix <- cor_matrix[abs(cor_matrix[,j]) < 0.5,]
-    dataMatrix_copy_fil <- dataMatrix_copy_fil[rownames(cor_matrix),]
-  }
-  selectedProbes[[uniqueGroups[i]]] <- newProbe
-}
-# Record end time
-t_end <- Sys.time()
-
-# Give run time
-t_end-t_start
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Make copy of data
-dataMatrix_copy <- dataMatrix_M
-
-# Make matrix to save correlations
-cor_matrix <- matrix(NA, nrow(mydat_M), nFeatures-1)
-rownames(cor_matrix) <- rownames(mydat_M)
-
-# Make vector to save feature set
-newProbe <- rep(NA, nFeatures)
-newProbe[1] <- seedProbe
-
-# Record start time
-t_start <- Sys.time()
-
-# Start selecting features
-for (i in 1:(nFeatures - 1)){
-  # Calculate correlations between seed probe and all other probes
-  cor_matrix[,i] <- apply(mydat_copy,1,function(x){cor(x,mydat_copy[newProbe[i],])})
-  
-  # Add most uncorrelated probe to feature set
-  newProbe[i+1] <- rownames(cor_matrix)[which.min(abs(cor_matrix[,i]))]
-  
-  # Remove all highly correlated probes: keep probes with cor < 0.9
-  cor_matrix <- cor_matrix[abs(cor_matrix[,i]) < 0.5,]
-  mydat_copy <- mydat_copy[rownames(cor_matrix),]
-}
-# Record end time
-t_end <- Sys.time()
-
-# Give run time
-t_end-t_start
-
-
-
-
-
-#*****************************************************************************#
-# Probe annotation
-#*****************************************************************************#
-
-# Get annotation
-#BiocManager::install("IlluminaHumanMethylationEPICanno.ilm10b4.hg19")
-library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
-ann <- minfi::getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
-
-annList <- ann@listData
-
-probe_annotation <- data.frame(
-  ID = annList$Name,
-  Chr = annList$chr,
-  Position = annList$pos,
-  Strand = annList$strand,
-  Type = annList$Type,
-  CpG_MAF = annList$CpG_maf,
-  Relation_to_Island = annList$Relation_to_Island,
-  Gene_Name = annList$UCSC_RefGene_Name,
-  Gene_ID = annList$UCSC_RefGene_Accession,
-  Gene_Group = annList$UCSC_RefGene_Group,
-  Regulatory_Group = annList$Regulatory_Feature_Group
-)
-
-save(probe_annotation,file = "E:/Thesis/MLData/probe_annotation.RData")
-
-
-
-
-
-# load annotation
-load("E:/Thesis/MLData/probe_annotation.RData")
-library(tidyverse)
-unique(probe_annotation$Regulatory_Group)
-
-
-
-body <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "Body")]
-tss200 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "TSS200")]
-tss1500 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "TSS1500")]
-utr5 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "5'UTR")]
-utr3 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "3'UTR")]
-exon1 <- probe_annotation$ID[str_detect(probe_annotation$Gene_Group, "1stExon")]
-
-promotor <- unique(c(tss200,tss1500))
-geneBody <- setdiff(unique(c(utr5,exon1, body, utr3)),promotor)
-interGenic <- setdiff(probe_annotation$ID, unique(c(promotor, geneBody)))
-
-probe_annotation$Class <- NA
-probe_annotation$Class[probe_annotation$ID %in% promotor] <- "Promotor"
-probe_annotation$Class[probe_annotation$ID %in% geneBody] <- "Gene Body"
-probe_annotation$Class[probe_annotation$ID %in% interGenic] <- "Intergenic"
-
-save(probe_annotation,file = "E:/Thesis/MLData/probe_annotation.RData")

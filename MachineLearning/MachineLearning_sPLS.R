@@ -55,7 +55,7 @@ Score = "CAIDE1"
 FeatureSelection = "var"
 
 # Prepare data (M-values)
-X_train = log2(X_CAIDE1_var/(1-X_CAIDE1_var))
+X_train = log2(X_CAIDE1_var[1:100,]/(1-X_CAIDE1_var[1:100,]))
 Y_train = Y_CAIDE1$CAIDE
 
 # Test if samples are in correct order
@@ -63,7 +63,7 @@ all(colnames(X_train) == Y_CAIDE1$Basename)
 
 # Set number of folds and repeats
 nfold = 5
-nrep = 5
+nrep = 1
 
 #=============================================================================#
 
@@ -72,18 +72,20 @@ fitControl <- trainControl(method = "repeatedcv",
                            number = nfold, 
                            repeats = nrep, 
                            search = "grid", 
-                           savePredictions = TRUE,
+                           savePredictions = FALSE,
                            summaryFunction = regressionSummary)
 
-# Set grid for lambda (2.5 for CAIDE)
-lambdaCV <- exp(seq(log(0.01),log(2.5),length.out = 100))
+# Number of component
+K_CV <- 1:10
 
-# Set grid for alpha
-alphaCV <- seq(0.1,1,length.out = 10)
+# thresholding parameter
+eta_CV <- seq(0.1,0.9,length.out = 10)
+
+kappa_CV = 0.5
 
 # Combine into a single data frame
-parameterGrid <- expand.grid(alphaCV, lambdaCV)
-colnames(parameterGrid) <- c(".alpha", ".lambda")
+parameterGrid <- expand.grid(K_CV, eta_CV, kappa_CV)
+colnames(parameterGrid) <- c(".K", ".eta", ".kappa")
 
 # Use MSE as performance metric
 performance_metric = "RMSE"
@@ -95,15 +97,19 @@ MLmethod = "spls"
 #cl <- makeCluster(nCores)
 #registerDoParallel(cl)
 
+# Perform scaling before!!!!
 # Actual training
 set.seed(123)
+
 fit <- train(x = t(X_train),
              y = Y_train,
              metric= performance_metric,
              method = MLmethod,
+             tuneGrid = parameterGrid,
              trControl = fitControl,
              maximize = FALSE)
 
+varImp(fit, scale = FALSE)
 # Stop clusters
 #stopCluster(cl)
 

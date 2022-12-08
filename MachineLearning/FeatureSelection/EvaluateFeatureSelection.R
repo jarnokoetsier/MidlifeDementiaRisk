@@ -1,100 +1,81 @@
+# Clear workspace and console
+rm(list = ls())
+cat("\014") 
+
+# Load packages
+library(tidyverse)
+
 # Set working directory
 setwd("E:/Thesis/EXTEND/Methylation")
 
-# Load data
+# Cell type composition data
 load("cellType.RData")
+
+# Phenotype data
 load("E:/Thesis/EXTEND/Phenotypes/metaData_ageFil.RData")
+
+# Meta data
 files <- list.files('Y')
 for (f in files){
   load(paste0("Y/",f))
 }
 
-# Load S-scored data
-files <- list.files('X_S')
+# Feature selection data
+FeatureSelection = "S"
+files <- list.files(paste0("X", FeatureSelection))
 for (f in files){
-  load(paste0("X_S/",f))
-}
-# Load var data
-files <- list.files('X_var')
-for (f in files){
-  load(paste0("X_var/",f))
+  load(paste0("X", FeatureSelection, "/",f))
 }
 
-# Load varM data
-files <- list.files('X_varM')
-for (f in files){
-  load(paste0("X_varM/",f))
+
+# Make subtitle of figure
+if (FeatureSelection == "Non"){
+  subtitle = "No Feature Selection"
 }
-
-# Load packages
-library(tidyverse)
-
+if (FeatureSelection == "var"){
+  subtitle = "Variance (\u03b2)-based Feature Selection"
+}
+if (FeatureSelection == "varM"){
+  subtitle = "Variance (M)-based Feature Selection"
+}
+if (FeatureSelection == "S"){
+  subtitle = "S-score-based Feature Selection"
+}
 
 ###############################################################################
 
-# 1. All scores
+# 1. Mean Beta-value vs SD Beta-value
 
 ###############################################################################
-
-#*****************************************************************************#
-# Beta vs sd
-#*****************************************************************************#
 
 # Load all beta/M and their sd
 load("plot_all.RData")
-
-# Load betas of probes in final model
-load("X_coefs.RData")
-
-Mvalues_S <- log2(X_nonTest_S/(1 - X_nonTest_S))
-Mvalues_var <- log2(X_nonTest_var/(1 - X_nonTest_var))
-Mvalues_varM <- log2(X_nonTest_varM/(1 - X_nonTest_varM))
-Mvalues_coefs <- log2(X_coefs/(1 - X_coefs))
-
-plot_S <- data.frame(
-  ID = rownames(X_nonTest_S),
-  meanBeta = rowMeans(X_nonTest_S),
-  sdBeta = apply(X_nonTest_S, 1, sd),
-  meanM  = rowMeans(Mvalues_S),
-  sdM = apply(Mvalues_S, 1, sd)
-)
-
-plotVar <- data.frame(
-  ID = rownames(X_nonTest_var),
-  meanBeta = rowMeans(X_nonTest_var),
-  sdBeta = apply(X_nonTest_var, 1, sd),
-  meanM  = rowMeans(Mvalues_var),
-  sdM = apply(Mvalues_var, 1, sd)
-)
-
-plotVarM <- data.frame(
-  ID = rownames(X_nonTest_varM),
-  meanBeta = rowMeans(X_nonTest_varM),
-  sdBeta = apply(X_nonTest_varM, 1, sd),
-  meanM  = rowMeans(Mvalues_varM),
-  sdM = apply(Mvalues_varM, 1, sd)
-)
-
-plotCoefs <- data.frame(
-  ID = rownames(X_coefs),
-  meanBeta = rowMeans(X_coefs),
-  sdBeta = apply(X_coefs, 1, sd),
-  meanM  = rowMeans(Mvalues_coefs),
-  sdM = apply(Mvalues_coefs, 1, sd)
-)
-
 plot_all$ID <- rownames(plot_all)
 
-p_S <- ggplot() +
+# Get beta- and M-values
+Bvalues <- X_nonTest_S
+Mvalues <- log2(Bvalues/(1 - Bvalues))
+
+# Format data
+plotDF <- data.frame(
+  ID = rownames(Bvalues),
+  meanBeta = rowMeans(Bvalues),
+  sdBeta = apply(Bvalues, 1, sd),
+  meanM  = rowMeans(Mvalues),
+  sdM = apply(Mvalues, 1, sd)
+)
+
+# Make plot
+p <- ggplot() +
   geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
              color = "lightgrey", alpha = 0.5) +
-  geom_point(data = plot_S, aes(x = meanBeta, y = sdBeta), 
+  geom_point(data = plotDF, aes(x = meanBeta, y = sdBeta), 
              color = RColorBrewer::brewer.pal(3, "Dark2")[1], alpha = 0.5) +
   xlim(c(0,1)) +
   ylim(c(0,0.5)) +
   xlab("Mean of \u03b2-values") +
   ylab("Standard Deviation of \u03b2-values") +
-  ggtitle("S-score-based Feature Selection") +
+  ggtitle(subtitle) +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
@@ -104,76 +85,11 @@ p_S <- ggplot() +
         legend.position = "none",
         legend.title = element_text())
 
-ggsave(p_S, file = "MeanVsSD_S.png", width = 8, height = 6)
+# Save plot
+ggsave(p, file = paste0("MeanVsSD_", FeatureSelection, ".png"), width = 8, height = 6)
 
 
-p_Var <- ggplot() +
-  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
-             color = "lightgrey", alpha = 0.5) +
-  geom_point(data = plotVar, aes(x = meanBeta, y = sdBeta), 
-             color = RColorBrewer::brewer.pal(3, "Dark2")[2], alpha = 0.5) +
-  xlim(c(0,1)) +
-  ylim(c(0,0.5)) +
-  xlab("Mean of \u03b2-values") +
-  ylab("Standard Deviation of \u03b2-values") +
-  ggtitle("Variance (\u03b2)-based Feature Selection") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "none",
-        legend.title = element_text())
-
-ggsave(p_Var, file = "MeanVsSD_var.png", width = 8, height = 6)
-
-
-p_coefs <- ggplot() +
-  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
-             color = "lightgrey", alpha = 0.5) +
-  geom_point(data = plotCoefs, aes(x = meanBeta, y = sdBeta), 
-             color = RColorBrewer::brewer.pal(4, "Dark2")[4], alpha = 0.5) +
-  xlim(c(0,1)) +
-  ylim(c(0,0.5)) +
-  xlab("Mean of \u03b2-values") +
-  ylab("Standard Deviation of \u03b2-values") +
-  ggtitle("Features in Final Model") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "none",
-        legend.title = element_text())
-  
-ggsave(p_coefs, file = "MeanVsSD_coefs.png", width = 8, height = 6)
-
-
-p_VarM <- ggplot() +
-  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
-             color = "lightgrey", alpha = 0.5) +
-  geom_point(data = plotVarM, aes(x = meanBeta, y = sdBeta), 
-             color = RColorBrewer::brewer.pal(3, "Dark2")[3], alpha = 0.5) +
-  xlim(c(0,1)) +
-  ylim(c(0,0.5)) +
-  xlab("Mean of \u03b2-values") +
-  ylab("Standard Deviation of \u03b2-values") +
-  ggtitle("Variance (M)-based Feature Selection") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "none",
-        legend.title = element_text())
-
-ggsave(p_VarM, file = "MeanVsSD_varM.png", width = 8, height = 6)
-
-
-
+# Get beta-values mean and SD of specific probe annotation
 load("E:/Thesis/MLData/probe_annotation.RData")
 
 plot_all<- inner_join(plot_all, probe_annotation, by = c("ID" = "ID"))
@@ -198,35 +114,34 @@ p_island <- ggplot() +
 ggsave(p_island, file = "MeanVsSD_island.png", width = 8, height = 6)
 
 
-ggplot() +
-  geom_point(data = plotVarM[plotVarM$Class == "Promotor",], aes(x = meanBeta, y = sdBeta, color = Class), alpha = 0.5) +
-  scale_color_brewer(palette = "Dark2")
-
-p_chrX <- ggplot() +
-  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
-             color = "lightgrey", alpha = 0.5) +
-  geom_point(data = plot_all[plot_all$Chr == "chrX",], aes(x = meanBeta, y = sdBeta, color ="ChrX"), 
-             color = RColorBrewer::brewer.pal(5, "Dark2")[5], alpha = 0.5) +
+p_island <- ggplot() +
+  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta, color = Class), alpha = 0.5) +
+  scale_color_brewer(palette = "Dark2") +
   xlim(c(0,1)) +
   ylim(c(0,0.5)) +
   xlab("Mean of \u03b2-values") +
   ylab("Standard Deviation of \u03b2-values") +
-  ggtitle("X-Chromosomal Probes") +
+  ggtitle("Probe Location") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 14),
         plot.subtitle = element_text(hjust = 0.5,
                                      size = 10),
-        legend.position = "none",
-        legend.title = element_text())
+        legend.position = "right",
+        legend.title = element_blank())
 
-ggsave(p_chrX, file = "MeanVsSD_chrX.png", width = 8, height = 6)
+ggsave(p_island, file = "MeanVsSD_class.png", width = 8, height = 6)
 
 
-#*****************************************************************************#
-# Multiple regression to get cell type probes
-#*****************************************************************************#
+
+###############################################################################
+
+# 2. Multiple regression
+
+###############################################################################
+
+
 features <- rownames(X_nonTest_varM)
 
 formula <- paste0("cbind(",paste(features, collapse = ", "),") ~ ", 
@@ -272,9 +187,14 @@ p_cellType <- ggplot() +
 
 ggsave(p_cellType, file = "MeanVsSD_cellType.png", width = 8, height = 6)
 
-#*****************************************************************************#
-# Venn Diagram
-#*****************************************************************************#
+
+
+###############################################################################
+
+# 3. Venn diagram
+
+###############################################################################
+
 library(ggvenn)
 
 plotList <- list(rownames(X_nonTest_S), 
@@ -287,80 +207,18 @@ p <- ggvenn(plotList, show_percentage = FALSE)
 ggsave(p, file = "FeatureSelectionVenn.png", width = 6, height = 6)
 
 
-# Make PCA on intersection
-intBM <- X_nonTest_var[intersect(rownames(X_nonTest_var), rownames(X_nonTest_varM)),]
-
-pcaList <-  prcomp(t(intBM),        
-                   retx = TRUE,
-                   center =TRUE,
-                   scale = TRUE,
-                   rank. = 10)
-# Get PCA scores
-PCAscores <- as.data.frame(pcaList$x)
-PCAscores$ID <- rownames(PCAscores)
-PCAscores <- inner_join(PCAscores, dat, by = c("ID" = "Basename"))
-
-# Combine with cell type composition
-PCAscores <- inner_join(PCAscores,cellType, by = c("ID" = "ID"))
-
-# Get explained variance
-explVar <- round(((pcaList$sdev^2)/sum(pcaList$sdev^2))*100,2)
-
-PCs <- PCAscores[,1:5]
-colnames(PCs) <- paste0(colnames(PCs), " (", explVar[1:5], "%)")
-meta <- PCAscores[,c("Age", "Sex", colnames(cellType))]
-meta <- meta[,-c(9,10)]
-#meta$Sex <- ifelse(meta$Sex == "Male", 0,1)
-colnames(meta) <- c("Age", "Sex", "CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", "Monocytes",
-                    "Neutrophils")
-
-corDF <- expand.grid(colnames(PCs), colnames(meta))
-colnames(corDF) <- c("PCs", "Meta")
-corDF$Correlation <- rep(NA, nrow(corDF))
-for (i in 1:nrow(corDF)){
-  corDF$Correlation[i] <- cor(PCs[,corDF$PCs[i]], meta[,corDF$Meta[i]], method = "spearman")
-}
-
-p <- ggplot() +
-  geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
-  labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
-  guides(size = "none") +
-  ggtitle("S-score-based Feature Selection") +
-  scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
-                        limits = c(-1,1)) +
-  scale_size_continuous(limits = c(0,1)) +
-  theme_minimal() +
-  theme(axis.title = element_blank(),
-        plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10))
-
-ggsave(p,file = "correlationPlot_S.png", width = 8, height = 6)
-
-
 ###############################################################################
 
-# 2. S-score
+# 4. PCA
 
 ###############################################################################
-
-
-#*****************************************************************************#
-# PCA
-#*****************************************************************************#
 
 # Perform PCA
-pcaList <-  prcomp(t(X_nonTest_S),        
+pcaList <-  prcomp(t(Bvalues),        
                    retx = TRUE,
                    center =TRUE,
                    scale = TRUE,
                    rank. = 10)
-
-# Save pcaList object
-#save(pcaList, file = "pcaList_S.RData")
-#load("pcaList_S.RData")
 
 # Get PCA scores
 PCAscores <- as.data.frame(pcaList$x)
@@ -378,155 +236,7 @@ explVar <- round(((pcaList$sdev^2)/sum(pcaList$sdev^2))*100,2)
 #=============================================================================#
 
 # Make PCA score: PC1 vs PC2
-p_12 <- ggplot(data = PCAscores, aes(x = PC1, y = PC2)) +
-  stat_ellipse(geom = "polygon",
-               fill = "red",
-               type = "norm", 
-               alpha = 0.25,
-               level = 0.95) +
-  stat_ellipse(geom = "polygon",
-               color = "red",
-               alpha = 0,
-               linetype = 2,
-               type = "norm",
-               level = 0.99) +
-  geom_point(alpha = 0.9, size = 2, aes(color = Sex)) +
-  xlab(paste0("PC1 (", explVar[1],"%)")) +
-  ylab(paste0("PC2 (", explVar[2],"%)")) +
-  labs(color = "CD8 T-cells") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "bottom",
-        legend.title = element_text()) +
-  scale_color_viridis_c()
-
-# save plot
-ggsave(p_12, file = "PCAplot_1vs2.png", width = 8, height = 6)
-
-#=============================================================================#
-# PCA correlations
-#=============================================================================#
-
-PCs <- PCAscores[,1:5]
-colnames(PCs) <- paste0(colnames(PCs), " (", explVar[1:5], "%)")
-meta <- PCAscores[,c("Age", "Sex", colnames(cellType))]
-meta <- meta[,-c(9,10)]
-#meta$Sex <- ifelse(meta$Sex == "Male", 0,1)
-colnames(meta) <- c("Age", "Sex", "CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", "Monocytes",
-                    "Neutrophils")
-
-corDF <- expand.grid(colnames(PCs), colnames(meta))
-colnames(corDF) <- c("PCs", "Meta")
-corDF$Correlation <- rep(NA, nrow(corDF))
-for (i in 1:nrow(corDF)){
-  corDF$Correlation[i] <- cor(PCs[,corDF$PCs[i]], meta[,corDF$Meta[i]], method = "spearman")
-}
-
-p <- ggplot() +
-  geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
-  labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
-  guides(size = "none") +
-  ggtitle("S-score-based Feature Selection") +
-  scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
-                        limits = c(-1,1)) +
-  scale_size_continuous(limits = c(0,1)) +
-  theme_minimal() +
-  theme(axis.title = element_blank(),
-        plot.title = element_text(hjust = 0.5,
-                                   face = "bold",
-                                   size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                      size = 10))
-
-ggsave(p,file = "correlationPlot_S.png", width = 8, height = 6)
-
-
-#=============================================================================#
-# PCA correlations with LIBRA and CAIDE
-#=============================================================================#
-
-
-load("E:/Thesis/EXTEND/Phenotypes/EPILIBRA.Rdata")
-load("E:/Thesis/EXTEND/Phenotypes/CAIDE.Rdata")
-
-# Combine with cell type composition
-PCAscores <- inner_join(PCAscores,CAIDE, by = c("ID" = "Basename"))
-
-PCs <- PCAscores[,1:5]
-colnames(PCs) <- paste0(colnames(PCs), " (", explVar[1:5], "%)")
-meta <- PCAscores[,colnames(CAIDE[,10:17])]
-#meta$Sex <- ifelse(meta$Sex == "Male", 0,1)
-
-corDF <- expand.grid(colnames(PCs), colnames(meta))
-colnames(corDF) <- c("PCs", "Meta")
-corDF$Correlation <- rep(NA, nrow(corDF))
-for (i in 1:nrow(corDF)){
-  corDF$Correlation[i] <- cor(PCs[,corDF$PCs[i]], meta[,corDF$Meta[i]], method = "spearman")
-}
-
-p <- ggplot() +
-  geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
-  labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
-  guides(size = "none") +
-  ggtitle("S-score-based Feature Selection") +
-  scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
-                        limits = c(-1,1)) +
-  scale_size_continuous(limits = c(0,1)) +
-  theme_minimal() +
-  theme(axis.title = element_blank(),
-        plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10))
-
-
-###############################################################################
-
-# 3. Variance (beta)
-
-###############################################################################
-
-# Load S-scored data
-files <- list.files('X_var')
-for (f in files){
-  load(paste0("X_var/",f))
-}
-#*****************************************************************************#
-# PCA
-#*****************************************************************************#
-
-# Perform PCA
-pcaList_var <-  prcomp(t(X_nonTest_cell),        
-                   retx = TRUE,
-                   center =TRUE,
-                   scale = TRUE,
-                   rank. = 10)
-
-# Save pcaList object
-#save(pcaList_var, file = "pcaList_var.RData")
-
-# Get PCA scores
-PCAscores_var <- as.data.frame(pcaList_var$x)
-PCAscores_var$ID <- rownames(PCAscores_var)
-PCAscores_var <- inner_join(PCAscores_var, dat, by = c("ID" = "Basename"))
-
-# Combine with cell type composition
-PCAscores_var<- inner_join(PCAscores_var,cellType, by = c("ID" = "ID"))
-
-# Get explained variance
-explVar_var <- round(((pcaList_var$sdev^2)/sum(pcaList_var$sdev^2))*100,1)
-
-#=============================================================================#
-# PCA score plot
-#=============================================================================#
-
-# Make PCA score: PC1 vs PC2
-PCAscores_var$Sex <- ifelse(PCAscores_var$Sex == 1, "Male", "Female")
+PCAscores$Sex <- ifelse(PCAscores$Sex == 1, "Male", "Female")
 p_12 <- ggplot(data = PCAscores_var, aes(x = PC1, y = PC2)) +
   stat_ellipse(geom = "polygon",
                aes(fill = factor(Sex)),
@@ -550,20 +260,24 @@ p_12 <- ggplot(data = PCAscores_var, aes(x = PC1, y = PC2)) +
   scale_fill_brewer(palette = "Set1")
 
 # save plot
-ggsave(p_12, file = "PCAplot_1vs2_var.png", width = 8, height = 6)
+ggsave(p_12, file = paste0("PCAplot_1vs2_", FeatureSelection, ".png"), width = 8, height = 6)
 
 #=============================================================================#
 # PCA correlations
 #=============================================================================#
 
-PCs <- PCAscores_var[,1:5]
-colnames(PCs) <- paste0(colnames(PCs), " (", explVar_var[1:5], "%)")
-meta <- PCAscores_var[,c("Age", "Sex", colnames(cellType))]
+# Get principal components
+PCs <- PCAscores[,1:5]
+colnames(PCs) <- paste0(colnames(PCs), " (", explVar[1:5], "%)")
+
+# Get meta data
+meta <- PCAscores[,c("Age", "Sex", colnames(cellType))]
 meta <- meta[,-c(9,10)]
-#meta$Sex <- ifelse(meta$Sex == "Male", 1,2)
+meta$Sex <- ifelse(meta$Sex == "Male", 0,1)
 colnames(meta) <- c("Age", "Sex", "CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", "Monocytes",
                     "Neutrophils")
 
+# Get correlations
 corDF <- expand.grid(colnames(PCs), colnames(meta))
 colnames(corDF) <- c("PCs", "Meta")
 corDF$Correlation <- rep(NA, nrow(corDF))
@@ -571,11 +285,12 @@ for (i in 1:nrow(corDF)){
   corDF$Correlation[i] <- cor(PCs[,corDF$PCs[i]], meta[,corDF$Meta[i]], method = "spearman")
 }
 
+# Make plot
 p <- ggplot() +
   geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
   labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
   guides(size = "none") +
-  ggtitle("Variance (\u03b2)-based Feature Selection") +
+  ggtitle(subtitle) +
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
@@ -586,107 +301,8 @@ p <- ggplot() +
                                   size = 14),
         plot.subtitle = element_text(hjust = 0.5,
                                      size = 10))
-
-ggsave(p,file = "correlationPlot_Var.png", width = 8, height = 6)
-
-
-###############################################################################
-
-# 3. VarM
-
-###############################################################################
-
-# Load varM data
-files <- list.files('X_varM')
-for (f in files){
-  load(paste0("X_varM/",f))
-}
-
-#*****************************************************************************#
-# PCA
-#*****************************************************************************#
-
-# Perform PCA
-pcaList_varM <-  prcomp(t(X_nonTest_varM),        
-                        retx = TRUE,
-                        center =TRUE,
-                        scale = TRUE,
-                        rank. = 10)
-
-# Save pcaList object
-#save(pcaList_var, file = "pcaList_var.RData")
-
-# Get PCA scores
-PCAscores_varM <- as.data.frame(pcaList_varM$x)
-PCAscores_varM$ID <- rownames(PCAscores_varM)
-PCAscores_varM <- inner_join(PCAscores_varM, dat, by = c("ID" = "Basename"))
-
-# Combine with cell type composition
-PCAscores_varM <- inner_join(PCAscores_varM,cellType, by = c("ID" = "ID"))
-
-# Get explained variance
-explVar_varM <- round(((pcaList_varM$sdev^2)/sum(pcaList_varM$sdev^2))*100,1)
-
-#=============================================================================#
-# PCA score plot
-#=============================================================================#
-
-# Make PCA score: PC1 vs PC2
-PCAscores_varM$Sex <- ifelse(PCAscores_varM$Sex == 1, "Male", "Female")
-p_12 <- ggplot(data = PCAscores_varM, aes(x = PC4, y = PC2)) +
-  geom_point(alpha = 0.9, size = 2, aes(color = Neu)) +
-  xlab(paste0("PC1 (", explVar_varM[1],"%)")) +
-  ylab(paste0("PC2 (", explVar_varM[2],"%)")) +
-  ggtitle("Variance (M)-based Feature Selection") +
-  labs(color = "Neutrophils", fill = "Sex") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "bottom",
-        legend.title = element_text()) +
-  scale_color_viridis_c() +
-  scale_fill_brewer(palette = "Set1")
 
 # save plot
-ggsave(p_12, file = "PCAplot_1vs2_var.png", width = 8, height = 6)
+ggsave(p,file = paste0("correlationPlot_", FeatureSelection, ".png"), width = 8, height = 6)
 
-#=============================================================================#
-# PCA correlations
-#=============================================================================#
-
-PCs <- PCAscores_varM[,1:5]
-colnames(PCs) <- paste0(colnames(PCs), " (", explVar_varM[1:5], "%)")
-meta <- PCAscores_varM[,c("Age", "Sex", colnames(cellType))]
-meta <- meta[,-c(9,10)]
-meta$Sex <- ifelse(meta$Sex == "Male", 1,2)
-colnames(meta) <- c("Age", "Sex", "CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", "Monocytes",
-                    "Neutrophils")
-
-corDF <- expand.grid(colnames(PCs), colnames(meta))
-colnames(corDF) <- c("PCs", "Meta")
-corDF$Correlation <- rep(NA, nrow(corDF))
-for (i in 1:nrow(corDF)){
-  corDF$Correlation[i] <- cor(PCs[,corDF$PCs[i]], meta[,corDF$Meta[i]], method = "spearman")
-}
-
-p <- ggplot() +
-  geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
-  labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
-  guides(size = "none") +
-  ggtitle("Variance (M)-based Feature Selection") +
-  scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
-                        limits = c(-1,1)) +
-  scale_size_continuous(limits = c(0,1)) +
-  theme_minimal() +
-  theme(axis.title = element_blank(),
-        plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10))
-
-ggsave(p,file = "correlationPlot_varM.png", width = 8, height = 6)
 

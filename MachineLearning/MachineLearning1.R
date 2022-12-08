@@ -355,10 +355,10 @@ explVar <- round(((pcaList$sdev^2)/sum(pcaList$sdev^2))*100,2)
 
 
 p_12 <- ggplot(data = PCAscores, aes(x = PC1, y = PC2)) +
-  geom_point(alpha = 0.9, size = 2, aes(color = Age.x)) +
+  geom_point(alpha = 0.9, size = 2, aes(color = CAIDE)) +
   xlab(paste0("PC1 (", explVar[1],"%)")) +
   ylab(paste0("PC2 (", explVar[2],"%)")) +
-  labs(color = "CD8 T-cells") +
+  labs(color = "CAIDE1") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
