@@ -1,6 +1,7 @@
 # Clear workspace and console
 rm(list = ls())
 cat("\014") 
+gc()
 
 # Load packages
 library(glmnet)
@@ -34,7 +35,7 @@ for (f in files){
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "varM"
+FeatureSelection = "PC"
 
 # Load data
 files <- list.files(paste0("X_", FeatureSelection))
@@ -43,7 +44,8 @@ for (f in files){
 }
 
 # Prepare data
-X_train = log2(X_CAIDE1_varM/(1-X_CAIDE1_varM))
+#X_train = log2(X_CAIDE1_PC/(1-X_CAIDE1_PC))
+X_train = t(X_CAIDE1_PC)
 Y_train = Y_CAIDE1$CAIDE
 
 # Test if samples are in correct order

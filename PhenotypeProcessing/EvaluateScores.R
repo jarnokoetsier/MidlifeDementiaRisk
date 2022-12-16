@@ -105,3 +105,94 @@ p <- ggarrange(libra_caide, caide_caide, libra_libra, caide_libra,
 
 ggsave(p, file = "ScoreCor.png", height = 11, width = 10)
 
+###############################################################################
+
+# Constitution of each score
+
+###############################################################################
+
+library(tidyverse)
+
+# Set working directory
+setwd("E:/Thesis/EXTEND/Phenotypes")
+
+# Load data
+load("CAIDE.Rdata")
+load("EPILIBRA.Rdata")
+
+CAIDE1 <- CAIDE[,c(1,10:17)]
+CAIDE1$Age3 <- ifelse(CAIDE1$age_c == 3, 3, 0)
+CAIDE1$Age4 <- ifelse(CAIDE1$age_c == 4, 4, 0)
+CAIDE1 <- CAIDE1[,c(1,2,10,11,3:9)]
+colnames(CAIDE1) <- c("ID", "Age", "Age (>47)", "Age (>53)", "Sex", "Edu", "BP", "BMI", "Chol", "Physical", "CAIDE")
+scores <- table(CAIDE1$CAIDE)
+
+plotDF <- NULL
+for (i in 1:length(scores)){
+
+  temp <- CAIDE1[CAIDE1$CAIDE == names(scores)[i],]
+  temp1 <- colSums(temp[,3:10] != 0)/scores[i]
+  
+  collect <- data.frame(Factor = names(temp1),
+                        nonZero = temp1,
+                        Score = rep(names(scores[i]), length(temp1)))
+  
+  plotDF <- rbind.data.frame(plotDF, collect)
+}
+
+plotDF$Score <- factor(plotDF$Score,
+                       levels = as.character(0:12))
+
+main <- ggplot(plotDF) +
+  geom_bar(aes(y = nonZero, x = Score, fill = Factor), stat="identity") +
+  facet_grid(rows = vars(Factor)) +
+  xlab("CAIDE1 Score") +
+  ylab("Proportion with non-zero score") +
+  scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1), labels = c("", "", "0.5", "", "1")) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(),
+        legend.position = "none",
+        strip.background = element_rect(fill= "grey", linewidth = 0, 
+                                        linetype="solid"),
+        strip.text = element_text(face = "bold"))
+
+CAIDE1$CAIDE <- factor(CAIDE1$CAIDE,
+                       levels = as.character(0:12))
+top <- ggplot(CAIDE1) +
+  geom_bar(aes(x = CAIDE)) +
+  ylab("# Samples") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+
+sidePlot <- data.frame(Factor = names( apply(CAIDE1[,3:10], 2, max)),
+                       Value =  apply(CAIDE1[,3:10], 2, max))
+
+side <- ggplot(sidePlot) +
+  geom_bar(aes(y = Value, x = Factor), stat="identity") +
+  ylab("Score Weight") +
+  coord_flip() +
+  facet_grid(rows = vars(Factor), scales = "free", space = "free") +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_classic() +
+  theme(axis.text.x = element_text(),
+        axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.title.x = element_text(),
+        #axis.line.y = element_blank(),
+        #axis.ticks.y = element_blank(),
+        legend.position = "none",
+        strip.background = element_blank(),
+        strip.text.y = element_blank())
+  
+  
+  
+
+library(patchwork)
+
+p <- top + main + plot_spacer() + side +
+  plot_layout(nrow = 2, byrow = FALSE) +
+  plot_layout(heights = c(1,6), widths = c(6,1))
+
+ggsave(p, file = "test.png", width = 8, height = 8)

@@ -172,7 +172,7 @@ dataMatrix_all <- cbind(dataMatrix_scaled, dataMatrix_perm)
 # Settings for repeated cross-validation
 fitControl <- trainControl(method = "repeatedcv", 
                            number = 5, 
-                           repeats = 5, 
+                           repeats = 1, 
                            search = "grid", 
                            savePredictions = FALSE)
 
@@ -211,26 +211,29 @@ fit <- train(x = t(dataMatrix_all),
 #stopCluster(cl)
 
 test <- as.matrix(coef(fit$finalModel))
-coeffs <- test[-1, which.min(abs(colSums(test != 0) - 10000))]
-probes <- coeffs[coeffs != 0]
-
-# Get results
-trainResults <- fit$results
+coeffs <- test[, which.min(abs(colSums(test != 0) - 1000))]
 
 # Get optimal lambda and alpha
-optAlpha <- fit$bestTune$alpha
-optLambda <- fit$bestTune$lambda
+optAlpha <- 1
+optLambda <- lambdaCV[which.min(abs(colSums(test != 0) - 1000))]
 
-finalModel <- glmnet(x = t(dataMatrix_all), 
-                      y = factor(c(rep("Normal", ncol(dataMatrix_scaled)), 
-                                   rep("Permuted", ncol(dataMatrix_perm)))), 
-                      family = "binomial",
-                      alpha = optAlpha, 
-                      lambda = optLambda,
-                      standardize = TRUE)
+# Repeat for different permutations
+for (i in 1:10){
+  dataMatrix_perm <- t(apply(dataMatrix_scaled,1,switch))
+  dataMatrix_perm <- apply(dataMatrix_perm,2,switch)
+  dataMatrix_all <- cbind(dataMatrix_scaled, dataMatrix_perm)
+  
+  finalModel <- glmnet(x = t(dataMatrix_all), 
+                       y = factor(c(rep("Normal", ncol(dataMatrix_scaled)), 
+                                    rep("Permuted", ncol(dataMatrix_perm)))), 
+                       family = "binomial",
+                       alpha = optAlpha, 
+                       lambda = 0.00001,
+                       standardize = TRUE)
+  test <- as.matrix(coef(finalModel))
+  coeffs <- cbind(coeffs,test[,1])
+}
 
-test <- as.matrix(coef(finalModel))
-
-
+hist(rowSums(coeffs[-1,2:11] != 0))
 
 

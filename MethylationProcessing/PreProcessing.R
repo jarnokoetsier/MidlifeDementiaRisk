@@ -9,19 +9,19 @@
 ###############################################################################
 
 # Install Bioconductor packages
-BiocManager::install(c("minfi", 
-                       "wateRmelon", 
-                       "IlluminaHumanMethylationEPICmanifest",
-                       "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
-                       "minfiData",
-                       "FlowSorted.Blood.EPIC"))
+#BiocManager::install(c("minfi", 
+#                       "wateRmelon", 
+#                       "IlluminaHumanMethylationEPICmanifest",
+#                       "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
+#                       "minfiData",
+#                       "FlowSorted.Blood.EPIC"))
 
 # Install CRAN packages
-install.packages("RPMM")
-install.packages("ggrepel")
+#install.packages("RPMM")
+#install.packages("ggrepel")
 
 # Install GitHub packages
-devtools::install_github("markgene/maxprobes")
+#devtools::install_github("markgene/maxprobes")
 
 # Load packages
 library(minfi)
@@ -41,36 +41,18 @@ load("metaData_ageFil.RData")
 ###############################################################################
 
 # Check whether basename and ID are both unique identifiers
-length(unique(dat$Basename))
-length(unique(dat$ID))
+# length(unique(dat$Basename))
+# length(unique(dat$ID))
 
 # Get beta values from RGset object
 RGset <- RGset[,dat$Basename]
-bv <- getBeta(RGset)
 
 #=============================================================================#
-# 1.1. Sample filtering
-#=============================================================================#
-
-# Remove samples with more than 20% missing missing values 
-keepSamples <- colnames(bv)[colSums(is.na(bv)) < 0.2*nrow(bv)]
-
-# Filter RGset
-RGset1 <- RGset[,keepSamples]
-
-# Make a QC report (NOT NECESARY TO RUN)
-qcReport(RGset1, pdf= "qcReport.pdf")
-
-# Outlier detection (wateRmelon) (NOT NECESARY TO RUN)
-outliers <- outlyx(RGset1, plot=TRUE)
-
-
-#=============================================================================#
-# 1.2. Bisulfite conversion
+# 1.1. Bisulfite conversion
 #=============================================================================#
 
 # Bisulfite conversion
-bsc <- data.frame(bsc = bscon(RGset1))
+bsc <- data.frame(bsc = bscon(RGset))
 bisulfiteConv <- ggplot(bsc, aes(x = bsc)) +
   geom_histogram(bins = 30, color = "white") +
   theme_classic() +
@@ -84,11 +66,11 @@ bisulfiteConv <- ggplot(bsc, aes(x = bsc)) +
 ggsave(bisulfiteConv, file = "bisulfiteConv.png", height = 6, width = 8)
 
 #=============================================================================#
-# 1.3. Sample Quality
+# 1.2. Sample Quality
 #=============================================================================#
 
 # Get median intensities
-qc <- getQC(preprocessRaw(RGset1))
+qc <- getQC(preprocessRaw(RGset))
 plotQC <- data.frame(ID = qc@rownames,
                      mMed = qc$mMed,
                      uMed = qc$uMed)
@@ -114,11 +96,11 @@ ggsave(p, file = "sampleQuality.png", width = 8, height = 6)
 
 
 #=============================================================================#
-# 1.4. Check sex labels
+# 1.3. Check sex labels
 #=============================================================================#
 
 # Predicted sex
-predictedSex <- getSex(mapToGenome(RGset1), cutoff = -2)
+predictedSex <- getSex(mapToGenome(RGset), cutoff = -2)
 predictedSex <- data.frame(
   SampleID = predictedSex@rownames,
   PredictedSex = predictedSex$predictedSex,
@@ -151,10 +133,9 @@ ggsave(matchingSex, file = "matchingSex.png", width = 8, height = 6)
 # 2. Normalization
 
 ###############################################################################
-load("RGset1.RData")
 
 #single sample Noob (minfi) 
-methSet_noob1 <- preprocessNoob(RGset1, 
+methSet_noob1 <- preprocessNoob(RGset, 
                                offset = 15, 
                                dyeCorr = TRUE, 
                                verbose = FALSE,
@@ -172,7 +153,8 @@ save(methSet_allNorm, file = "methSet_allNorm1.RData")
 
 ###############################################################################
 
-load("methSet_allNorm1.RData")
+gc()
+#load("methSet_allNorm1.RData")
 
 #=============================================================================#
 # 3.1. Detection P-value
@@ -218,17 +200,17 @@ methSet_allNorm_fil <- methSet_allNorm_fil[rownames(methSet_allNorm_fil) %in% ke
 #=============================================================================#
 
 # Check for NA values
-sum(is.na(methSet_allNorm_fil))
+# sum(is.na(methSet_allNorm_fil))
 
 # Check if values are lower or equal to zero
-sum(methSet_allNorm_fil <= 0)
+# sum(methSet_allNorm_fil <= 0)
 
 # Check if values are larger or equal to one
-sum(methSet_allNorm_fil >= 1)
+# sum(methSet_allNorm_fil >= 1)
 
 # Check for non-unique probes
-length(unique(rownames(methSet_allNorm_fil))) == nrow(methSet_allNorm_fil)
-nrow(methSet_allNorm_fil)
+# length(unique(rownames(methSet_allNorm_fil))) == nrow(methSet_allNorm_fil)
+# nrow(methSet_allNorm_fil)
 
 # Save methylation matrix
 save(methSet_allNorm_fil, file = "methSet_allNorm_fil.RData")
@@ -240,7 +222,9 @@ save(methSet_allNorm_fil, file = "methSet_allNorm_fil.RData")
 
 ###############################################################################
 
-load("methSet_allNorm_fil.RData")
+gc()
+
+#load("methSet_allNorm_fil.RData")
 load("cellType.RData")
 
 #=============================================================================#
@@ -404,7 +388,9 @@ ggsave(p_56, file = "PCAplot_5vs6.png", width = 8, height = 6)
 # Split data into reconstruction and residuals based on the first ten PC's
 loadings <- pcaList$rotation
 reconstruction <- as.matrix(PCAscores[,1:10]) %*% t(loadings[,1:10])
-residuals <- t(methSet_allNorm_fil) - reconstruction
+
+data_scaled <- (methSet_allNorm_fil - rowMeans(methSet_allNorm_fil))/(apply(methSet_allNorm_fil, 1, sd))
+residuals <- t(data_scaled) - reconstruction
 
 # Calculate the orthogonal distances
 ortDist<- sqrt(rowSums(residuals^2))
@@ -444,120 +430,6 @@ DDplot <- ggplot() +
 # Save plot
 ggsave(DDplot, file = "DDplot.png", width = 8, height = 6)
 
-# Label the identified "outliers" in regular PCA score plot
-outliers <- distanceDF$ID[(distanceDF$MD > 690000) | (distanceDF$OD > 2000)]
-
-# PC1 vs PC2
-p_12_label <- ggplot() +
-  stat_ellipse(geom = "polygon",
-               data = PCAscores,
-               aes(x = PC1, y = PC2),
-               fill = "red",
-               type = "norm", 
-               alpha = 0.25,
-               level = 0.95) +
-  stat_ellipse(geom = "polygon",
-               data = PCAscores,
-               aes(x = PC1, y = PC2),
-               color = "red",
-               alpha = 0,
-               linetype = 2,
-               type = "norm",
-               level = 0.99) +
-  geom_point(data = PCAscores, aes(x = PC1, y = PC2, color = CD8T), 
-             alpha = 0.9, size = 2) +
-  geom_text_repel(data = PCAscores[PCAscores$ID %in% outliers,], 
-                  aes(x = PC1, y = PC2, label = ID), size = 2) +
-  xlab(paste0("PC1 (", explVar[1],"%)")) +
-  ylab(paste0("PC2 (", explVar[2],"%)")) +
-  labs(color = "CD8 T-cells") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "bottom",
-        legend.title = element_text()) +
-  scale_color_viridis_c()
-
-# save plot
-ggsave(p_12_label, file = "PCAplot_1vs2_label.png", width = 8, height = 6)
-
-# PC3 vs PC4
-p_34_label <- ggplot() +
-  stat_ellipse(geom = "polygon",
-               data = PCAscores,
-               aes(x = PC3, y = PC4),
-               fill = "red",
-               type = "norm", 
-               alpha = 0.25,
-               level = 0.95) +
-  stat_ellipse(geom = "polygon",
-               data = PCAscores,
-               aes(x = PC3, y = PC4),
-               color = "red",
-               alpha = 0,
-               linetype = 2,
-               type = "norm",
-               level = 0.99) +
-  geom_point(data = PCAscores, aes(x = PC3, y = PC4, color = CD4T), 
-             alpha = 0.9, size = 2) +
-  geom_text_repel(data = PCAscores[PCAscores$ID %in% outliers,], 
-                  aes(x = PC3, y = PC4, label = ID), size = 2) +
-  xlab(paste0("PC3 (", explVar[3],"%)")) +
-  ylab(paste0("PC4 (", explVar[4],"%)")) +
-  labs(color = "CD4 T-cells") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "bottom",
-        legend.title = element_text()) +
-  scale_color_viridis_c()
-
-# save plot
-ggsave(p_34_label, file = "PCAplot_3vs4_label.png", width = 8, height = 6)
-
-# PC5 vs PC6
-p_56_label <- ggplot() +
-  stat_ellipse(geom = "polygon",
-               data = PCAscores,
-               aes(x = PC5, y = PC6),
-               fill = "red",
-               type = "norm", 
-               alpha = 0.25,
-               level = 0.95) +
-  stat_ellipse(geom = "polygon",
-               data = PCAscores,
-               aes(x = PC5, y = PC6),
-               color = "red",
-               alpha = 0,
-               linetype = 2,
-               type = "norm",
-               level = 0.99) +
-  geom_point(data = PCAscores, aes(x = PC5, y = PC6, color = Sex), 
-             alpha = 0.9, size = 2) +
-  geom_text_repel(data = PCAscores[PCAscores$ID %in% outliers,], 
-                  aes(x = PC5, y = PC6, label = ID), size = 2) +
-  xlab(paste0("PC5 (", explVar[5],"%)")) +
-  ylab(paste0("PC6 (", explVar[6],"%)")) +
-  labs(color = "Sex") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "bottom",
-        legend.title = element_text()) +
-  scale_color_brewer(palette = "Set1")
-
-# save plot
-ggsave(p_56_label, file = "PCAplot_5vs6_label.png", width = 8, height = 6)
-
 
 #=============================================================================#
 # 4.4. PCA explained variances
@@ -585,13 +457,17 @@ ggsave(p, file = "explVar.png", width = 8, height = 6)
 # 4.5. PCA correlations
 #=============================================================================#
 
+# Get principal components
 PCs <- PCAscores[,1:10]
+
+# Prepare meta data
 meta <- PCAscores[,c("Age", "Sex", colnames(cellType))]
 meta <- meta[,-c(9,10)]
 meta$Sex <- ifelse(meta$Sex == "Male", 0,1)
 colnames(meta) <- c("Age", "Sex", "CD8 T-cells", "CD4 T-cells", "NK-cells", "B-cells", "Monocytes",
                     "Neutrophils")
 
+# Calculate correlations
 corDF <- expand.grid(colnames(PCs), colnames(meta))
 colnames(corDF) <- c("PCs", "Meta")
 corDF$Correlation <- rep(NA, nrow(corDF))
@@ -602,45 +478,21 @@ for (i in 1:nrow(corDF)){
 p <- ggplot() +
   geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
   labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
-  scale_color_viridis_c(limits = c(-0.7, 0.7), oob = scales::squish) +
-  theme(axis.title = element_blank())
+  scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+                        limits = c(-1,1)) +
+  scale_size_continuous(limits = c(0,1)) +
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10),
+        strip.background = element_rect(
+          color="black", fill="#1B9E77", linewidth = 1.5, linetype="solid"
+        ))
 
 ggsave(p,file = "correlationPlot.png", width = 8, height = 6)
 
-
-###############################################################################
-
-# 5. M-values
-
-###############################################################################
-
-Mvalues <- log2(methSet_allNorm_fil/(1 - methSet_allNorm_fil))
-
-plotDensity_M <- gather(as.data.frame(Mvalues))
-densityNorm <- ggplot(plotDensity_M) +
-  geom_density(aes(x = value, color = key)) +
-  xlim(c(-10,10)) +
-  xlab("M-value") +
-  ylab("Density") +
-  ggtitle("Post-normalization") +
-  scale_color_viridis_d() +
-  theme_classic() +
-  theme(legend.position = "none",
-        plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 16)) 
-# Save plot
-ggsave(densityNorm, file = "densityNorm_Mvalue.png", width = 8, height = 6)
-
-# Get variance
-MvsB <- data.frame(
-  sd_M = apply(Mvalues, 1, sd),
-  mean_M = rowMeans(Mvalues),
-  sd_B = apply(methSet_allNorm_fil, 1, sd),
-  mean_B = rowMeans(methSet_allNorm_fil)
-)
-
-ggplot() +
-  stat_bin_hex(data = MvsB, aes(x = mean_M, y = sd_M), bins = 100)
 
 

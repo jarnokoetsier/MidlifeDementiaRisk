@@ -19,8 +19,8 @@ load("cellType.RData")
 load("E:/Thesis/EXTEND/Phenotypes/metaData_ageFil.RData")
 
 # Load model information
-Score = "CAIDE1"
-FeatureSelection = "varCor"
+Score = "LIBRA"
+FeatureSelection = "Non"
 load(paste0("CV_", Score, "_", FeatureSelection,".RData"))
 
 # Make subtitle of figure
@@ -120,12 +120,12 @@ R2(ObsPred_CV$Predicted, ObsPred_CV$Observed)
 # Box plot
 #*****************************************************************************#
 
-ObsPred_CV$Class <- rep("Intermediate Risk (4-7)",nrow(ObsPred_CV))
-ObsPred_CV$Class[ObsPred_CV$Observed <= 3] <- "Low Risk (0-3)"
-ObsPred_CV$Class[ObsPred_CV$Observed >= 8] <- "High Risk (8-14)"
-ObsPred_CV$Class <- factor(ObsPred_CV$Class, levels = c("Low Risk (0-3)", 
-                                                        "Intermediate Risk (4-7)",
-                                                        "High Risk (8-14)"))
+ObsPred_CV$Class <- rep("Intermediate Risk (0-2)",nrow(ObsPred_CV))
+ObsPred_CV$Class[ObsPred_CV$Observed <= 0] <- "Low Risk (-2.7-0)"
+ObsPred_CV$Class[ObsPred_CV$Observed >= 2] <- "High Risk (2-6.7)"
+ObsPred_CV$Class <- factor(ObsPred_CV$Class, levels = c("Low Risk (-2.7-0)", 
+                                                        "Intermediate Risk (0-2)",
+                                                        "High Risk (2-6.7)"))
 
 ObsVsPred_box <- ggplot(ObsPred_CV) +
   geom_jitter(aes(x = Class, y = Predicted, color = Class), alpha = 0.3) +
@@ -446,7 +446,7 @@ top <- ggplot(finalCoefs) +
   geom_bar(aes(x = CpG, y = coefValue, fill = coefValue), stat = "identity", color = "black") +
   ylab("Coefficients\nFinal Model") +
   scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
-                        limits = c(-0.8,0.8), oob = scales::squish) +
+                       limits = c(-0.8,0.8), oob = scales::squish) +
   scale_color_viridis_c(limits = c(-0.8, 0.8), oob = scales::squish) +
   theme_classic() +
   theme(axis.text.x = element_blank(),
@@ -464,7 +464,7 @@ ggsave(p,file = "cohenF_coefsModel.png", width = 8, height = 8)
 
 # Distribution of R-squared
 plotDF1 <- data.frame(Rsquared = Rsquared,
-                     Probe = names(Rsquared))
+                      Probe = names(Rsquared))
 
 p <- ggplot(plotDF1) +
   geom_histogram(aes(x = Rsquared), color = "white", bins = 20) +
@@ -669,7 +669,7 @@ ggsave(p_coefs, file = "MeanVsSD_coefs.png", width = 8, height = 6)
 
 
 # Score and feature selection method
-Score = "CAIDE1"
+Score = "LIBRA"
 methods = c("S", "var", "varM", "varCor", "varMCor", "Non")
 
 # Retrieve performance in CV for the different feature selection methods
