@@ -23,7 +23,7 @@ for (f in files){
 }
 
 # Feature selection data
-FeatureSelection = "S"
+FeatureSelection = "PC"
 files <- list.files(paste0("X_", FeatureSelection))
 for (f in files){
   load(paste0("X_", FeatureSelection, "/",f))
@@ -31,13 +31,13 @@ for (f in files){
 
 
 h2o.init()
-features <- as.h2o(t(X_test_S))
+features <- as.h2o(X_nonTest_PC)
 
 ae1 <- h2o.deeplearning(
   x = seq_along(features),
   training_frame = features,
   autoencoder = TRUE,
-  hidden = 100,
+  hidden = c(200,50,200),
   activation = 'Tanh',
   sparse = FALSE
 )
@@ -46,4 +46,35 @@ ae1_codings <- h2o.deepfeatures(ae1, features, layer = 1)
 test <- as.data.frame(ae1_codings)
 
 
-pred <- h2o.predict(ae1_codings, as.h2o(X_nonTest[,1:100]))
+pred <- h2o.predict(ae1, as.h2o(X_CAIDE1_PC))
+pred <- as.data.frame(pred)
+
+
+hyper_grid <- list(hidden = list(
+  c(50),
+  c(100), 
+  c(300, 100, 300),
+  c(100, 50, 100),
+  c(250, 100, 50, 100, 250)
+))
+
+# Execute grid search
+ae_grid <- h2o.grid(
+  algorithm = 'deeplearning',
+  x = seq_along(features),
+  training_frame = features,
+  grid_id = 'autoencoder_grid',
+  autoencoder = TRUE,
+  activation = 'Tanh',
+  hyper_params = hyper_grid,
+  sparse = TRUE,
+  ignore_const_cols = FALSE,
+  seed = 123
+)
+
+
+grid <- h2o.getGrid('autoencoder_grid', sort_by = 'mse', decreasing = FALSE)
+best_model_id <- grid@model_ids[[5]]
+best_model <- h2o.getModel(best_model_id)
+pred <- h2o.predict(best_model, as.h2o(X_CAIDE1_PC))
+pred <- as.data.frame(pred)

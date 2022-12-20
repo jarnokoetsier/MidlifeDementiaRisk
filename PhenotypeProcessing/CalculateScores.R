@@ -108,6 +108,11 @@ hist(CAIDE$CAIDE,10)
 CAIDE <- unique(CAIDE)
 save(CAIDE, file="CAIDE.Rdata")
 
+CAIDE_factors <- dat[,c("ID", "Basename","Age", "Sex", "Edu_c", "MeanSysBP", "BMI","Chol_unloged", "PHYSICAL_c")]
+CAIDE_factors$BMI <- as.numeric(CAIDE_factors$BMI)
+CAIDE_factors$MeanSysBP <- as.numeric(CAIDE_factors$MeanSysBP)
+save(CAIDE_factors, file="CAIDE_factors.Rdata")
+
 ###############################################################################
 
 # Calculate CAIDE2 score
@@ -338,6 +343,8 @@ EPILIBRA$LIBRAlog10<- log10(EPILIBRA$LIBRA + 10)
 # Save data
 EPILIBRA <- unique(EPILIBRA)
 save(EPILIBRA, file="EPILIBRA.Rdata")
+
+
 
 
 ###############################################################################

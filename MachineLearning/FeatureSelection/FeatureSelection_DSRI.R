@@ -10,7 +10,28 @@ library(doParallel)
 library(ggrepel)
 library(tidyverse)
 library(ggpubr)
-source("FUN_MachineLearning.R")
+source("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA/MachineLearning/FUN_MachineLearning.R")
+
+# Set working directory
+setwd("E:/Thesis/EXTEND/Methylation")
+
+# Load cell type composition and phenotype data
+load("cellType.RData")
+load("E:/Thesis/EXTEND/Phenotypes/metaData_ageFil.RData")
+
+
+# Meta data
+files <- list.files('Y')
+for (f in files){
+  load(paste0("Y/",f))
+}
+
+# Feature selection data
+FeatureSelection = "S"
+files <- list.files(paste0("X_", FeatureSelection))
+for (f in files){
+  load(paste0("X_", FeatureSelection, "/",f))
+}
 
 #*****************************************************************************#
 # Make all data combinations

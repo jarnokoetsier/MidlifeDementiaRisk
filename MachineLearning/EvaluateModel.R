@@ -20,7 +20,7 @@ load("E:/Thesis/EXTEND/Phenotypes/metaData_ageFil.RData")
 
 # Load model information
 Score = "CAIDE1"
-FeatureSelection = "varCor"
+FeatureSelection = "cor"
 load(paste0("CV_", Score, "_", FeatureSelection,".RData"))
 
 # Make subtitle of figure
@@ -41,6 +41,12 @@ if (FeatureSelection == "varCor"){
 }
 if (FeatureSelection == "varMCor"){
   subtitle = "Variance (M, Cor)-based Feature Selection"
+}
+if (FeatureSelection == "PC"){
+  subtitle = "PCA-based Feature Selection"
+}
+if (FeatureSelection == "cor"){
+  subtitle = "Correlation-based Feature Selection"
 }
 ################################################################################
 
@@ -670,7 +676,7 @@ ggsave(p_coefs, file = "MeanVsSD_coefs.png", width = 8, height = 6)
 
 # Score and feature selection method
 Score = "CAIDE1"
-methods = c("S", "var", "varM", "varCor", "varMCor", "Non")
+methods = c("S", "var", "varM", "varCor", "varMCor", "PC", "Non")
 
 # Retrieve performance in CV for the different feature selection methods
 Performances <- list()
@@ -690,8 +696,9 @@ performanceDF <- data.frame(
   FeatureSelection = c(rep("S-score", 25),
                        rep("Variance (\u03b2)", 25),
                        rep("Variance (M)", 25),
-                       rep("Variance (\u03b2, Cor)", 25),
+                       rep("Variance (\u03b2, Cor)",25),
                        rep("Variance (M, Cor)", 25),
+                       rep("PCA", 25),
                        rep("None", 25))
 )
 performanceDF$FeatureSelection <- factor(performanceDF$FeatureSelection,
@@ -718,3 +725,23 @@ p <- ggplot(performanceDF) +
 
 ggsave(p, file = paste0(Score, "_RMSE_boxplot.png"), width = 8, height = 6)
 
+
+# Evaluate on test data
+# Score and feature selection method
+Score = "CAIDE1"
+FeatureSelection = "cor"
+
+# Load data
+files <- list.files(paste0("X_", FeatureSelection))
+for (f in files){
+  load(paste0("X_", FeatureSelection, "/", f))
+}
+
+# Load phenotype data
+files <- list.files('Y')
+for (f in files){
+  load(paste0("Y/",f))
+}
+
+test <- predict(finalModel, t(X_test_cor))
+plot(test, Y_test$CAIDE)

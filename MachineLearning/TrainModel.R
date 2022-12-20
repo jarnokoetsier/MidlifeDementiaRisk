@@ -35,7 +35,7 @@ for (f in files){
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "PC"
+FeatureSelection = "cor"
 
 # Load data
 files <- list.files(paste0("X_", FeatureSelection))
@@ -44,8 +44,7 @@ for (f in files){
 }
 
 # Prepare data
-#X_train = log2(X_CAIDE1_PC/(1-X_CAIDE1_PC))
-X_train = t(X_CAIDE1_PC)
+X_train = log2(X_CAIDE1_cor/(1-X_CAIDE1_cor))
 Y_train = Y_CAIDE1$CAIDE
 
 # Test if samples are in correct order

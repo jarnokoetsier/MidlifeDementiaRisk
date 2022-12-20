@@ -21,7 +21,7 @@ for (f in files){
 }
 
 # Feature selection data
-FeatureSelection = "S"
+FeatureSelection = "PC"
 files <- list.files(paste0("X_", FeatureSelection))
 for (f in files){
   load(paste0("X_", FeatureSelection, "/",f))
@@ -46,6 +46,9 @@ if (FeatureSelection == "varCor"){
 }
 if (FeatureSelection == "varMCor"){
   subtitle = "Variance (M, Cor)-based Feature Selection"
+}
+if (FeatureSelection == "PC"){
+  subtitle = "PCA-based Feature Selection"
 }
 
 ###############################################################################
@@ -142,15 +145,107 @@ ggsave(p_island, file = "MeanVsSD_class.png", width = 8, height = 6)
 
 ###############################################################################
 
-# 2. Multiple regression
+# 2. % explained by cell type composition
 
 ###############################################################################
 
 
+# Load all files
+m <- c("S", "var", "varM", "varCor", "varMCor", "PC")
 
+for (FeatureSelection in m){
+  files <- list.files(paste0("X_", FeatureSelection))
+  for (f in files){
+    load(paste0("X_", FeatureSelection, "/",f))
+  }
+}
+methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
+             "Variance (M, Cor)", "PCA")
+
+plotDF = NULL
+for (i in 1:length(methods)){
+  # Get data
+  if (methods[i] == "S-score"){
+    dataMatrix <- X_nonTest_S
+  }
+  if (methods[i] == "Variance (\u03b2)"){
+    dataMatrix <- X_nonTest_var
+  }
+  if (methods[i] == "Variance (M)"){
+    dataMatrix <- X_nonTest_varM
+  }
+  if (methods[i] == "Variance (\u03b2, Cor)"){
+    dataMatrix <- X_nonTest_varCor
+  }
+  if (methods[i] == "Variance (M, Cor)"){
+    dataMatrix <- X_nonTest_varMCor
+  }
+  if (methods[i] == "PCA"){
+    dataMatrix <- t(X_nonTest_PC)
+  }
+  
+  
+  # Get Features
+  features <- rownames(dataMatrix)
+  
+  # Make formula
+  formula <- paste0("cbind(",paste(features, collapse = ", "),") ~ ", 
+                    paste0("0 + ", paste(colnames(Y_nonTest[,7:12]), collapse = " + ")))
+  
+  # Scale data matrix
+  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix))/(apply(dataMatrix,1,sd)))
+  
+  # Combine with cell type composition
+  dataMatrix <- cbind(dataMatrix_scaled,Y_nonTest[,7:12])
+  
+  # Make linear model
+  model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+  
+  # Get fitted values
+  fittedValues <- fitted(model)
+  
+  # Get residual values
+  residualValues <- residuals(model)
+  
+  # Calculate R-squared
+  sse <- colSums(residualValues^2)
+  ssr <- colSums(fittedValues^2)
+  explVar <- sum(ssr)/sum(ssr + sse)
+  
+  # Prepare data for plotting
+  temp <- data.frame(
+    Value = explVar,
+    FeatureSelection = methods[i]
+  )
+  
+  plotDF <- rbind.data.frame(plotDF, temp)
+}
+plotDF$FeatureSelection <- factor(plotDF$FeatureSelection, levels = methods)
+
+# Make plot
+p <- ggplot() +
+  geom_bar(data = plotDF, aes(x = FeatureSelection, y = Value*100, fill = FeatureSelection),
+           stat="identity", position=position_dodge(), color = "black", alpha = 0.8) +
+  xlab("Feature Selection Method") +
+  ylab("Variance explained (%) by cell type composition") +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "none")
+
+
+# Save plot
+ggsave(p, file = "R2_cellType_all.png", width = 8, height = 6)
+
+
+###############################################################################
+
+# 2. Multiple regression
+
+###############################################################################
 
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
-             "Variance (M, Cor)")
+             "Variance (M, Cor)", "PCA")
 plotDF = NULL
 for (i in 1:length(methods)){
   # Get data
@@ -170,7 +265,9 @@ for (i in 1:length(methods)){
   if (methods[i] == "Variance (M, Cor)"){
     dataMatrix <- X_nonTest_varMCor
   }
-  
+  if (methods[i] == "PCA"){
+    dataMatrix <- t(X_nonTest_PC)
+  }
   
   # Get Features
   features <- rownames(dataMatrix)
@@ -201,9 +298,9 @@ for (i in 1:length(methods)){
   
   # Prepare data for plotting
   temp <- data.frame(
-    Value = c(sum(Rsquared > 0.1),
-              sum(Rsquared > 0.5),
-              sum(Rsquared > 0.8)),
+    Value = c(sum(Rsquared > 0.1)/length(features),
+              sum(Rsquared > 0.5)/length(features),
+              sum(Rsquared > 0.8)/length(features)),
     FeatureSelection = c(rep(methods[i], 3)),
     Threshold = rep(c("R2 > 0.1","R2 > 0.5","R2 > 0.8"))
   )
@@ -217,7 +314,7 @@ p <- ggplot() +
   geom_bar(data = plotDF, aes(x = FeatureSelection, y = Value, fill = Threshold),
            stat="identity", position=position_dodge(), color = "black", alpha = 0.8) +
   xlab("Feature Selection Method") +
-  ylab("# Features") +
+  ylab("Proportion of Features") +
   scale_fill_manual(breaks = c("R2 > 0.1","R2 > 0.5","R2 > 0.8"),
                       labels = c(expression(R^2 > 0.1), 
                                  expression(R^2 > 0.5),
@@ -434,7 +531,7 @@ ggsave(p, file = "FeatureSelectionHeatmap.png", width = 8, height = 6)
 ###############################################################################
 
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
-             "Variance (M, Cor)")
+             "Variance (M, Cor)", "PCA")
 plotExplVar = NULL
 for (i in 1:length(methods)){
   # Get data
@@ -453,6 +550,9 @@ for (i in 1:length(methods)){
   
   if (methods[i] == "Variance (M, Cor)"){
     dataMatrix <- X_nonTest_varMCor
+  }
+  if (methods[i] == "PCA"){
+    dataMatrix <- t(X_nonTest_PC)
   }
   
   # Perform PCA
@@ -482,9 +582,11 @@ plotExplVar$FeatureSelection <- factor(plotExplVar$FeatureSelection,
 p  <- ggplot(plotExplVar) +
   geom_step(aes(x = PC, y = cumVar, group = FeatureSelection, color = FeatureSelection),
             linewidth = 1.5) +
+  geom_hline(yintercept = 100,  linetype = "dashed", linewidth = 1.5) +
   xlab("Principal Components (PC1 - 924)") +
   ylab("Cumulative Explained Variance (%)") +
   scale_color_brewer(palette = "Dark2") +
+  ylim(c(0,100)) +
   theme_classic() +
   theme(legend.title  = element_blank(),
         axis.text.x = element_blank())#element_text(angle = 45, vjust = 0.5))
