@@ -193,13 +193,13 @@ for (i in 1:length(methods)){
                     paste0("0 + ", paste(colnames(Y_nonTest[,7:12]), collapse = " + ")))
   
   # Scale data matrix
-  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix))/(apply(dataMatrix,1,sd)))
+  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix))/apply(dataMatrix,1,sd))
   
   # Combine with cell type composition
-  dataMatrix <- cbind(dataMatrix_scaled,Y_nonTest[,7:12])
+  dataMatrix1 <- cbind(dataMatrix_scaled,Y_nonTest[,7:12])
   
   # Make linear model
-  model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+  model <- lm(as.formula(formula), data = as.data.frame(dataMatrix1))
   
   # Get fitted values
   fittedValues <- fitted(model)
@@ -210,7 +210,8 @@ for (i in 1:length(methods)){
   # Calculate R-squared
   sse <- colSums(residualValues^2)
   ssr <- colSums(fittedValues^2)
-  explVar <- sum(ssr)/sum(ssr + sse)
+  sst <- colSums(dataMatrix_scaled^2)
+  explVar <- sum(ssr)/sum(sst)
   
   # Prepare data for plotting
   temp <- data.frame(
@@ -277,13 +278,13 @@ for (i in 1:length(methods)){
                     paste0("0 + ", paste(colnames(Y_nonTest[,7:12]), collapse = " + ")))
   
   # Scale data matrix
-  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix))/(apply(dataMatrix,1,sd)))
+  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix)))
   
   # Combine with cell type composition
-  dataMatrix <- cbind(dataMatrix_scaled,Y_nonTest[,7:12])
+  dataMatrix1 <- cbind(dataMatrix_scaled,Y_nonTest[,7:12])
   
   # Make linear model
-  model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+  model <- lm(as.formula(formula), data = as.data.frame(dataMatrix1))
   
   # Get fitted values
   fittedValues <- fitted(model)
@@ -294,7 +295,7 @@ for (i in 1:length(methods)){
   # Calculate R-squared
   sse <- colSums(residualValues^2)
   ssr <- colSums(fittedValues^2)
-  Rsquared <- ssr/(ssr + sse)
+  Rsquared <- ssr/(colSums(dataMatrix_scaled^2))
   
   # Prepare data for plotting
   temp <- data.frame(

@@ -39,7 +39,7 @@ Y_CAIDE1_factors$PHYSICAL_c <- ifelse(Y_CAIDE1_factors$PHYSICAL_c == 0, "Active"
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "var"
+FeatureSelection = "PC"
 
 # Load data
 files <- list.files(paste0("X_", FeatureSelection))
@@ -68,7 +68,8 @@ nrep = 5
 # ElasticNet
 
 ###############################################################################
-
+#save(test1, file = "CVindex.RData")
+load("CVindex.RData")
 
 #*****************************************************************************#
 # Model training
@@ -104,7 +105,8 @@ for (variables in 1:ncol(Y_train)){
                                number = nfold, 
                                repeats = nrep, 
                                search = "grid", 
-                               savePredictions = FALSE)
+                               savePredictions = FALSE,
+                               index = test1)
     
     # Register cores for parallel computing
     nCores <- 3
@@ -205,7 +207,8 @@ for (variables in 1:ncol(Y_train)){
                                repeats = nrep, 
                                search = "grid", 
                                savePredictions = FALSE,
-                               summaryFunction = regressionSummary)
+                               summaryFunction = regressionSummary,
+                               index = test1)
     
     # Register cores for parallel computing
     nCores <- 3
@@ -411,11 +414,11 @@ methodsName <- c("S-score", "Variance (\u03b2)", "Variance (M)",
                  "Variance (\u03b2, Cor)", "Variance (M, Cor)", "PCA")
 predList <- list()
 obsList <- list()
-output <- NULL
-output_obs <- NULL
+
 for (m in 1:length(methods)){
   load(paste0("PerFactor/OutputList_CAIDE1factors_", methods[m], ".RData"))
-  
+  output <- NULL
+  output_obs <- NULL
   # Continuous variables
   continuous <- c("Age", "MeanSysBP", "BMI", "Chol_unloged")
   for (i in continuous){
@@ -450,8 +453,8 @@ for (m in 1:length(methods)){
   predList[[m]] <- output
   obsList[[m]] <- output_obs
 }
-names(predList) <- methods
-names(obsList) <- methods
+names(predList) <- methodsName
+names(obsList) <- methodsName
 
 # Calculate CAIDE score
 calculateCAIDE1 <- function(x){
@@ -489,6 +492,7 @@ for (k in 1:length(predList)){
   for (fold in 1:25){
     pred <- calculateCAIDE1(predList[[k]][predList[[k]]$Fold == fold,])
     obs <- calculateCAIDE1(obsList[[k]][obsList[[k]]$Fold == fold,])
+    
     
     method <- names(predList)[k]
     rmse <- caret::RMSE(pred, obs)
@@ -531,10 +535,113 @@ performanceDF <- data.frame(
 
 plotDF <- rbind.data.frame(plotDF, performanceDF)
 plotDF$Approach <- c(rep("Per Factor", 150), rep("Per Score", 150))
+plotDF$Method <- factor(plotDF$Method,
+                        levels = methodsName)
 
-ggplot(plotDF) +
-  geom_boxplot(aes(x = Method, y = RMSE, fill = Approach))
+colors <- RColorBrewer::brewer.pal(3, "Reds")
+p <- ggplot(plotDF) +
+  geom_boxplot(aes(x = Method, y = RMSE, fill = Approach), alpha = 0.3) +
+  geom_point(aes(x = Method, y = RMSE, color = Approach), 
+             position=position_jitterdodge(jitter.width = 0.3)) +
+  scale_fill_manual(values = colors[2:3]) +
+  scale_color_manual(values = colors[2:3]) +
+  xlab("Feature Selection Method") +
+  ggtitle("CAIDE1", subtitle = "Performance in the cross-validation") +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     face = "italic",
+                                     size = 10))
+
+ggsave(p, file= "CAIDE1_RMSE_boxplot_perFactor.png", width = 8, height = 5)
 
 
 
+# R2 instead of RMSE
+
+plotDF <- NULL
+for (k in 1:length(predList)){
+  for (fold in 1:25){
+    pred <- calculateCAIDE1(predList[[k]][predList[[k]]$Fold == fold,])
+    obs <- calculateCAIDE1(obsList[[k]][obsList[[k]]$Fold == fold,])
+    
+    
+    method <- names(predList)[k]
+    rmse <- caret::R2(pred, obs)
+    
+    temp <- data.frame(Method = method,
+                       Fold = fold,
+                       RMSE = rmse)
+    plotDF <- rbind.data.frame(plotDF, temp)
+  }
+}
+
+
+# Score and feature selection method
+Score = "CAIDE1"
+methods = c("S", "var", "varM", "varCor", "varMCor", "PC")
+
+# Retrieve performance in CV for the different feature selection methods
+Performances <- list()
+for (i in 1:length(methods)){
+  
+  # load output
+  load(paste0("CV_", Score, "_", methods[i],".RData"))
+  
+  perf <- NULL
+  for (j in 1:25){
+    pred <- ObsPred_CV$Predicted[ObsPred_CV$Fold == j]
+    obs <- ObsPred_CV$Observed[ObsPred_CV$Fold == j]
+    rsq <- caret::R2(pred, obs)
+    perf <- c(perf, rsq)
+  }
+    # Put performance into list
+    Performances[[i]] <- perf
+
+
+}
+names(Performances) <- methods
+
+# Combine into single data frame
+performanceDF <- data.frame(
+  Method = c(rep("S-score", 25),
+             rep("Variance (\u03b2)", 25),
+             rep("Variance (M)", 25),
+             rep("Variance (\u03b2, Cor)",25),
+             rep("Variance (M, Cor)", 25),
+             rep("PCA", 25)),
+  Fold = rep(1:25,length(methods)),
+  RMSE = unlist(Performances)
+)
+
+plotDF <- rbind.data.frame(plotDF, performanceDF)
+plotDF$Approach <- c(rep("Per Factor", 150), rep("Per Score", 150))
+plotDF$Method <- factor(plotDF$Method,
+                        levels = methodsName)
+
+colors <- RColorBrewer::brewer.pal(3, "Reds")
+p <- ggplot(plotDF) +
+  geom_boxplot(aes(x = Method, y = RMSE, fill = Approach), alpha = 0.3) +
+  geom_point(aes(x = Method, y = RMSE, color = Approach), 
+             position=position_jitterdodge(jitter.width = 0.3)) +
+  scale_fill_manual(values = colors[2:3]) +
+  scale_color_manual(values = colors[2:3]) +
+  xlab("Feature Selection Method") +
+  ylab(expression(R^2)) +
+  ggtitle("CAIDE1", subtitle = "Performance in the cross-validation") +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 14),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     face = "italic",
+                                     size = 10))
+
+ggsave(p, file= "CAIDE1_RMSE_boxplot_perFactor_R2.png", width = 8, height = 5)
 
