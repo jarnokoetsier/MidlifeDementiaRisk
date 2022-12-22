@@ -12,6 +12,7 @@ library(doParallel)
 library(ggrepel)
 library(tidyverse)
 library(ggpubr)
+library(pROC)
 
 # Load machine learning functions
 source("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA/MachineLearning/FUN_MachineLearning.R")
@@ -29,6 +30,8 @@ for (f in files){
   load(paste0("Y/",f))
 }
 
+# Load CV index
+load("CVindex_CAIDE1.RData")
 #=============================================================================#
 # FILL IN
 #=============================================================================#
@@ -55,8 +58,8 @@ nfold = 5
 nrep = 5
 
 # Performance metric
-performance_metric = "Kappa"
-
+performance_metric = "ROC"
+output <- list()
 #=============================================================================#
 
 
@@ -67,22 +70,19 @@ performance_metric = "Kappa"
 
 ###############################################################################
 
-hist(Y_train)
-quantile(Y_train,0.33)
-quantile(Y_train,0.67)
-
-Y_train <- ifelse(Y_train < 4, "Low", "Intermediate_High")
 
 #*****************************************************************************#
 # Model training (Low vs intermediate/high)
 #*****************************************************************************#
+Y_train <- factor(ifelse(Y_CAIDE1$CAIDE < 4, "Low", "Intermediate_High"),
+                  levels = c("Intermediate_High","Low"))
 
 # Settings for repeated cross-validation
-fitControl <- trainControl(method = "repeatedcv", 
-                           number = nfold, 
-                           repeats = nrep, 
-                           search = "grid", 
-                           savePredictions = FALSE)
+fitControl <- trainControl(search = "grid", 
+                           savePredictions = FALSE,
+                           summaryFunction = twoClassSummary,
+                           classProbs = TRUE,
+                           index = CVindex)
 
 # Set grid for lambda
 lambdaCV <- exp(seq(log(0.01),log(2.5),length.out = 100))
@@ -124,6 +124,40 @@ trainResults <- fit$results
 optAlpha <- fit$bestTune$alpha
 optLambda <- fit$bestTune$lambda
 
+# Get coefficients, prediction, and performance during the repeated CV
+coefs <- matrix(NA, ncol(t(X_train))+1, nfold*nrep)
+perf <- rep(NA, nfold*nrep)
+folds <- fit$control$index
+pred_CV <- NULL
+obs_CV <- NULL
+fold_CV <- NULL
+count = 0
+for (r in 1:nrep){
+  for (f in 1:nfold){
+    count = count + 1
+    en_model_cv <- glmnet(x = t(X_train)[folds[[count]],], 
+                          y = Y_train[folds[[count]]], 
+                          family = "binomial",
+                          alpha = optAlpha, 
+                          lambda = optLambda,
+                          standardize = TRUE)
+    
+    # Get coefficients
+    coefs[,count] <- as.matrix(coef(en_model_cv))
+    
+    # Get prediction
+    pred <- predict(en_model_cv, t(X_train)[-folds[[count]],], type = "response")[,1]
+    
+    pred_CV <- c(pred_CV,pred)
+    obs_CV <- c(obs_CV, Y_train[-folds[[count]]])
+    fold_CV <- c(fold_CV, rep(count,length(pred)))
+  }
+}
+
+# Save observed and predicted in a dataframe
+ObsPred_CV <- data.frame(Predicted = pred_CV,
+                         Observed = obs_CV,
+                         Fold = fold_CV)
 
 # Get final model
 finalModel <- glmnet(x = t(X_train), 
@@ -133,28 +167,22 @@ finalModel <- glmnet(x = t(X_train),
                      lambda = optLambda,
                      standardize = TRUE)
 
-
-pred_test <- predict(finalModel, t(X_test_var), type = "response")[,1]
-response_test <- ifelse(Y_test$CAIDE < 4, 0, 1)
-
-roc_list_test <- roc(response = response_test, 
-                     predictor = pred_test)
-
-plot(roc_list_test)
-
-pred_test <- predict(finalModel, t(X_train), type = "response")[,1]
-response_test <- ifelse(Y_CAIDE1$CAIDE < 4, 0, 1)
+# Save output
+save(trainResults, optLambda, optAlpha, ObsPred_CV, coefs, finalModel,
+     file = paste0("CV_", Score, "_", FeatureSelection,"_LowRisk.RData"))
 
 #*****************************************************************************#
-# Model training (Low vs intermediate/high)
+# Model training (High vs intermediate/low)
 #*****************************************************************************#
+Y_train <- factor(ifelse(Y_CAIDE1$CAIDE > 7, "High", "Intermediate_Low"),
+                  levels = c("Intermediate_Low", "High"))
 
 # Settings for repeated cross-validation
-fitControl <- trainControl(method = "repeatedcv", 
-                           number = nfold, 
-                           repeats = nrep, 
-                           search = "grid", 
-                           savePredictions = FALSE)
+fitControl <- trainControl(search = "grid", 
+                           savePredictions = FALSE,
+                           summaryFunction = twoClassSummary,
+                           classProbs = TRUE,
+                           index = CVindex)
 
 # Set grid for lambda
 lambdaCV <- exp(seq(log(0.01),log(2.5),length.out = 100))
@@ -178,8 +206,10 @@ registerDoParallel(cl)
 set.seed(123)
 fit <- train(x = t(X_train),
              y = Y_train,
-             metric= performance_metric,
              method = MLmethod,
+             family = "binomial",
+             standardize = TRUE,
+             metric= performance_metric,
              tuneGrid = parameterGrid,
              trControl = fitControl,
              maximize = TRUE)
@@ -194,6 +224,40 @@ trainResults <- fit$results
 optAlpha <- fit$bestTune$alpha
 optLambda <- fit$bestTune$lambda
 
+# Get coefficients, prediction, and performance during the repeated CV
+coefs <- matrix(NA, ncol(t(X_train))+1, nfold*nrep)
+perf <- rep(NA, nfold*nrep)
+folds <- fit$control$index
+pred_CV <- NULL
+obs_CV <- NULL
+fold_CV <- NULL
+count = 0
+for (r in 1:nrep){
+  for (f in 1:nfold){
+    count = count + 1
+    en_model_cv <- glmnet(x = t(X_train)[folds[[count]],], 
+                          y = Y_train[folds[[count]]], 
+                          family = "binomial",
+                          alpha = optAlpha, 
+                          lambda = optLambda,
+                          standardize = TRUE)
+    
+    # Get coefficients
+    coefs[,count] <- as.matrix(coef(en_model_cv))
+    
+    # Get prediction
+    pred <- predict(en_model_cv, t(X_train)[-folds[[count]],], type = "response")[,1]
+    
+    pred_CV <- c(pred_CV,pred)
+    obs_CV <- c(obs_CV, Y_train[-folds[[count]]])
+    fold_CV <- c(fold_CV, rep(count,length(pred)))
+  }
+}
+
+# Save observed and predicted in a dataframe
+ObsPred_CV <- data.frame(Predicted = pred_CV,
+                         Observed = obs_CV,
+                         Fold = fold_CV)
 
 # Get final model
 finalModel <- glmnet(x = t(X_train), 
@@ -203,14 +267,17 @@ finalModel <- glmnet(x = t(X_train),
                      lambda = optLambda,
                      standardize = TRUE)
 
+# Save output
+save(trainResults, optLambda, optAlpha, ObsPred_CV, coefs, finalModel,
+     file = paste0("CV_", Score, "_", FeatureSelection,"_HighRisk.RData"))
 
-pred_test <- predict(finalModel, t(X_test_cor), type = "response")[,1]
-response_test <- ifelse(Y_test$CAIDE < 4, 0, 1)
 
-roc_list_test <- roc(response = response_test, 
-                     predictor = pred_test)
 
-plot(roc_list_test)
+
+
+
+
+
 
 
 

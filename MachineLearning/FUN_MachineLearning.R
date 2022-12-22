@@ -36,6 +36,35 @@ regressionSummary <- function (data, lev = NULL, model = NULL){
   return(out)
 }
 
+
+#*****************************************************************************#
+# classificationSummary
+#*****************************************************************************#
+
+classificationSummary <- function (data, lev = NULL, model = NULL){
+  if (length(lev) > 2) {
+    stop(paste("Your outcome has", length(lev), "levels. The twoClassSummary() function isn't appropriate."))
+  }
+  caret::requireNamespaceQuietStop("pROC")
+  if (!all(levels(data[, "pred"]) == lev)) {
+    stop("levels of observed and predicted data do not match")
+  }
+  rocObject <- try(pROC::roc(data$obs, data[, lev[1]], direction = ">", 
+                             quiet = TRUE), silent = TRUE)
+  rocAUC <- if (inherits(rocObject, "try-error")) 
+    NA
+  else rocObject$auc
+  
+  sens <- sensitivity(data[, "pred"], data[, "obs"], lev[1])
+  spec <-  specificity(data[, "pred"], data[, "obs"], lev[2])
+  out <- c(rocAUC, 
+           sens, 
+           spec,
+           sqrt(sens*spec))
+  names(out) <- c("ROC", "Sens", "Spec", "GMean")
+  out
+}
+
 #*****************************************************************************#
 # selectionKS
 #*****************************************************************************#
