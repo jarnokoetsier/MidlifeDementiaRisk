@@ -29,13 +29,16 @@ for (f in files){
   load(paste0("Y/",f))
 }
 
+# Load CV index
+load("CVindex_CAIDE1.RData")
+
 #=============================================================================#
 # FILL IN
 #=============================================================================#
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "cor"
+FeatureSelection = "PC"
 
 # Load data
 files <- list.files(paste0("X_", FeatureSelection))
@@ -44,7 +47,7 @@ for (f in files){
 }
 
 # Prepare data
-X_train = log2(X_CAIDE1_cor/(1-X_CAIDE1_cor))
+X_train = log2(X_CAIDE1_varCor/(1-X_CAIDE1_varCor))
 Y_train = Y_CAIDE1$CAIDE
 
 # Test if samples are in correct order
@@ -60,7 +63,6 @@ performance_metric = "RMSE"
 #=============================================================================#
 
 
-
 ###############################################################################
 
 # ElasticNet
@@ -74,11 +76,10 @@ performance_metric = "RMSE"
 
 # Settings for repeated cross-validation
 fitControl <- trainControl(method = "repeatedcv", 
-                           number = nfold, 
-                           repeats = nrep, 
                            search = "grid", 
                            savePredictions = FALSE,
-                           summaryFunction = regressionSummary)
+                           summaryFunction = regressionSummary,
+                           index = CVindex)
 
 # Set grid for lambda
 lambdaCV <- exp(seq(log(0.01),log(2.5),length.out = 100))

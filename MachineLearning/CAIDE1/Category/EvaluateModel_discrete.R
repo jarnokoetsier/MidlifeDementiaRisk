@@ -32,7 +32,7 @@ for (f in files){
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "var"
+FeatureSelection = "Non"
 
 # Load CV index
 load("CVindex_CAIDE1.RData")
@@ -44,6 +44,8 @@ load("CVindex_CAIDE1.RData")
 
 ################################################################################
 
+load("X/X_Non/X_test_Non.RData")
+testData <-  log2(X_test_Non/(1-X_test_Non))
 
 #****************************************************************************#
 # Cross-validation
@@ -53,7 +55,7 @@ load("CVindex_CAIDE1.RData")
 # Low risk
 #============================================================================#
 # Load low risk model training
-load(paste0("CV_", Score, "_", FeatureSelection,"_LowRisk.RData"))
+load(paste0("CV_CAIDE1/CV_", Score, "_", FeatureSelection,"_LowRisk.RData"))
 
 # construct ROC
 roc_list_CV <- roc(response = ObsPred_CV$Observed, 
@@ -75,12 +77,34 @@ ObsPred_CV_lowRisk$PredictedClass <- ifelse(ObsPred_CV_lowRisk$Predicted > thres
 # Get CAIDE score
 test <- lapply(CVindex,function(x){setdiff(1:nrow(Y_CAIDE1),x)})
 ObsPred_CV_lowRisk$ObservedScore <- Y_CAIDE1$CAIDE[unlist(test)]
+
+
+# Performance on test set
+pred <- predict(finalModel, t(testData), type = "response")
+ObsPred_test <- data.frame(Observed = ifelse(Y_test$CAIDE < 4, 2, 1),
+                           Predicted = as.numeric(pred))
+
+roc_list_test <- roc(response = ObsPred_test$Observed, 
+                   predictor = ObsPred_test$Predicted)
+
+
+# Get sensitivies and specificities
+plotDF_lowRisk_test <- data.frame(Sensitivity = roc_list_test$sensitivities,
+                                  Specificity = roc_list_test$specificities)
+
+# Get AUC
+auc_lowRisk_test <- auc(roc_list_test)
+
+ObsPred_test_lowRisk <- ObsPred_test
+ObsPred_test_lowRisk$PredictedClass <- ifelse(ObsPred_test_lowRisk$Predicted > threshold, "Low", "High/Intermediate")
+ObsPred_test_lowRisk$ObservedScore <- Y_test$CAIDE
+
 #============================================================================#
 # High risk
 #============================================================================#
 
 # Load high risk model
-load(paste0("CV_", Score, "_", FeatureSelection,"_HighRisk.RData"))
+load(paste0("CV_CAIDE1/CV_", Score, "_", FeatureSelection,"_HighRisk.RData"))
 
 # Construct ROC
 roc_list_CV <- roc(response = ObsPred_CV$Observed, 
@@ -102,11 +126,31 @@ ObsPred_CV_highRisk$PredictedClass <- ifelse(ObsPred_CV_highRisk$Predicted > thr
 test <- lapply(CVindex,function(x){setdiff(1:nrow(Y_CAIDE1),x)})
 ObsPred_CV_highRisk$ObservedScore <- Y_CAIDE1$CAIDE[unlist(test)]
 
+# Performance on test set
+pred <- predict(finalModel, t(testData), type = "response")
+ObsPred_test <- data.frame(Observed = ifelse(Y_test$CAIDE > 7, 2, 1),
+                           Predicted = as.numeric(pred))
+
+roc_list_test <- roc(response = ObsPred_test$Observed, 
+                     predictor = ObsPred_test$Predicted)
+
+
+# Get sensitivies and specificities
+plotDF_highRisk_test <- data.frame(Sensitivity = roc_list_test$sensitivities,
+                                  Specificity = roc_list_test$specificities)
+
+# Get AUC
+auc_highRisk_test <- auc(roc_list_test)
+
+ObsPred_test_highRisk <- ObsPred_test
+ObsPred_test_highRisk$PredictedClass <- ifelse(ObsPred_test_highRisk$Predicted > threshold, "High", "Low/Intermediate")
+ObsPred_test_highRisk$ObservedScore <- Y_test$CAIDE
+
 #============================================================================#
 # plot ROC
 #============================================================================#
 
-ggplot() +
+p <- ggplot() +
   geom_path(data = plotDF_lowRisk, aes(y = Sensitivity, x = 1- Specificity,
                                        color = "Low Risk (1-3)"), 
             linewidth = 2) +
@@ -130,7 +174,34 @@ ggplot() +
                                      face = "italic")) +
   scale_color_brewer(palette = "Set1")
 
+ggsave(p, file = "CAIDE1_Non_EN_Discrete_AUC.png", height = 8, width = 8)
 
+
+p <- ggplot() +
+  geom_path(data = plotDF_lowRisk_test, aes(y = Sensitivity, x = 1- Specificity,
+                                       color = "Low Risk (1-3)"), 
+            linewidth = 2) +
+  geom_path(data = plotDF_highRisk_test, aes(y = Sensitivity, x = 1- Specificity,
+                                        color = "High Risk (8-14)"), 
+            linewidth = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
+  geom_text(aes(x = 0.75, y = 0.25, label = paste0("AUC (Low Risk): ", round(auc_lowRisk_test,2), "\n"),
+                color = "Low Risk (1-3)"), fontface = "bold") +
+  geom_text(aes(x = 0.75, y = 0.25, label = paste0("\nAUC (High Risk): ", round(auc_highRisk_test,2)),
+                color = "High Risk (8-14)"), fontface = "bold") +
+  ggtitle("Performance in Test Set") +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic")) +
+  scale_color_brewer(palette = "Set1")
+
+ggsave(p, file = "CAIDE1_Non_EN_Discrete_AUC_test.png", height = 8, width = 8)
 
 #============================================================================#
 # plot predicted classes
@@ -147,7 +218,7 @@ ObsPred_CV_all$Class <- factor(ObsPred_CV_all$Class,
                                levels = c("Low Risk (0-3)",
                                           "Intermediate Risk (4-7)",
                                           "High Risk (8-14)"))
-ggplot(ObsPred_CV_all) +
+p <- ggplot(ObsPred_CV_all) +
   geom_boxplot(aes(x = Class, y = Score, fill = Class), alpha = 0.5) +
   geom_jitter(aes(x= Class, y = Score, color = Class), width = 0.2, height = 0.1, alpha = 0.2) +
   xlab("Predicted Class") +
@@ -165,44 +236,39 @@ ggplot(ObsPred_CV_all) +
                                      face = "italic")) 
 
 
+ggsave(p, file = "CAIDE1_Non_EN_Discrete_Boxplot.png", height = 6, width = 8)
 
 
-#****************************************************************************#
-# Test set
-#****************************************************************************#
+ObsPred_test_all <- data.frame(Score = ObsPred_test_highRisk$ObservedScore,
+                             Class = rep("Intermediate Risk (4-7)",nrow(ObsPred_test_highRisk)))
+ObsPred_test_all$Class[(ObsPred_test_highRisk$PredictedClass == "High") &
+                       (ObsPred_test_lowRisk$PredictedClass == "High/Intermediate")] <- "High Risk (8-14)"
+ObsPred_test_all$Class[(ObsPred_test_lowRisk$PredictedClass == "Low") &
+                       (ObsPred_test_highRisk$PredictedClass == "Low/Intermediate")] <- "Low Risk (0-3)"
+
+ObsPred_test_all$Class <- factor(ObsPred_test_all$Class,
+                               levels = c("Low Risk (0-3)",
+                                          "Intermediate Risk (4-7)",
+                                          "High Risk (8-14)"))
+p <- ggplot(ObsPred_test_all) +
+  geom_boxplot(aes(x = Class, y = Score, fill = Class), alpha = 0.5) +
+  geom_jitter(aes(x= Class, y = Score, color = Class), width = 0.2, height = 0.1, alpha = 1) +
+  xlab("Predicted Class") +
+  ylab("CAIDE1 Score") +
+  ggtitle("Performance in Cross-Validation") +
+  scale_fill_manual(values = RColorBrewer::brewer.pal(n = 4, "Reds")[2:4]) +
+  scale_color_manual(values = RColorBrewer::brewer.pal(n = 4, "Reds")[2:4]) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic")) 
 
 
-# Get performance on test set
-X_test_var_M <- log2(X_test_var/(1-X_test_var))
-test_prob <- predict(finalModel, t(X_test_var_M), type = "response")[,1]
-test_class <-factor(ifelse(Y_test$CAIDE <4, "Low", "Intermediate_High"),
-                               levels = c("Intermediate_High", "Low"))
-
-roc_list_test <- roc(response = test_class, 
-                     predictor = test_prob)
-
-plot(roc_list_test)
-auc(roc_list_test)
-
-
-output[["High"]] <- roc_list_test
+ggsave(p, file = "CAIDE1_Non_EN_Discrete_Boxplot_test.png", height = 6, width = 8)
 
 
 
-# Load data
-files <- list.files(paste0("X_", FeatureSelection))
-for (f in files){
-  load(paste0("X_", FeatureSelection, "/", f))
-}
-
-# Prepare data
-X_train = log2(X_CAIDE1_var/(1-X_CAIDE1_var))
-Y_train = Y_CAIDE1$CAIDE
-
-# Test if samples are in correct order
-all(colnames(X_train) == Y_CAIDE1$Basename)
-
-
-# Score and feature selection method
-Score = "CAIDE1"
-FeatureSelection = "var"

@@ -21,10 +21,10 @@ for (f in files){
 }
 
 # Feature selection data
-FeatureSelection = "PC"
-files <- list.files(paste0("X_", FeatureSelection))
+FeatureSelection = "Cor"
+files <- list.files(paste0("X/X_", FeatureSelection))
 for (f in files){
-  load(paste0("X_", FeatureSelection, "/",f))
+  load(paste0("X/X_", FeatureSelection, "/",f))
 }
 
 
@@ -50,6 +50,12 @@ if (FeatureSelection == "varMCor"){
 if (FeatureSelection == "PC"){
   subtitle = "PCA-based Feature Selection"
 }
+if (FeatureSelection == "KS"){
+  subtitle = "Kennard-Stone-like Feature Selection"
+}
+if (FeatureSelection == "Cor"){
+  subtitle = "Correlation-based Feature Selection"
+}
 
 ###############################################################################
 
@@ -61,7 +67,7 @@ if (FeatureSelection == "PC"){
 load("plot_all.RData")
 
 # Get beta- and M-values
-Bvalues <- X_nonTest_varCor
+Bvalues <- X_nonTest_KS
 Mvalues <- log2(Bvalues/(1 - Bvalues))
 
 # Format data
@@ -78,7 +84,7 @@ p <- ggplot() +
   geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
              color = "lightgrey", alpha = 0.5) +
   geom_point(data = plotDF, aes(x = meanBeta, y = sdBeta), 
-             color = RColorBrewer::brewer.pal(5, "Dark2")[5], alpha = 0.5) +
+             color = RColorBrewer::brewer.pal(8, "Dark2")[7], alpha = 0.5) +
   xlim(c(0,1)) +
   ylim(c(0,0.5)) +
   xlab("Mean of \u03b2-values") +
@@ -151,16 +157,16 @@ ggsave(p_island, file = "MeanVsSD_class.png", width = 8, height = 6)
 
 
 # Load all files
-m <- c("S", "var", "varM", "varCor", "varMCor", "PC")
+m <- c("S", "var", "varM", "varCor", "varMCor", "PC", "KS", "Cor")
 
 for (FeatureSelection in m){
-  files <- list.files(paste0("X_", FeatureSelection))
+  files <- list.files(paste0("X/X_", FeatureSelection))
   for (f in files){
-    load(paste0("X_", FeatureSelection, "/",f))
+    load(paste0("X/X_", FeatureSelection, "/",f))
   }
 }
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
-             "Variance (M, Cor)", "PCA")
+             "Variance (M, Cor)","KS-like", "Correlation", "PCA")
 
 plotDF = NULL
 for (i in 1:length(methods)){
@@ -182,6 +188,9 @@ for (i in 1:length(methods)){
   }
   if (methods[i] == "PCA"){
     dataMatrix <- t(X_nonTest_PC)
+  }
+  if (methods[i] == "KS-like"){
+    dataMatrix <- X_nonTest_KS
   }
   
   
@@ -246,7 +255,8 @@ ggsave(p, file = "R2_cellType_all.png", width = 8, height = 6)
 ###############################################################################
 
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
-             "Variance (M, Cor)", "PCA")
+             "Variance (M, Cor)", "KS-like", "Correlation", "PCA")
+
 plotDF = NULL
 for (i in 1:length(methods)){
   # Get data
@@ -268,6 +278,12 @@ for (i in 1:length(methods)){
   }
   if (methods[i] == "PCA"){
     dataMatrix <- t(X_nonTest_PC)
+  }
+  if (methods[i] == "KS-like"){
+    dataMatrix <- X_nonTest_KS
+  }
+  if (methods[i] == "Correlation"){
+    dataMatrix <- X_nonTest_Cor
   }
   
   # Get Features
@@ -327,7 +343,7 @@ p <- ggplot() +
 
 
 # Save plot
-ggsave(p, file = "R2_cellType.png", width = 8, height = 6)
+ggsave(p, file = "R2_cellType.png", width = 10, height = 6)
 
 
 
@@ -352,7 +368,7 @@ ggsave(p, file = "FeatureSelectionVenn.png", width = 6, height = 6)
 
 ###############################################################################
 
-# 4. Heatmap of shared features
+# 4. Upset diagram (overlap of features)
 
 ###############################################################################
 
@@ -360,20 +376,25 @@ featureList <- list(features_S = rownames(X_nonTest_S),
                     features_var = rownames(X_nonTest_var),
                     features_varM = rownames(X_nonTest_varM),
                     features_varCor = rownames(X_nonTest_varCor),
-                    features_varMCor = rownames(X_nonTest_varMCor))
+                    features_varMCor = rownames(X_nonTest_varMCor),
+                    features_KS = rownames(X_nonTest_KS),
+                    features_Cor = rownames(X_nonTest_Cor))
 # Load all files
-m <- c("S", "var", "varM", "varCor", "varMCor")
+m <- c("S", "var", "varM", "varCor", "varMCor", "KS", "Cor")
+methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
+             "Variance (M, Cor)", "KS-like", "Correlation")
 
-for (FeatureSelection in m){
-  files <- list.files(paste0("X_", FeatureSelection))
-  for (f in files){
-    load(paste0("X_", FeatureSelection, "/",f))
-  }
-}
 
 
 # Format data
-combinations <- expand.grid(c(1:5),c(1:5),c(1:5),c(1:5),c(1:5))
+nMethods = 7
+combinations <- expand.grid(1:nMethods,
+                            1:nMethods, 
+                            1:nMethods, 
+                            1:nMethods, 
+                            1:nMethods, 
+                            1:nMethods,
+                            1:nMethods)
 colnames(combinations) <- m
 
 for (i in 1:length(methods)){
@@ -395,16 +416,17 @@ rownames(combinations1) <- as.character(1:nrow(combinations1))
 combinations1$ID <- as.character(1:nrow(combinations1))
 colnames(combinations1) <- c("S-score", "Variance (\u03b2)", "Variance (M)",
                              "Variance (\u03b2, Cor)", "Variance (M, Cor)",
-                             "Sum", "ID")
+                             "KS-like", "Correlation", "Sum", "ID")
 
-levelsID <- rev(names(sort(rowSums(combinations1[,1:5]))))
+levelsID <- rev(names(sort(rowSums(combinations1[,1:nMethods]))))
 levelsSelection <- c("S-score", "Variance (\u03b2)", "Variance (M)",
-                     "Variance (\u03b2, Cor)", "Variance (M, Cor)")
+                     "Variance (\u03b2, Cor)", "Variance (M, Cor)",
+                     "KS-like", "Correlation")
 
 
 # Make heatmap part of the plot
-plotDF <- gather(combinations1[,1:5])
-plotDF$ID <- factor(rep(combinations1$ID,5),
+plotDF <- gather(combinations1[,1:nMethods])
+plotDF$ID <- factor(rep(combinations1$ID,nMethods),
                     levels = levelsID)
 plotDF$key <- factor(plotDF$key,
                      levels = levelsSelection)
@@ -413,7 +435,7 @@ plotDF <- plotDF[plotDF$value == 1,]
 
 main <- ggplot(plotDF) +
   geom_tile(aes(x = ID, y = key, fill = key),
-            color = 'black', width = 0.9, height = 0.9, size = 0.7) +
+            color = 'white', width = 0.9, height = 0.9, size = 0.7) +
   ylab("Feature Selection Method") +
   theme_classic() +
   scale_fill_brewer(palette = "Dark2") +
@@ -451,79 +473,9 @@ p <- top + main +
   plot_layout(nrow = 2, ncol = 1) +
   plot_layout(heights = c(1,1))
 
-ggsave(p, file = "UpsetDiagram.png", width = 10, height = 6)
+ggsave(p, file = "UpsetDiagram.png", width = 12, height = 6)
 
 
-features_S <- rownames(X_nonTest_S)
-features_var <- rownames(X_nonTest_var)
-features_varM <- rownames(X_nonTest_varM)
-features_varCor <- rownames(X_nonTest_varCor)
-features_varMCor <- rownames(X_nonTest_varMCor)
-
-plotDF <- data.frame(
-  Source = rep(c("S-score", "Variance (\u03b2)", "Variance (M)",
-                 "Variance (\u03b2, Cor)", "Variance (M, Cor)"),5),
-  Target =  c(rep("S-score",5), rep("Variance (\u03b2)",5), rep("Variance (M)",5),
-              rep("Variance (\u03b2, Cor)",5), rep("Variance (M, Cor)",5)),
-  value = c(length(intersect(features_S, features_S)),
-            length(intersect(features_var, features_S)),
-            length(intersect(features_varM, features_S)),
-            length(intersect(features_varCor, features_S)),
-            length(intersect(features_varMCor, features_S)),
-            length(intersect(features_S, features_var)),
-            length(intersect(features_var, features_var)),
-            length(intersect(features_varM, features_var)),
-            length(intersect(features_varCor, features_var)),
-            length(intersect(features_varMCor, features_var)),
-            length(intersect(features_S, features_varM)),
-            length(intersect(features_var, features_varM)),
-            length(intersect(features_varM, features_varM)),
-            length(intersect(features_varCor, features_varM)),
-            length(intersect(features_varMCor, features_varM)),
-            length(intersect(features_S, features_varCor)),
-            length(intersect(features_var, features_varCor)),
-            length(intersect(features_varM, features_varCor)),
-            length(intersect(features_varCor, features_varCor)),
-            length(intersect(features_varMCor, features_varCor)),
-            length(intersect(features_S, features_varMCor)),
-            length(intersect(features_var, features_varMCor)),
-            length(intersect(features_varM, features_varMCor)),
-            length(intersect(features_varCor, features_varMCor)),
-            length(intersect(features_varMCor, features_varMCor))
-            )
-)
-levels = unique(plotDF$Source)
-
-
-plotDF$Combined <- paste(plotDF$Source, plotDF$Target, sep = "_")
-plotDF$value[plotDF$Combined %in% c(paste0(levels[2], "_", levels[1]),
-                                    paste0(levels[3], "_", levels[1]),
-                                    paste0(levels[4], "_", levels[1]),
-                                    paste0(levels[5], "_", levels[1]),
-                                    paste0(levels[3], "_", levels[2]),
-                                    paste0(levels[4], "_", levels[2]),
-                                    paste0(levels[5], "_", levels[2]),
-                                    paste0(levels[4], "_", levels[3]),
-                                    paste0(levels[5], "_", levels[3]),
-                                    paste0(levels[5], "_", levels[4])
-                                    )] <- NA
-
-plotDF$Source <- factor(plotDF$Source, levels = levels)
-plotDF$Target <- factor(plotDF$Target, levels = rev(levels))
-
-p <- ggplot(plotDF) +
-  geom_tile(aes(x = Source, y = Target, fill = value, color = ifelse(is.na(value), NA, "1")),
-            width = 0.9, height = 0.9, alpha = 0.8) +
-  geom_label(aes(x = Source, y = Target, label = value), 
-             alpha = 0.5, label.size = NA) +
-  scale_fill_viridis_c(na.value = "white") +
-  scale_color_manual(values = "black", na.value = "white") +
-  theme_void() +
-  theme(legend.position = "none",
-        axis.text.y = element_text(hjust = 1),
-        axis.text.x = element_text())
-
-ggsave(p, file = "FeatureSelectionHeatmap.png", width = 8, height = 6)
 
 ###############################################################################
 
@@ -532,7 +484,7 @@ ggsave(p, file = "FeatureSelectionHeatmap.png", width = 8, height = 6)
 ###############################################################################
 
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
-             "Variance (M, Cor)", "PCA")
+             "Variance (M, Cor)", "KS-like", "Correlation", "PCA")
 plotExplVar = NULL
 for (i in 1:length(methods)){
   # Get data
@@ -548,12 +500,17 @@ for (i in 1:length(methods)){
   if (methods[i] == "Variance (\u03b2, Cor)"){
     dataMatrix <- X_nonTest_varCor
   }
-  
   if (methods[i] == "Variance (M, Cor)"){
     dataMatrix <- X_nonTest_varMCor
   }
+  if (methods[i] == "KS-like"){
+    dataMatrix <- X_nonTest_KS
+  }
   if (methods[i] == "PCA"){
     dataMatrix <- t(X_nonTest_PC)
+  }
+  if (methods[i] == "Correlation"){
+    dataMatrix <- X_nonTest_Cor
   }
   
   # Perform PCA

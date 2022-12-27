@@ -94,7 +94,7 @@ selectionKS <- function(dataMatrix, nFeatures = 5000, seedProbe = NULL) {
     # Add most uncorrelated probe to feature set
     newProbe[j+1] <- rownames(cor_matrix)[which.min(abs(cor_matrix[,j]))]
     
-    # Remove all highly correlated probes: keep probes with cor < 0.9
+    # Remove all highly correlated probes: keep probes with cor < 0.5
     cor_matrix <- cor_matrix[abs(cor_matrix[,j]) < 0.5,]
     dataMatrix <- dataMatrix[rownames(cor_matrix),]
   }
