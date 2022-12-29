@@ -12,7 +12,7 @@ load("EPILIBRA.Rdata")
 
 scoreAll <- inner_join(CAIDE[,c(1,10:16)], EPILIBRA[,c(1,10:20)], by = c("ID" = "ID"))
 colnames(scoreAll) <- c("ID", "Age", "Sex", "Education", "Systolic Blood Pressure",
-                        "BMI", "Total Serum Cholesterol", "Physical Inactivity",
+                        "BMI", "Total Cholesterol", "Physical Inactivity",
                         "Diet", " Physical Inactivity", "Smoking", "Alcohol Intake",
                         "Obesity", "Depression", "Type 2 Diabetes", "Hypertension", "HDL Cholesterol", 
                         "Heart Disease", "Kidney Disease")
@@ -54,8 +54,15 @@ libra_libra <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_ke
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
+  ylab("LIBRA") +
+  xlab("LIBRA") +
   theme_minimal() +
-  theme(axis.title = element_blank(),
+  theme(axis.title.x = element_text(face = "bold",
+                                    size = 12),
+        axis.title.y = element_text(angle = 90, 
+                                    vjust = 1,
+                                    face = "bold",
+                                    size = 12),
         legend.position = "none",
         axis.text.x = element_text(angle = 90, hjust = 1),
         plot.title = element_text(hjust = 0.5,
@@ -71,8 +78,14 @@ libra_caide <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_ke
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
+  ylab("CAIDE1") +
+  xlab("LIBRA") +
   theme_minimal() +
-  theme(axis.title = element_blank(),
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_text(angle = 90, 
+                                    vjust = 1,
+                                    face = "bold",
+                                    size = 12),
         legend.position = "none",
         axis.text.x = element_blank(),
         plot.title = element_text(hjust = 0.5,
@@ -87,8 +100,12 @@ caide_libra <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_ke
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
+  xlab("CAIDE1") +
+  ylab("LIBRA") +
   theme_minimal() +
-  theme(axis.title = element_blank(),
+  theme(axis.title.x = element_text(face = "bold",
+                                    size = 12),
+        axis.title.y = element_blank(),
         legend.position = "none",
         axis.text.y = element_blank(),
         axis.text.x = element_text(angle = 90, hjust = 1),
@@ -99,11 +116,135 @@ caide_libra <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_ke
                                      size = 10))
 
 
-p <- ggarrange(libra_caide, caide_caide, libra_libra, caide_libra,
-          nrow = 2, ncol = 2, align = "hv")
+library(patchwork)
+
+p <- libra_caide + caide_caide + libra_libra + caide_libra + 
+  plot_layout(nrow = 2)
 
 
-ggsave(p, file = "ScoreCor.png", height = 11, width = 10)
+
+ggsave(p, file = "ScoreCor.png", height = 10, width = 10)
+
+library(grid)
+legendPlot <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_key == "LIBRA"),]) +
+  geom_point(aes(x = key, y = Source, color = value, size = abs(value))) +
+  scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+                        limits = c(-1,1)) +
+  scale_size_continuous(limits = c(0,1)) +
+  ylab("LIBRA") +
+  xlab("LIBRA") +
+  labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
+  theme_minimal()
+legend <- cowplot::get_legend(legendPlot)
+grid.newpage()
+grid.draw(legend)
+
+###############################################################################
+
+# Constitution of each score
+
+###############################################################################
+Value <- c(table(CAIDE$age_c)/nrow(CAIDE),
+           table(CAIDE$Sex_c)/nrow(CAIDE),
+           table(CAIDE$Edu_c)/nrow(CAIDE),
+           table(CAIDE$Syst_c)/nrow(CAIDE),
+           table(CAIDE$BMI_c)/nrow(CAIDE),
+           table(CAIDE$Chol_c)/nrow(CAIDE),
+           table(CAIDE$PHYSICAL_c)/nrow(CAIDE)
+)
+
+Score <- c(names(table(CAIDE$age_c)/nrow(CAIDE)),
+           names(table(CAIDE$Sex_c)/nrow(CAIDE)),
+           names(table(CAIDE$Edu_c)/nrow(CAIDE)),
+           names(table(CAIDE$Syst_c)/nrow(CAIDE)),
+           names(table(CAIDE$BMI_c)/nrow(CAIDE)),
+           names(table(CAIDE$Chol_c)/nrow(CAIDE)),
+           names(table(CAIDE$PHYSICAL_c)/nrow(CAIDE))
+)
+
+ScoreFactor <-  c(rep("Age",3), 
+                  rep("Sex",2), 
+                  rep("Education",2), 
+                  rep("Systolic Blood Pressure",2),
+                  rep("BMI",2), 
+                  rep("Total Cholesterol",2), 
+                  rep("Physical Inactivity",2)
+)
+
+
+
+plotDF <- data.frame(Value, Score, ScoreFactor)
+
+ggplot(plotDF) +
+  geom_bar(aes(x = ScoreFactor, y = Value, fill = Score), 
+           stat = "identity", color = 'black') +
+  scale_fill_brewer(palette = "Reds") +
+  xlab("CAIDE1 Factor") +
+  ylab("Sample Proportion") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90,
+                                   hjust = 1,
+                                   vjust = 0.5))
+
+
+
+#LIBRA
+Value <- c(table(EPILIBRA$MEDITERANIAN)/nrow(EPILIBRA),
+           table(EPILIBRA$PHYSICAL_INACTIVITY)/nrow(EPILIBRA),
+           table(EPILIBRA$SMOKING)/nrow(EPILIBRA),
+           table(EPILIBRA$LtoMAlcohol)/nrow(EPILIBRA),
+           table(EPILIBRA$OBESITY)/nrow(EPILIBRA),
+           table(EPILIBRA$DEPRESSION)/nrow(EPILIBRA),
+           table(EPILIBRA$DIABETEII)/nrow(EPILIBRA),
+           table(EPILIBRA$HYPERTENSTION)/nrow(EPILIBRA),
+           table(EPILIBRA$Highcholesterol)/nrow(EPILIBRA),
+           table(EPILIBRA$Heartdisease)/nrow(EPILIBRA),
+           table(EPILIBRA$kidneydisease)/nrow(EPILIBRA)
+)
+
+Score <-  c(names(table(EPILIBRA$MEDITERANIAN)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$PHYSICAL_INACTIVITY)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$SMOKING)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$LtoMAlcohol)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$OBESITY)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$DEPRESSION)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$DIABETEII)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$HYPERTENSTION)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$Highcholesterol)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$Heartdisease)/nrow(EPILIBRA)),
+            names(table(EPILIBRA$kidneydisease)/nrow(EPILIBRA))
+)
+
+ScoreFactor <-  c(rep("Diet",2), 
+                  rep("Physical Inactivity",2), 
+                  rep("Smoking",2), 
+                  rep("Alcohol Intake",2),
+                  rep("Obesity",2), 
+                  rep("Depression",2), 
+                  rep("Type 2 Diabetes",2),
+                  rep("Hypertension",2),
+                  rep("HDL Cholesterol",2),
+                  rep("Heart Disease",2),
+                  rep("Kidney Disease",2)
+)
+
+
+
+plotDF <- data.frame(Value, Score, ScoreFactor)
+plotDF$Score <- factor(plotDF$Score,levels = as.character(sort(as.numeric(unique(plotDF$Score)))))
+
+colors <- c(RColorBrewer::brewer.pal(n = 3, name = "Blues")[c(3,2)], "grey",
+            RColorBrewer::brewer.pal(n = 8, name = "Reds")[2:8])
+ggplot(plotDF) +
+  geom_bar(aes(x = ScoreFactor, y = Value, fill = Score), 
+           stat = "identity", color = 'black') +
+  scale_fill_manual(values = colors) +
+  xlab("LIBRA Factor") +
+  ylab("Sample Proportion") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90,
+                                   hjust = 1,
+                                   vjust = 0.5))
 
 ###############################################################################
 
