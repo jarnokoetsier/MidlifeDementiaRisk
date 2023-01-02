@@ -219,7 +219,7 @@ nCores <- 3
 cl <- makeCluster(nCores)
 registerDoParallel(cl)
 
-trainResults <- fforeach::foreach(i = 1:length(CVindex), .packages = c("caret", "glmnet")) %dopar% {
+trainResults <- foreach::foreach(i = 1:length(CVindex), .packages = c("caret", "glmnet")) %dopar% {
   
   # Select samples from specific fold
   index <- list(CVindex[[i]])
@@ -288,14 +288,14 @@ stopCluster(cl)
 
 perf <- matrix(NA, nrow = 1000, ncol = 25)
 for (i in 1:length(trainResults)){
-  perf[,i] <- trainResults[[i]]$RMSE
+  perf[,i] <- trainResults[[i]]$ROC
 }
-optPar <- which.min(rowMeans(perf))
+optPar <- which.max(rowMeans(perf))
 
 optAlpha <- trainResults[[1]]$alpha[optPar]
 optLambda <- trainResults[[1]]$lambda[optPar]
 
-load("X_CAIDE1_Cor.RData")
+load("X/X_Cor/X_CAIDE1_Cor.RData")
 X_train = log2(X_CAIDE1_Cor/(1-X_CAIDE1_Cor))
 all(colnames(X_train) == Y_train$Basename)
 
