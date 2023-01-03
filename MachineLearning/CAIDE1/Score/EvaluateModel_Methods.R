@@ -12,6 +12,7 @@ library(doParallel)
 library(ggrepel)
 library(tidyverse)
 library(ggpubr)
+library(patchwork)
 
 # Set working directory
 setwd("E:/Thesis/EXTEND/Methylation")
@@ -234,4 +235,312 @@ p <- ggplot() +
 
 # save plot
 ggsave(p,file = "correlationPlot_sPLS.png", width = 8, height = 6)
+
+
+################################################################################
+
+# Cohen's f2 (Elastic Net)
+
+################################################################################
+
+
+load(paste0("CV_CAIDE1/CV_CAIDE1_", "cor", ".RData"))
+load(paste0("X/X_Cor/X_CAIDE1_Cor.RData"))
+
+# Load phenotype data
+files <- list.files('Y')
+for (f in files){
+  load(paste0("Y/",f))
+}
+
+# Get top 50 features
+topFeatures <- names(tail(sort(abs(coef(finalModel)[-1,1])),50))
+X_CAIDE1_top <- X_CAIDE1_Cor[topFeatures,]
+topCoefs <- data.frame(CpG = topFeatures,
+                         coefValue = coef(finalModel)[topFeatures,1])
+
+# Check whether samples are in correct order
+all(colnames(X_CAIDE1_top) == Y_CAIDE1$Basename)
+
+# Make formula
+formula <- paste0("cbind(",paste(topFeatures, collapse = ", "),") ~ ", 
+                  paste0("0 + ", paste(colnames(Y_CAIDE1[,14:20]), collapse = " + ")))
+
+# Mean center the data
+X_coefs_scaled <- (X_CAIDE1_top - rowMeans(X_CAIDE1_top))
+
+# Combine with dependent variables
+dataMatrix <- cbind(t(X_coefs_scaled),Y_CAIDE1[,14:20])
+
+# Fit model
+model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+
+# Get fitted and residual values
+fittedValues <- fitted(model)
+residualValues <- residuals(model)
+
+# Calculate Rsquared
+sse <- colSums(residualValues^2)
+ssr <- colSums(fittedValues^2)
+Rsquared = ssr/(ssr + sse)
+
+# Get global effect size
+globalEffect <- (Rsquared)/(1-Rsquared)
+
+# Calculate Cohen's f2 statistic
+cohenF <- list()
+factors <- colnames(Y_CAIDE1[,14:20])
+for (i in 1:length(factors)){
+  
+  # Formula without factor
+  formula <- paste0("cbind(",paste(topFeatures, collapse = ", "),") ~ ", 
+                    paste0("0 + ", paste(factors[-i], collapse = " + ")))
+  
+  # Fit model
+  model_i <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+  
+  # Get fitted and residual values
+  fittedValues <- fitted(model_i)
+  residualValues <- residuals(model_i)
+  
+  # Calculate Rsquared
+  sse <- colSums(residualValues^2)
+  ssr <- colSums(fittedValues^2)
+  Rsquared_i <- ssr/(ssr + sse)
+  
+  # Calculate cohen's f2 statistic (local effect size)
+  cohenF[[i]] <- ((Rsquared - Rsquared_i)/(1-Rsquared))#/globalEffect
+}
+
+
+
+# Combine into data frame
+factorNames <- c("Age", "Sex", "Edu", "BP", "BMI", "Chol", "Physical")
+plotDF <- data.frame(cohenF = c(unlist(cohenF)/globalEffect, globalEffect),
+                     Effect = rep(c(factorNames, "Global"), each = nrow(X_coefs_scaled)),
+                     CpG = rep(topFeatures,length(factorNames) +1))
+
+# Reorder
+plotDF$Effect <- factor(plotDF$Effect, levels = c(factorNames, "Global"))
+
+# Combine with coefficient values in final model
+plotDF <- inner_join(plotDF, topCoefs, by = c("CpG" = "CpG"))
+plotDF$CpG <- factor(plotDF$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
+
+
+# Make plot
+main <- ggplot(plotDF[plotDF$Effect != "Global",]) +
+  geom_bar(aes(y = cohenF, x = CpG, fill = Effect), stat="identity", alpha = 1) +
+  facet_grid(rows = vars(Effect)) +
+  xlab(NULL) +
+  ylab(expression("Cohen's " ~ f^2 ~ " (local / global)")) +
+  ggtitle("") +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "none",
+        strip.background = element_rect(fill= "grey", linewidth = 1, 
+                                        linetype="solid"),
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 13))
+
+global <- ggplot(plotDF[plotDF$Effect == "Global",]) +
+  geom_bar(aes(y = cohenF, x = CpG, fill = Effect), stat="identity") +
+  xlab(NULL) +
+  ylab(expression("Cohen's " ~ f^2)) +
+  ggtitle("") +
+  facet_grid(rows = vars(Effect)) +
+  #scale_fill_manual(values = "black") +
+  scale_fill_manual(values = "#666666") +
+  scale_y_continuous(breaks = c(0,0.05,0.1,0.15,0.2),labels = c("0.0", "", "0.1", "", "0.2")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.position = "none",
+        strip.background = element_rect(fill= "#ff726f",
+                                        linewidth = 1, 
+                                        linetype="solid"),
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 13))
+
+
+
+topCoefs$CpG <- factor(topCoefs$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
+top <- ggplot(topCoefs) +
+  #geom_point(aes(x = fct_reorder(cpg, avgValue), y = avgValue), color = "blue") +
+  geom_bar(aes(x = CpG, y = coefValue, fill = coefValue), stat = "identity", color = "black") +
+  ylab("Coefficients\nFinal Model") +
+  scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+                       limits = c(-0.5,0.5), oob = scales::squish) +
+  #scale_color_viridis_c(limits = c(-0.5, 0.5), oob = scales::squish) +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+p <- top / main / global +
+  plot_layout(heights = c(1,7,1))
+
+p <- main / global +
+  plot_layout(heights = c(7,1))
+
+# Save plot
+ggsave(p,file = "cohenF_ElasticNetModel_Cor_CAIDE1.png", width = 8, height = 8)
+
+
+################################################################################
+
+# Cohen's f2 (sPLS)
+
+################################################################################
+
+
+load(paste0("CV_CAIDE1/CV_CAIDE1_", "Cor_spls", ".RData"))
+load(paste0("X/X_Cor/X_CAIDE1_Cor.RData"))
+
+# Load phenotype data
+files <- list.files('Y')
+for (f in files){
+  load(paste0("Y/",f))
+}
+
+# Get top 50 features
+topFeatures <- names(tail(sort(abs(coef(finalModel)[-1,1])),50))
+X_CAIDE1_top <- X_CAIDE1_Cor[topFeatures,]
+topCoefs <- data.frame(CpG = topFeatures,
+                       coefValue = coef(finalModel)[topFeatures,1])
+
+# Check whether samples are in correct order
+all(colnames(X_CAIDE1_top) == Y_CAIDE1$Basename)
+
+# Make formula
+formula <- paste0("cbind(",paste(topFeatures, collapse = ", "),") ~ ", 
+                  paste0("0 + ", paste(colnames(Y_CAIDE1[,14:20]), collapse = " + ")))
+
+# Mean center the data
+X_coefs_scaled <- (X_CAIDE1_top - rowMeans(X_CAIDE1_top))
+
+# Combine with dependent variables
+dataMatrix <- cbind(t(X_coefs_scaled),Y_CAIDE1[,14:20])
+
+# Fit model
+model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+
+# Get fitted and residual values
+fittedValues <- fitted(model)
+residualValues <- residuals(model)
+
+# Calculate Rsquared
+sse <- colSums(residualValues^2)
+ssr <- colSums(fittedValues^2)
+Rsquared = ssr/(ssr + sse)
+
+# Get global effect size
+globalEffect <- (Rsquared)/(1-Rsquared)
+
+# Calculate Cohen's f2 statistic
+cohenF <- list()
+factors <- colnames(Y_CAIDE1[,14:20])
+for (i in 1:length(factors)){
+  
+  # Formula without factor
+  formula <- paste0("cbind(",paste(topFeatures, collapse = ", "),") ~ ", 
+                    paste0("0 + ", paste(factors[-i], collapse = " + ")))
+  
+  # Fit model
+  model_i <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+  
+  # Get fitted and residual values
+  fittedValues <- fitted(model_i)
+  residualValues <- residuals(model_i)
+  
+  # Calculate Rsquared
+  sse <- colSums(residualValues^2)
+  ssr <- colSums(fittedValues^2)
+  Rsquared_i <- ssr/(ssr + sse)
+  
+  # Calculate cohen's f2 statistic (local effect size)
+  cohenF[[i]] <- ((Rsquared - Rsquared_i)/(1-Rsquared))#/globalEffect
+}
+
+
+
+# Combine into data frame
+factorNames <- c("Age", "Sex", "Edu", "BP", "BMI", "Chol", "Physical")
+plotDF <- data.frame(cohenF = c(unlist(cohenF)/globalEffect, globalEffect),
+                     Effect = rep(c(factorNames, "Global"), each = nrow(X_coefs_scaled)),
+                     CpG = rep(topFeatures,length(factorNames) +1))
+
+# Reorder
+plotDF$Effect <- factor(plotDF$Effect, levels = c(factorNames, "Global"))
+
+# Combine with coefficient values in final model
+plotDF <- inner_join(plotDF, topCoefs, by = c("CpG" = "CpG"))
+plotDF$CpG <- factor(plotDF$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
+
+
+# Make plot
+main <- ggplot(plotDF[plotDF$Effect != "Global",]) +
+  geom_bar(aes(y = cohenF, x = CpG, fill = Effect), stat="identity", alpha = 1) +
+  facet_grid(rows = vars(Effect)) +
+  xlab(NULL) +
+  ylab(expression("Cohen's " ~ f^2 ~ " (local / global)")) +
+  ggtitle("") +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "none",
+        strip.background = element_rect(fill= "grey", linewidth = 1, 
+                                        linetype="solid"),
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 13))
+
+global <- ggplot(plotDF[plotDF$Effect == "Global",]) +
+  geom_bar(aes(y = cohenF, x = CpG, fill = Effect), stat="identity") +
+  xlab(NULL) +
+  ylab(expression("Cohen's " ~ f^2)) +
+  ggtitle("") +
+  facet_grid(rows = vars(Effect)) +
+  #scale_fill_manual(values = "black") +
+  scale_fill_manual(values = "#666666") +
+  #scale_y_continuous(breaks = c(0,0.05,0.1,0.15,0.2),labels = c("0.0", "", "0.1", "", "0.2")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.position = "none",
+        strip.background = element_rect(fill= "#ff726f",
+                                        linewidth = 1, 
+                                        linetype="solid"),
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 13))
+
+
+
+topCoefs$CpG <- factor(topCoefs$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
+top <- ggplot(topCoefs) +
+  #geom_point(aes(x = fct_reorder(cpg, avgValue), y = avgValue), color = "blue") +
+  geom_bar(aes(x = CpG, y = coefValue, fill = coefValue), stat = "identity", color = "black") +
+  ylab("Coefficients\nFinal Model") +
+  scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+                       limits = c(-0.03,0.03), oob = scales::squish) +
+  #scale_color_viridis_c(limits = c(-0.5, 0.5), oob = scales::squish) +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+p <- top / main / global +
+  plot_layout(heights = c(1,7,1))
+
+p <- main / global +
+  plot_layout(heights = c(7,1))
+
+# Save plot
+ggsave(p,file = "cohenF_sPLStModel_Cor_CAIDE1.png", width = 8, height = 8)
 

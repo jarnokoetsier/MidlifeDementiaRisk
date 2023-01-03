@@ -19,9 +19,9 @@ probe_annotation <- probe_annotation[(probe_annotation$Chr != "chrY") & (probe_a
 
 
 # Get associated gene(s)
-
+n <- nrow(probe_annotation)
 Probe2Gene <- NULL
-for (i in 1:nrow(probe_annotation)){
+for (i in 1:10000){
   temp <- data.frame(
     Gene = unlist(str_split(probe_annotation$Gene_Name[i], ";")),
     CpG = rep(probe_annotation$ID[i],length(unlist(str_split(probe_annotation$Gene_Name[i], ";")))),
@@ -32,10 +32,11 @@ for (i in 1:nrow(probe_annotation)){
 
 
 # Register cores for parallel computing
+# start from 200001
 nCores <- 3
 cl <- makeCluster(nCores)
 registerDoParallel(cl)
-Probe2Gene <- foreach (i = 1:nrow(probe_annotation), 
+Probe2Gene <- foreach (i = 100001:200000, 
                        .packages = "tidyverse", 
                        .combine = rbind.data.frame, 
                        .inorder = FALSE) %dopar% {
@@ -48,3 +49,6 @@ Probe2Gene <- foreach (i = 1:nrow(probe_annotation),
 }
 # Stop clusters
 stopCluster(cl)
+
+Probe2Gene_final <- rbind.data.frame(Probe2Gene_final,Probe2Gene)
+save(Probe2Gene_final, file = "Probe2Gene_final.RData")
