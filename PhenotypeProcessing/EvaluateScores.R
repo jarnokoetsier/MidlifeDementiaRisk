@@ -2,17 +2,25 @@
 library(readxl)
 library(tidyverse)
 library(ggpubr)
+library(patchwork)
 
 # Set working directory
 setwd("E:/Thesis/EXTEND/Phenotypes")
 
 # Load data
 load("CAIDE.Rdata")
+load("CAIDE2.RData")
 load("EPILIBRA.Rdata")
 
-scoreAll <- inner_join(CAIDE[,c(1,10:16)], EPILIBRA[,c(1,10:20)], by = c("ID" = "ID"))
+###############################################################################
+
+# Correlation of CAIDE and LIBRA
+
+###############################################################################
+
+scoreAll <- inner_join(CAIDE2[,c(1,10:17)], EPILIBRA[,c(1,10:20)], by = c("ID" = "ID"))
 colnames(scoreAll) <- c("ID", "Age", "Sex", "Education", "Systolic Blood Pressure",
-                        "BMI", "Total Cholesterol", "Physical Inactivity",
+                        "BMI", "Total Cholesterol", "Physical Inactivity", "APOE \u03b54 status",
                         "Diet", " Physical Inactivity", "Smoking", "Alcohol Intake",
                         "Obesity", "Depression", "Type 2 Diabetes", "Hypertension", "HDL Cholesterol", 
                         "Heart Disease", "Kidney Disease")
@@ -26,12 +34,12 @@ test <- test[,-1]
 
 plotDF <- gather(test)
 plotDF$Source <- rep(rownames(test), ncol(test))
-plotDF$Score_key <- rep(c(rep("CAIDE1",7), rep("LIBRA",11)), each = ncol(test))
-plotDF$Score_source <- rep(c(rep("CAIDE1",7), rep("LIBRA",11)), ncol(test))
+plotDF$Score_key <- rep(c(rep("CAIDE",8), rep("LIBRA",11)), each = ncol(test))
+plotDF$Score_source <- rep(c(rep("CAIDE",8), rep("LIBRA",11)), ncol(test))
 
 
 # CAIDE vs CAIDE
-caide_caide <- ggplot(plotDF[(plotDF$Score_source == "CAIDE1") & (plotDF$Score_key == "CAIDE1"),]) +
+caide_caide <- ggplot(plotDF[(plotDF$Score_source == "CAIDE") & (plotDF$Score_key == "CAIDE"),]) +
   geom_point(aes(x = key, y = Source, color = value, size = abs(value))) +
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
@@ -73,12 +81,12 @@ libra_libra <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_ke
 #ggsave(libra_libra, file = "libra_libra.png", height = 11, width = 11)
 
 # LIBRA vs CAIDE
-libra_caide <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_key == "CAIDE1"),]) +
+libra_caide <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_key == "CAIDE"),]) +
   geom_point(aes(y = key, x = Source, color = value, size = abs(value))) +
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
-  ylab("CAIDE1") +
+  ylab("CAIDE") +
   xlab("LIBRA") +
   theme_minimal() +
   theme(axis.title.x = element_blank(),
@@ -95,12 +103,12 @@ libra_caide <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_ke
                                      size = 10))
 
 # CAIDE vs LIBRA
-caide_libra <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_key == "CAIDE1"),]) +
+caide_libra <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_key == "CAIDE"),]) +
   geom_point(aes(x = key, y = Source, color = value, size = abs(value))) +
   scale_color_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                         limits = c(-1,1)) +
   scale_size_continuous(limits = c(0,1)) +
-  xlab("CAIDE1") +
+  xlab("CAIDE") +
   ylab("LIBRA") +
   theme_minimal() +
   theme(axis.title.x = element_text(face = "bold",
@@ -116,7 +124,6 @@ caide_libra <- ggplot(plotDF[(plotDF$Score_source == "LIBRA") & (plotDF$Score_ke
                                      size = 10))
 
 
-library(patchwork)
 
 p <- libra_caide + caide_caide + libra_libra + caide_libra + 
   plot_layout(nrow = 2)
@@ -144,6 +151,11 @@ grid.draw(legend)
 # Constitution of each score
 
 ###############################################################################
+
+#*****************************************************************************#
+# CAIDE1
+#*****************************************************************************#
+
 Value <- c(table(CAIDE$age_c)/nrow(CAIDE),
            table(CAIDE$Sex_c)/nrow(CAIDE),
            table(CAIDE$Edu_c)/nrow(CAIDE),
@@ -175,20 +187,88 @@ ScoreFactor <-  c(rep("Age",3),
 
 plotDF <- data.frame(Value, Score, ScoreFactor)
 
-ggplot(plotDF) +
+colors <- c("grey",RColorBrewer::brewer.pal(n = 8, name = "Reds")[2:5])
+
+p <- ggplot(plotDF) +
   geom_bar(aes(x = ScoreFactor, y = Value, fill = Score), 
            stat = "identity", color = 'black') +
-  scale_fill_brewer(palette = "Reds") +
-  xlab("CAIDE1 Factor") +
+  scale_fill_manual(values = colors) +
+  xlab("") +
   ylab("Sample Proportion") +
+  ggtitle("CAIDE1 Score") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90,
                                    hjust = 1,
-                                   vjust = 0.5))
+                                   vjust = 0.5),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+
+ggsave(p, file = "BarChart_Factors_CAIDE1.png", width = 8, height = 6)
+
+#*****************************************************************************#
+# CAIDE2
+#*****************************************************************************#
+
+Value <- c(table(CAIDE2$age_c)/nrow(CAIDE2),
+           table(CAIDE2$Sex_c)/nrow(CAIDE2),
+           table(CAIDE2$Edu_c)/nrow(CAIDE2),
+           table(CAIDE2$Syst_c)/nrow(CAIDE2),
+           table(CAIDE2$BMI_c)/nrow(CAIDE2),
+           table(CAIDE2$Chol_c)/nrow(CAIDE2),
+           table(CAIDE2$PHYSICAL_c)/nrow(CAIDE2),
+           table(CAIDE2$APOE_c)/nrow(CAIDE2)
+)
+
+Score <- c(names(table(CAIDE2$age_c)/nrow(CAIDE2)),
+           names(table(CAIDE2$Sex_c)/nrow(CAIDE2)),
+           names(table(CAIDE2$Edu_c)/nrow(CAIDE2)),
+           names(table(CAIDE2$Syst_c)/nrow(CAIDE2)),
+           names(table(CAIDE2$BMI_c)/nrow(CAIDE2)),
+           names(table(CAIDE2$Chol_c)/nrow(CAIDE2)),
+           names(table(CAIDE2$PHYSICAL_c)/nrow(CAIDE2)),
+           names(table(CAIDE2$APOE_c)/nrow(CAIDE2))
+)
+
+ScoreFactor <-  c(rep("Age",3), 
+                  rep("Sex",2), 
+                  rep("Education",2), 
+                  rep("Systolic Blood Pressure",2),
+                  rep("BMI",2), 
+                  rep("Total Cholesterol",2), 
+                  rep("Physical Inactivity",2),
+                  rep("APOE \u03b54 status",2)
+)
 
 
 
-#LIBRA
+plotDF <- data.frame(Value, Score, ScoreFactor)
+
+colors <- c("grey",RColorBrewer::brewer.pal(n = 8, name = "Reds")[c(2:4,6)])
+
+p <- ggplot(plotDF) +
+  geom_bar(aes(x = ScoreFactor, y = Value, fill = Score), 
+           stat = "identity", color = 'black') +
+  scale_fill_manual(values = colors) +
+  xlab("") +
+  ylab("Sample Proportion") +
+  ggtitle("CAIDE2 Score") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90,
+                                   hjust = 1,
+                                   vjust = 0.5),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+
+ggsave(p, file = "BarChart_Factors_CAIDE2.png", width = 8, height = 6)
+
+
+
+#*****************************************************************************#
+# LIBRA
+#*****************************************************************************#
+
 Value <- c(table(EPILIBRA$MEDITERANIAN)/nrow(EPILIBRA),
            table(EPILIBRA$PHYSICAL_INACTIVITY)/nrow(EPILIBRA),
            table(EPILIBRA$SMOKING)/nrow(EPILIBRA),
@@ -235,16 +315,22 @@ plotDF$Score <- factor(plotDF$Score,levels = as.character(sort(as.numeric(unique
 
 colors <- c(RColorBrewer::brewer.pal(n = 3, name = "Blues")[c(3,2)], "grey",
             RColorBrewer::brewer.pal(n = 8, name = "Reds")[2:8])
-ggplot(plotDF) +
+p <- ggplot(plotDF) +
   geom_bar(aes(x = ScoreFactor, y = Value, fill = Score), 
            stat = "identity", color = 'black') +
   scale_fill_manual(values = colors) +
-  xlab("LIBRA Factor") +
+  xlab("") +
   ylab("Sample Proportion") +
+  ggtitle("LIBRA Score") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90,
                                    hjust = 1,
-                                   vjust = 0.5))
+                                   vjust = 0.5),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+
+ggsave(p, file = "BarChart_Factors_LIBRA.png", width = 8, height = 6)
 
 ###############################################################################
 
@@ -337,3 +423,50 @@ p <- top + main + plot_spacer() + side +
   plot_layout(heights = c(1,6), widths = c(6,1))
 
 ggsave(p, file = "test.png", width = 8, height = 8)
+
+
+###############################################################################
+
+# Distribution of each score
+
+###############################################################################
+
+p <- ggplot(CAIDE) +
+  geom_bar(aes(x = CAIDE, y = after_stat(count)/919), 
+           fill = "#DC3535", color = "black", linewidth = 0.8) +
+  xlab("CAIDE1 Score") +
+  ylab("Sample Proportion")  +
+  ggtitle("CAIDE1 Score") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+ggsave(p, file = "Distribution_CAIDE1.png", width = 8, height = 6)
+
+p <- ggplot(CAIDE2) +
+  geom_bar(aes(x = CAIDE2, y = after_stat(count)/789), 
+           fill = "#F49D1A", color = "black", linewidth = 0.8) +
+  xlab("CAIDE2 Score") +
+  ylab("Sample Proportion") +
+  ggtitle("CAIDE2 Score") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+ggsave(p, file = "Distribution_CAIDE2.png", width = 8, height = 6)
+
+
+p <- ggplot(EPILIBRA) +
+  geom_histogram(aes(x = LIBRA, y = after_stat(count)/883), 
+                 bins = 12, fill = "#B01E68", color = "black", linewidth = 0.8) +
+  xlab("LIBRA Score") +
+  ylab("Sample Proportion") +
+  ggtitle("LIBRA Score") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+ggsave(p, file = "Distribution_LIBRA.png", width = 8, height = 6)
+
+
+

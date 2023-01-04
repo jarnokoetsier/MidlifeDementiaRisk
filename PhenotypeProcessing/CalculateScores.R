@@ -122,6 +122,92 @@ save(CAIDE_factors, file="CAIDE_factors.Rdata")
 #APOE: The two SNPs (rs429358, rs7412) that define the epsilon 2, 3, and 4 alleles
 
 
+# Information about the calculation of the CAIDE scores can be found here:
+# https://onlinelibrary.wiley.com/doi/full/10.1111/joim.12736
+
+dat <- dat_copy
+
+#*****************************************************************************#
+# Age
+#*****************************************************************************#
+# Discretize age in 3 classes with score 0, 3, and 4.
+dat$age_c <- rep(NA,nrow(dat))
+dat$age_c[dat$Age < 47] <- 0
+dat$age_c[dat$Age >= 47 & dat$Age <= 53] <- 3
+dat$age_c[dat$Age > 53] <- 5
+table(dat$age_c)
+
+#*****************************************************************************#
+# Sex
+#*****************************************************************************#
+# Male = 1 (1 in dataset)
+# Female = 0 (2 in dataset)
+
+dat$Sex_c <- ifelse(dat$Sex == 1,1,0) # Check!!!
+table(dat$Sex_c)
+
+
+#*****************************************************************************#
+# Education
+#*****************************************************************************#
+# "College.or.Uni.degree"                          "A.level.AS.level.or.equiv"                                    
+# "O.level.GCSEs.or.equiv"                         "CSEs.or.equiv"                                                
+# "NVQ.HND.HNC.or.equiv"                            "Other.professional.quals"                                     
+# "None.of.the.above
+dat$Edu_c <- ifelse(dat$None.of.the.above == 1,3,0)
+table(dat$Edu_c)
+
+
+#*****************************************************************************#
+# Systolic blood pressure
+#*****************************************************************************#
+dat$Syst_c <- ifelse(dat$MeanSysBP <= 140,0,2)
+table(dat$Syst_c)
+
+#*****************************************************************************#
+# BMI
+#*****************************************************************************#
+dat$BMI_c<-ifelse(dat$BMI <= 30,0,2)
+table(dat$BMI_c)
+
+#*****************************************************************************#
+# Serum total cholesterol level
+#*****************************************************************************#
+dat <- dat[-which(dat$Chol_unloged=="."),]
+dat$Chol_unloged <- as.numeric(dat$Chol_unloged)
+dat$Chol_c <- ifelse(dat$Chol_unloged <= 6.5,0,1)
+table(dat$Chol_c)
+
+#*****************************************************************************#
+# Physical activity
+#*****************************************************************************#
+dat$PHYSICAL_c <- ifelse(dat$Exercise.increased.pulse.more.than.2halfhrsawk == 1,0,1)
+table(dat$PHYSICAL_c)
+
+#*****************************************************************************#
+# APOE status
+#*****************************************************************************#
+APOEstatus <- read.csv("APOE_status.csv")
+dat <- dat[dat$ID %in% APOEstatus$sampleID,]
+e4 <- APOEstatus$e4
+names(e4) <- APOEstatus$sampleID
+e4 <- e4[dat$ID]
+all(names(e4) == dat$ID)
+dat$APOE_c <- ifelse(e4 == 0, 0,2)
+
+#*****************************************************************************#
+# Calculate scores
+#*****************************************************************************#
+CAIDE2 <- dat[,c(1:8,11,12,151:158)]
+CAIDE2$X <- NULL
+
+CAIDE2$CAIDE2 <- rowSums(CAIDE2[,10:17])
+hist(CAIDE2$CAIDE2,50)
+
+# Save data
+CAIDE2 <- unique(CAIDE2)
+save(CAIDE2, file="CAIDE2.Rdata")
+
 
 ###############################################################################
 
