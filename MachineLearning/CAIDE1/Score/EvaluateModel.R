@@ -682,7 +682,7 @@ ggsave(p_coefs, file = "MeanVsSD_coefs.png", width = 8, height = 6)
 
 # Score and feature selection method
 Score = "CAIDE1"
-methods = c("S", "var", "varM", "varCor", "varMCor", "KS", "PC", "Non")
+methods = c("S", "var", "varM", "varCor", "varMCor","PC", "KS", "Non")
 
 # Load data
 for (i in 1:length(methods)){
@@ -731,8 +731,8 @@ performanceDF <- data.frame(
                        rep("Variance (M)", 25),
                        rep("Variance (\u03b2, Cor)",25),
                        rep("Variance (M, Cor)", 25),
-                       rep("Kennard-Stone-like",25),
                        rep("PCA",25),
+                       rep("KS-like",25),
                        rep("None",25))
 )
 performanceDF$FeatureSelection <- factor(performanceDF$FeatureSelection,
@@ -746,8 +746,8 @@ performanceDF_test <- data.frame(
                        rep("Variance (M)", 1),
                        rep("Variance (\u03b2, Cor)",1),
                        rep("Variance (M, Cor)", 1),
-                       rep("Kennard-Stone-like",1),
                        rep("PCA",1),
+                       rep("KS-like",1),
                        rep("None", 1))
 )
 performanceDF_test$FeatureSelection <- factor(performanceDF_test$FeatureSelection,
@@ -784,9 +784,9 @@ performanceDF$FeatureSelection <- factor(performanceDF$FeatureSelection,
                                          rep("Variance (M)", 1),
                                          rep("Variance (\u03b2, Cor)",1),
                                          rep("Variance (M, Cor)", 1),
-                                         rep("Kennard-Stone-like",1),
-                                         rep("Correlation",1),
                                          rep("PCA",1),
+                                         rep("KS-like",1),
+                                         rep("Correlation",1),
                                          rep("None", 1)))
 
 
@@ -799,12 +799,13 @@ p <- ggplot(performanceDF) +
              color = "black", size = 5, shape = 18, alpha = 0.7) +
   xlab("Feature Selection Method") +
   ggtitle(Score) +
-  scale_fill_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2"), "red")) +
-  scale_color_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2"), "red")) +
+  scale_fill_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2")[c(1:5,8,6,7)], "red")) +
+  scale_color_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2")[c(1:5,8,6,7)], "red")) +
   #scale_color_brewer(palette = "Dark2") +
   #scale_fill_brewer(palette = "Dark2") +
   theme_classic() +
   theme(legend.title = element_blank(),
+        axis.text.x = element_text(),
         legend.position = "none",
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",

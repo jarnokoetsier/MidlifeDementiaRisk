@@ -82,7 +82,7 @@ for (j in 1:length(methods)){
   
 }
 
-
+performanceDF$Selection
 
 
 # Make plot
@@ -254,7 +254,8 @@ for (f in files){
 }
 
 # Get top 50 features
-topFeatures <- names(tail(sort(abs(coef(finalModel)[-1,1])),50))
+#topFeatures <- names(tail(sort(abs(coef(finalModel)[-1,1])),50))
+topFeatures <- names(coef(finalModel)[-1,1])[abs(coef(finalModel)[-1,1])>0]
 X_CAIDE1_top <- X_CAIDE1_Cor[topFeatures,]
 topCoefs <- data.frame(CpG = topFeatures,
                          coefValue = coef(finalModel)[topFeatures,1])
@@ -312,8 +313,65 @@ for (i in 1:length(factors)){
   cohenF[[i]] <- ((Rsquared - Rsquared_i)/(1-Rsquared))#/globalEffect
 }
 
+#==============================================================================#
+# NOT as a percentage of global effect
+#==============================================================================#
+# Combine into data frame
+factorNames <- c("Age", "Sex", "Edu", "BP", "BMI", "Chol", "Physical")
+plotDF <- data.frame(cohenF = c(unlist(cohenF), globalEffect),
+                     Effect = rep(c(factorNames, "Global"), each = nrow(X_coefs_scaled)),
+                     CpG = rep(topFeatures,length(factorNames) +1))
+
+# Reorder
+plotDF$Effect <- factor(plotDF$Effect, levels = c(factorNames, "Global"))
+
+# Combine with coefficient values in final model
+plotDF <- inner_join(plotDF, topCoefs, by = c("CpG" = "CpG"))
+plotDF$CpG <- factor(plotDF$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
 
 
+# Make plot
+main <- ggplot(plotDF) +
+  geom_bar(aes(y = cohenF, x = CpG, fill = Effect), stat="identity", alpha = 1) +
+  facet_grid(rows = vars(Effect)) +
+  xlab("Probes") +
+  ylab(expression("Cohen's " ~ f^2)) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "none",
+        strip.background = element_rect(fill= "grey", linewidth = 1, 
+                                        linetype="solid"),
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 13))
+
+
+topCoefs$CpG <- factor(topCoefs$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
+top <- ggplot(topCoefs) +
+  #geom_point(aes(x = fct_reorder(cpg, avgValue), y = avgValue), color = "blue") +
+  geom_bar(aes(x = CpG, y = coefValue, fill = coefValue), stat = "identity", color = "black") +
+  ylab("Coefficients\nFinal Model") +
+  scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+                       limits = c(-0.5,0.5), oob = scales::squish) +
+  #scale_color_viridis_c(limits = c(-0.5, 0.5), oob = scales::squish) +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+p <- top / main +
+  plot_layout(heights = c(1,7))
+
+
+# Save plot
+ggsave(p,file = "cohenF_ElasticNetModel_Cor_CAIDE1_all.png", width = 8, height = 8)
+
+
+#==============================================================================#
+# As a percentage of global effect
+#==============================================================================#
 # Combine into data frame
 factorNames <- c("Age", "Sex", "Edu", "BP", "BMI", "Chol", "Physical")
 plotDF <- data.frame(cohenF = c(unlist(cohenF)/globalEffect, globalEffect),

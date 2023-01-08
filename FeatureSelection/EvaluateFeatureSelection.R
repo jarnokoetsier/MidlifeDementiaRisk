@@ -56,6 +56,9 @@ if (FeatureSelection == "KS"){
 if (FeatureSelection == "Cor"){
   subtitle = "Correlation-based Feature Selection"
 }
+if (FeatureSelection == "CorKS"){
+  subtitle = "Correlation + KS-based Feature Selection"
+}
 
 ###############################################################################
 

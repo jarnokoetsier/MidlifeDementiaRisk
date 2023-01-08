@@ -48,7 +48,7 @@ load("X/X_Non/X_test_Non.RData")
 testData <-  log2(X_test_Non/(1-X_test_Non))
 
 #****************************************************************************#
-# Cross-validation
+# Cross-validation and test set
 #****************************************************************************#
 
 #============================================================================#
@@ -255,7 +255,7 @@ p <- ggplot(ObsPred_test_all) +
   geom_jitter(aes(x= Class, y = Score, color = Class), width = 0.2, height = 0.1, alpha = 1) +
   xlab("Predicted Class") +
   ylab("CAIDE1 Score") +
-  ggtitle("Performance in Cross-Validation") +
+  ggtitle("Performance in Test Set") +
   scale_fill_manual(values = RColorBrewer::brewer.pal(n = 4, "Reds")[2:4]) +
   scale_color_manual(values = RColorBrewer::brewer.pal(n = 4, "Reds")[2:4]) +
   theme_classic() +

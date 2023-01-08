@@ -38,16 +38,16 @@ load("CVindex_CAIDE1.RData")
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "PC"
+FeatureSelection = "CorKS"
 
 # Load data
-files <- list.files(paste0("X_", FeatureSelection))
+files <- list.files(paste0("X/X_", FeatureSelection))
 for (f in files){
-  load(paste0("X_", FeatureSelection, "/", f))
+  load(paste0("X/X_", FeatureSelection, "/", f))
 }
 
 # Prepare data
-X_train = log2(X_CAIDE1_varCor/(1-X_CAIDE1_varCor))
+X_train = log2(X_CAIDE1_CorKS/(1-X_CAIDE1_CorKS))
 Y_train = Y_CAIDE1$CAIDE
 
 # Test if samples are in correct order
