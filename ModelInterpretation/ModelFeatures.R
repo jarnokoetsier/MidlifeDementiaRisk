@@ -59,7 +59,7 @@ result_WP_CAIDE1 <- WP@result
 result_WP_CAIDE1_copy <- WP@result[,c(1,2,5)]
 
 # Number of permutations
-nPerm <- 100
+nPerm <- 1000
 
 # All CpGs
 all_cpg <- unique(Probe2Gene_final$CpG)
@@ -104,6 +104,12 @@ save(result_CAIDE1_early_copy, file = "results_WP_CAIDE1_copy.RData")
 perm_results <- -log10(result_WP_CAIDE1_copy[,4:(nPerm+3)])
 perm_results[is.na(perm_results)] <- 0
 
+#perm_results <- result_WP_CAIDE1_copy[,4:(nPerm+3)]
+#perm_results[is.na(perm_results)] <- 1
+#perm_test <- apply(perm_results,1,median)
+#hist(as.numeric(perm_results[which.min(perm_test),]))
+
+
 # Count number of times with more enrichment
 test <- rowSums(perm_results > -log10(result_WP_CAIDE1_copy[,3]))/nPerm
 
@@ -120,6 +126,22 @@ colnames(Output) <- c("ID", "Description", "pvalue (no perm)", "pvalue (perm)", 
 Output <- arrange(Output, by = `pvalue (perm)`)
 
 # Write output
-save(perm_results, file = "perm_results_Early.RData")
-write.csv(Output, file = "WP_Early.csv")
+save(perm_results, file = "perm_results_EN100.RData")
+write.csv(Output, file = "WP_EN100.csv")
 
+
+p <- ggplot() +
+  geom_point(data = Output, 
+             aes(x = -log10(`pvalue (no perm)`), y = -log10(`pvalue (perm)`+0.0005))) +
+  geom_label_repel(data = Output[Output$`pvalue (perm)` < 0.05,],
+                  aes(x = -log10(`pvalue (no perm)`), y = -log10(`pvalue (perm)`+0.0005), label = Description),
+                  size = 2) +
+  xlab(expression(-log[10] ~ "p-value (Fisher's exact test)")) +
+  ylab(expression(-log[10] ~ "p-value (permutation)")) +
+  ggtitle("Top 100 ElasticNet Features") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+
+ggsave(p, file = "pathwayAnalysis_CAIDE1_EN.png", width = 8, height = 6)

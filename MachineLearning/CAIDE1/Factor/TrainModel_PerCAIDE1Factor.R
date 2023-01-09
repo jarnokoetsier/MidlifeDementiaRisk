@@ -33,43 +33,55 @@ Y_CAIDE1_factors$Sex <- ifelse(Y_CAIDE1_factors$Sex == 1, "Male", "Female")
 Y_CAIDE1_factors$Edu_c <- ifelse(Y_CAIDE1_factors$Edu_c == 0, "Educated", "Uneducated")
 Y_CAIDE1_factors$PHYSICAL_c <- ifelse(Y_CAIDE1_factors$PHYSICAL_c == 0, "Active", "Inactive")
 
+Y <- Y_CAIDE1[,c(1,2,5,15:20)]
+Y$Sex_c <- ifelse(Y$Sex == 1, "Male", "Female")
+Y$Edu_c <- ifelse(Y$Edu_c == 0, "Educated", "Uneducated")
+Y$Syst_c <- ifelse(Y$Syst_c == 0, "Low", "High")
+Y$BMI_c <- ifelse(Y$BMI_c == 0, "Low", "High")
+Y$Chol_c <- ifelse(Y$Chol_c == 0, "Low", "High")
+Y$PHYSICAL_c <- ifelse(Y$PHYSICAL_c == 0, "Active", "Inactive")
+
 #=============================================================================#
 # FILL IN
 #=============================================================================#
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "PC"
+FeatureSelection = "Cor"
 
 # Load data
-files <- list.files(paste0("X_", FeatureSelection))
+files <- list.files(paste0("X/X_", FeatureSelection))
 for (f in files){
-  load(paste0("X_", FeatureSelection, "/", f))
+  load(paste0("X/X_", FeatureSelection, "/", f))
 }
 
 # Prepare data
-X_train = log2(X_CAIDE1_varMCor/(1-X_CAIDE1_varMCor))
-#X_train = t(X_CAIDE1_PC)
-Y_train = Y_CAIDE1_factors[,8:14]
+X_train = log2(X_CAIDE1_CorCV/(1-X_CAIDE1_CorCV))
+Y_train = Y[,3:9]
 
 # Test if samples are in correct order
-all(colnames(X_train) == Y_CAIDE1_factors$Basename)
+all(colnames(X_train) == Y$Basename)
 
 # Set number of folds and repeats
 nfold = 5
 nrep = 5
 
+load("CVindex.RData")
 #=============================================================================#
 
+###############################################################################
+
+# KS + Correlation
+
+###############################################################################
 
 
 ###############################################################################
 
-# ElasticNet
+# Correlation
 
 ###############################################################################
-#save(test1, file = "CVindex.RData")
-load("CVindex.RData")
+
 
 #*****************************************************************************#
 # Model training
@@ -98,99 +110,82 @@ for (variables in 1:ncol(Y_train)){
   if (class(Y_train[,variables]) == "character"){
     
     # Performance metric
-    performance_metric = "Kappa"
+    performance_metric = "ROC"
     
-    # Settings for repeated cross-validation
-    fitControl <- trainControl(method = "repeatedcv", 
-                               number = nfold, 
-                               repeats = nrep, 
-                               search = "grid", 
-                               savePredictions = FALSE,
-                               index = test1)
+    # Y_train
+    Y_train <- Y[,variables]
     
     # Register cores for parallel computing
     nCores <- 3
     cl <- makeCluster(nCores)
     registerDoParallel(cl)
     
-    # Actual training
-    set.seed(123)
-    fit <- train(x = t(X_train),
-                 y = Y_train[,variables],
-                 metric= performance_metric,
-                 method = MLmethod,
-                 tuneGrid = parameterGrid,
-                 trControl = fitControl,
-                 maximize = TRUE)
+    trainResults <- foreach::foreach(i = 1:length(CVindex), .packages = c("caret", "glmnet")) %dopar% {
+      
+      # Select samples from specific fold
+      index <- list(CVindex[[i]])
+      X_CV <- X_train[,index[[1]]]
+      
+      # Calculate correlations (using X_CV)
+      factors <- Y_CAIDE1[index[[1]],14:20]
+      correlations_CV <- matrix(NA, nrow = nrow(X_CV), ncol = ncol(factors))
+      for (f in 1:ncol(factors)) {
+        correlations_CV[,f] <- apply(X_CV, 1, 
+                                     function(x){cor(x, 
+                                                     factors[,f], 
+                                                     method = "spearman")})
+      }
+      rownames(correlations_CV) <- rownames(X_CV)
+      colnames(correlations_CV) <- colnames(factors)
+      
+      # Select top correlated features for each factor
+      probes <- list()
+      for (p in 1:7){
+        probes[[p]] <- names(tail(sort(abs(correlations_CV[,p])),1700))
+      }
+      
+      # get exactly 10,000 probes
+      n = 1
+      finalProbes <- unique(unlist(probes))
+      while (length(finalProbes) > 10000){
+        probes[[n]] <- probes[[n]][-1]
+        finalProbes <- unique(unlist(probes))
+        
+        if (n < 7){
+          n = n + 1
+        } else {
+          n = 1
+        }
+      }
+      
+      # Settings for repeated cross-validation
+      fitControl <- trainControl(search = "grid", 
+                                 savePredictions = FALSE,
+                                 summaryFunction = twoClassSummary,
+                                 classProbs = TRUE,
+                                 index = index)
+      
+      # Actual training
+      set.seed(123)
+      fit <- train(x = t(X_train[finalProbes,]),
+                   y = Y_train,
+                   metric= performance_metric,
+                   method = MLmethod,
+                   tuneGrid = parameterGrid,
+                   trControl = fitControl,
+                   maximize = TRUE)
+      
+      
+      return(fit$results)
+      
+    }
     
     # Stop clusters
     stopCluster(cl)
     
-    # Get results
-    trainResults <- fit$results
-    
-    # Get optimal lambda and alpha
-    optAlpha <- fit$bestTune$alpha
-    optLambda <- fit$bestTune$lambda
-    
-    # Get coefficients, prediction, and performance during the repeated CV
-    coefs <- matrix(NA, ncol(t(X_train))+1, nfold*nrep)
-    perf <- rep(NA, nfold*nrep)
-    folds <- fit$control$index
-    pred_CV_class <- NULL
-    pred_CV_response <- NULL
-    obs_CV <- NULL
-    fold_CV <- NULL
-    count = 0
-    for (r in 1:nrep){
-      for (f in 1:nfold){
-        count = count + 1
-        en_model_cv <- glmnet(x = t(X_train)[folds[[count]],], 
-                              y = Y_train[folds[[count]] ,variables], 
-                              family = "binomial",
-                              alpha = optAlpha, 
-                              lambda = optLambda,
-                              standardize = TRUE)
-        
-        # Get coefficients
-        coefs[,count] <- as.matrix(coef(en_model_cv))
-        
-        # Get prediction
-        pred_class <- predict(en_model_cv, t(X_train)[-folds[[count]],], type = "class")[,1]
-        pred_response <- predict(en_model_cv, t(X_train)[-folds[[count]],], type = "response")[,1]
-        
-        # Get performance
-        perf[count] <- sum(pred_class == Y_train[-folds[[count]],variables])/length(pred_class)
-        
-        pred_CV_class <- c(pred_CV_class,pred_class)
-        pred_CV_response <- c(pred_CV_response,pred_response)
-        obs_CV <- c(obs_CV, Y_train[-folds[[count]],variables])
-        fold_CV <- c(fold_CV, rep(count,length(pred_class)))
-      }
-    }
-    
-    # Save observed and predicted in a dataframe
-    ObsPred_CV <- data.frame(Predicted_class = pred_CV_class,
-                             Predicted_response = pred_CV_response,
-                             Observed = obs_CV,
-                             Fold = fold_CV)
-    
-    # Get final model
-    finalModel <- glmnet(x = t(X_train), 
-                         y = Y_train[,variables], 
-                         family = "binomial",
-                         alpha = optAlpha, 
-                         lambda = optLambda,
-                         standardize = TRUE)
     
     # Save output
-    outputList[[variables]] <- list(trainResults, 
-                                    optLambda, 
-                                    optAlpha, 
-                                    perf, 
-                                    ObsPred_CV, 
-                                    coefs, 
-                                    finalModel)
+    outputList[[variables]] <- trainResults
 
   } 
   
@@ -201,101 +196,84 @@ for (variables in 1:ncol(Y_train)){
     # Performance metric
     performance_metric = "RMSE"
     
-    # Settings for repeated cross-validation
-    fitControl <- trainControl(method = "repeatedcv", 
-                               number = nfold, 
-                               repeats = nrep, 
-                               search = "grid", 
-                               savePredictions = FALSE,
-                               summaryFunction = regressionSummary,
-                               index = test1)
+    # Y_train
+    Y_train <- Y[,variables]
     
     # Register cores for parallel computing
     nCores <- 3
     cl <- makeCluster(nCores)
     registerDoParallel(cl)
     
-    # Actual training
-    set.seed(123)
-    fit <- train(x = t(X_train),
-                 y = Y_train[,variables],
-                 metric= performance_metric,
-                 method = MLmethod,
-                 tuneGrid = parameterGrid,
-                 trControl = fitControl,
-                 maximize = TRUE)
+    trainResults <- foreach::foreach(i = 1:length(CVindex), .packages = c("caret", "glmnet")) %dopar% {
+      
+      # Select samples from specific fold
+      index <- list(CVindex[[i]])
+      X_CV <- X_train[,index[[1]]]
+      
+      # Calculate correlations (using X_CV)
+      factors <- Y_CAIDE1[index[[1]],14:20]
+      correlations_CV <- matrix(NA, nrow = nrow(X_CV), ncol = ncol(factors))
+      for (f in 1:ncol(factors)) {
+        correlations_CV[,f] <- apply(X_CV, 1, 
+                                     function(x){cor(x, 
+                                                     factors[,f], 
+                                                     method = "spearman")})
+      }
+      rownames(correlations_CV) <- rownames(X_CV)
+      colnames(correlations_CV) <- colnames(factors)
+      
+      # Select top correlated features for each factor
+      probes <- list()
+      for (p in 1:7){
+        probes[[p]] <- names(tail(sort(abs(correlations_CV[,p])),1700))
+      }
+      
+      # get exactly 10,000 probes
+      n = 1
+      finalProbes <- unique(unlist(probes))
+      while (length(finalProbes) > 10000){
+        probes[[n]] <- probes[[n]][-1]
+        finalProbes <- unique(unlist(probes))
+        
+        if (n < 7){
+          n = n + 1
+        } else {
+          n = 1
+        }
+      }
+      
+      # Settings for repeated cross-validation
+      fitControl <- trainControl(search = "grid", 
+                                 savePredictions = FALSE,
+                                 summaryFunction = regressionSummary,
+                                 classProbs = TRUE,
+                                 index = index)
+      
+      # Actual training
+      set.seed(123)
+      fit <- train(x = t(X_train[finalProbes,]),
+                   y = Y_train,
+                   metric= performance_metric,
+                   method = MLmethod,
+                   tuneGrid = parameterGrid,
+                   trControl = fitControl,
+                   maximize = TRUE)
+      
+      
+      return(fit$results)
+      
+    }
     
     # Stop clusters
     stopCluster(cl)
     
-    # Get results
-    trainResults <- fit$results
-    
-    # Get optimal lambda and alpha
-    optAlpha <- fit$bestTune$alpha
-    optLambda <- fit$bestTune$lambda
-    
-    # Get coefficients, prediction, and performance during the repeated CV
-    coefs <- matrix(NA, ncol(t(X_train))+1, nfold*nrep)
-    perf <- rep(NA, nfold*nrep)
-    folds <- fit$control$index
-    pred_CV <- NULL
-    obs_CV <- NULL
-    fold_CV <- NULL
-    count = 0
-    for (r in 1:nrep){
-      for (f in 1:nfold){
-        count = count + 1
-        en_model_cv <- glmnet(x = t(X_train)[folds[[count]],], 
-                              y = Y_train[folds[[count]],variables], 
-                              family = "gaussian",
-                              alpha = optAlpha, 
-                              lambda = optLambda,
-                              standardize = TRUE)
-        
-        # Get coefficients
-        coefs[,count] <- as.matrix(coef(en_model_cv))
-        
-        # Get prediction
-        pred <- predict(en_model_cv, t(X_train)[-folds[[count]],])[,1]
-        
-        # Get performance
-        perf[count] <- RMSE(pred = pred, obs = Y_train[-folds[[count]],variables])
-        
-        pred_CV <- c(pred_CV,pred)
-        obs_CV <- c(obs_CV, Y_train[-folds[[count]],variables])
-        fold_CV <- c(fold_CV, rep(count,length(pred)))
-      }
-    }
-    
-    # Save observed and predicted in a dataframe
-    ObsPred_CV <- data.frame(Predicted = pred_CV,
-                             Observed = obs_CV,
-                             Fold = fold_CV)
-    
-    # Get final model
-    finalModel <- glmnet(x = t(X_train), 
-                         y = Y_train[,variables], 
-                         family = "gaussian",
-                         alpha = optAlpha, 
-                         lambda = optLambda,
-                         standardize = TRUE)
     
     # Save output
-    outputList[[variables]] <- list(trainResults, 
-                                    optLambda, 
-                                    optAlpha, 
-                                    perf, 
-                                    ObsPred_CV, 
-                                    coefs, 
-                                    finalModel)
-    
+    outputList[[variables]] <- trainResults
   }
-
-
 }
 
-names(outputList) <- colnames(Y_train)
+names(outputList) <- colnames(Y[,3:9])
 save(outputList, file = paste0("OutputList_CAIDE1factors_", FeatureSelection, ".RData"))
 
 
