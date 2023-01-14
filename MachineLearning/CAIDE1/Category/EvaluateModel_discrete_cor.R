@@ -87,10 +87,10 @@ Y_train$Class <- factor(ifelse(Y_CAIDE1$CAIDE < 4, "Low", "Intermediate_High"),
                         levels = c("Intermediate_High","Low"))
 
 # Set grid for lambda
-lambdaCV <- optAlpha
+lambdaCV <- optLambda
 
 # Set grid for alpha
-alphaCV <- optLambda
+alphaCV <- optAlpha
 
 # Combine into a single data frame
 parameterGrid <- expand.grid(alphaCV, lambdaCV)

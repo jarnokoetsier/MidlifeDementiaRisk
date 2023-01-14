@@ -347,6 +347,9 @@ setwd("E:/Thesis/EXTEND/Phenotypes")
 load("CAIDE.Rdata")
 load("EPILIBRA.Rdata")
 
+
+
+
 CAIDE1 <- CAIDE[,c(1,10:17)]
 CAIDE1$Age3 <- ifelse(CAIDE1$age_c == 3, 3, 0)
 CAIDE1$Age4 <- ifelse(CAIDE1$age_c == 4, 4, 0)
@@ -370,16 +373,23 @@ for (i in 1:length(scores)){
 plotDF$Score <- factor(plotDF$Score,
                        levels = as.character(0:12))
 
+
+scoreValues <- data.frame(Factor = names( apply(CAIDE1[,3:10], 2, max)),
+                       Value =  apply(CAIDE1[,3:10], 2, max))
+
+plotDF <- inner_join(plotDF, scoreValues, by = c("Factor" = "Factor"))
+
 main <- ggplot(plotDF) +
-  geom_bar(aes(y = nonZero, x = Score, fill = Factor), stat="identity") +
+  geom_bar(aes(y = nonZero, x = Score, fill = as.factor(Value)), stat="identity", color = "black") +
   facet_grid(rows = vars(Factor)) +
   xlab("CAIDE1 Score") +
   ylab("Proportion with non-zero score") +
+  labs(fill = "Score") +
   scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1), labels = c("", "", "0.5", "", "1")) +
-  scale_fill_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Reds") +
   theme_minimal() +
   theme(axis.text.x = element_text(),
-        legend.position = "none",
+        legend.position = "bottom",
         strip.background = element_rect(fill= "grey", linewidth = 0, 
                                         linetype="solid"),
         strip.text = element_text(face = "bold"))
@@ -387,7 +397,7 @@ main <- ggplot(plotDF) +
 CAIDE1$CAIDE <- factor(CAIDE1$CAIDE,
                        levels = as.character(0:12))
 top <- ggplot(CAIDE1) +
-  geom_bar(aes(x = CAIDE)) +
+  geom_bar(aes(x = CAIDE), color = "black") +
   ylab("# Samples") +
   theme_classic() +
   theme(axis.text.x = element_blank(),
@@ -421,6 +431,11 @@ library(patchwork)
 p <- top + main + plot_spacer() + side +
   plot_layout(nrow = 2, byrow = FALSE) +
   plot_layout(heights = c(1,6), widths = c(6,1))
+
+p <- top + main +
+  plot_layout(nrow = 2, byrow = FALSE) +
+  plot_layout(heights = c(1,6))
+
 
 ggsave(p, file = "test.png", width = 8, height = 8)
 

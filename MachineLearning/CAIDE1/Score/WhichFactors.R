@@ -43,52 +43,63 @@ for (f in files){
 }
 
 # Load data
-methods = "cor"
-load(paste0("CV_CAIDE1/CV_CAIDE1_", methods, ".RData"))
-
-# Performance in test data
-testData <- log2(X_test_Cor/(1-X_test_Cor))
-pred_test <- predict(finalModel, t(testData))
-perf_test <- RMSE(pred = pred_test,
-                  obs = Y_test$CAIDE)
-
-perf_test_perm <- matrix(NA,100,7)
-test_CAIDE1 <- Y_test[,c(1,2,26:32)]
-for (factor in 3:9){
-  test_CAIDE1_copy <- test_CAIDE1
-  set.seed(123)
-  for (perm in 1:100){
-    rand <- sample(1:nrow(Y_test),nrow(Y_test))
-    test_CAIDE1_copy[,factor] <- test_CAIDE1[rand,factor]
-    CAIDE1_perm <- rowSums(test_CAIDE1_copy[,3:9])
-    
-    perf_test_perm[perm,factor-2] <- RMSE(pred = pred_test,
-                                          obs = CAIDE1_perm)
+methods = c("cor", "Cor_spls", "Cor_svm")
+methodNames <- c("ElasticNet", "sPLS", "SVM")
+perf_test <- rep(NA, length(methods))
+plotDF_all <- NULL
+for (m in 1:length(methods)){
+  load(paste0("CV_CAIDE1/CV_CAIDE1_", methods[m], ".RData"))
+  
+  # Performance in test data
+  testData <- log2(X_test_Cor/(1-X_test_Cor))
+  pred_test <- predict(finalModel, t(testData))
+  perf_test[m] <- RMSE(pred = pred_test,
+                    obs = Y_test$CAIDE)
+  
+  perf_test_perm <- matrix(NA,100,7)
+  test_CAIDE1 <- Y_test[,c(1,2,26:32)]
+  for (factor in 3:9){
+    test_CAIDE1_copy <- test_CAIDE1
+    set.seed(123)
+    for (perm in 1:100){
+      rand <- sample(1:nrow(Y_test),nrow(Y_test))
+      test_CAIDE1_copy[,factor] <- test_CAIDE1[rand,factor]
+      CAIDE1_perm <- rowSums(test_CAIDE1_copy[,3:9])
+      
+      perf_test_perm[perm,factor-2] <- RMSE(pred = pred_test,
+                                            obs = CAIDE1_perm)
+    }
   }
+  
+  colnames(perf_test_perm) <- c("Age", "Sex", "Education", "Systolic Blood Pressure", "BMI",
+                                "Total Cholesterol", "Physical Inactivity")
+  plotDF <- gather(as.data.frame(perf_test_perm))
+  plotDF$Method <- rep(methodNames[m],nrow(plotDF))
+  
+  plotDF_all <- rbind.data.frame(plotDF_all, plotDF)
 }
 
-colnames(perf_test_perm) <- c("Age", "Sex", "Education", "Systolic Blood Pressure", "BMI",
-                              "Total Cholesterol", "Physical Inactivity")
-plotDF <- gather(as.data.frame(perf_test_perm))
-
-
-p <- ggplot(plotDF) +
-  geom_hline(yintercept = perf_test, linetype = "dashed", color = "black", linewidth = 1.5) +
-  geom_violin(aes(x = key, y = value, fill = key)) +
-  geom_boxplot(aes(x = key, y = value), width = 0.1) +
-  xlab("CAIDE1 Factors") +
+p <- ggplot(plotDF_all) +
+  geom_hline(yintercept = perf_test[1], linetype = "dashed",color = "#FD841F", linewidth = 1) +
+  geom_hline(yintercept = perf_test[2], linetype = "dashed",color = "#E14D2A", linewidth = 1) +
+  geom_hline(yintercept = perf_test[3], linetype = "dashed",color = "#CD104D", linewidth = 1) +
+  geom_violin(aes(x = key, y = value, fill = Method)) +
+  geom_boxplot(aes(x = key, y = value, group = interaction(key,Method)), 
+               width=0.1, outlier.shape = NA, position=position_dodge(0.9)) +
+  #coord_flip() +
+  xlab(NULL) +
   ylab("RMSE") +
-  ggtitle("ElasticNet") +
-  theme_classic() +
-  #scale_fill_hue(c = 100, l = 40) +
-  scale_fill_brewer(palette = "Accent") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-        legend.position = "none",
+  labs(fill = NULL) +
+  #ggtitle("ElasticNet") +
+  theme_minimal() +
+  scale_fill_manual(values = c("#FD841F", "#E14D2A", "#CD104D")) +
+  theme(#axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.position = "bottom",
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
 
-ggsave(p, file = "ImportanceFactors_CAIDE1_EN.png", width = 8, height = 6)
+ggsave(p, file = "ImportanceFactors_CAIDE1_all_horizontal.png", width = 10, height = 6)
 
 ################################################################################
 

@@ -230,7 +230,7 @@ dat <- dat_copy
 
 dat <- dat[-which(dat$Fruit=="."|dat$Vegtables=="."),]
 dat$Fruit <- as.numeric(dat$Fruit)
-dat$Vegtables < -as.numeric(dat$Vegtables)
+dat$Vegtables <- as.numeric(dat$Vegtables)
 
 dat$MEDITERANIAN <- ifelse(dat$Fruit > 3 | dat$Vegtables > 3, 1,0)
 table(dat$MEDITERANIAN)
