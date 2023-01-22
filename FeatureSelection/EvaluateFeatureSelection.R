@@ -20,13 +20,18 @@ for (f in files){
   load(paste0("Y/",f))
 }
 
+###############################################################################
+
+# 1. Mean Beta-value vs SD Beta-value
+
+###############################################################################
+
 # Feature selection data
-FeatureSelection = "Cor"
+FeatureSelection = "KS"
 files <- list.files(paste0("X/X_", FeatureSelection))
 for (f in files){
   load(paste0("X/X_", FeatureSelection, "/",f))
 }
-
 
 # Make subtitle of figure
 if (FeatureSelection == "Non"){
@@ -59,12 +64,6 @@ if (FeatureSelection == "Cor"){
 if (FeatureSelection == "CorKS"){
   subtitle = "Correlation + KS-based Feature Selection"
 }
-
-###############################################################################
-
-# 1. Mean Beta-value vs SD Beta-value
-
-###############################################################################
 
 # Load all beta/M and their sd
 load("plot_all.RData")
@@ -160,7 +159,7 @@ ggsave(p_island, file = "MeanVsSD_class.png", width = 8, height = 6)
 
 
 # Load all files
-m <- c("S", "var", "varM", "varCor", "varMCor", "PC", "KS", "Cor")
+m <- c("S", "var", "varM", "varCor", "varMCor","KS", "Cor_CAIDE1")
 
 for (FeatureSelection in m){
   files <- list.files(paste0("X/X_", FeatureSelection))
@@ -169,7 +168,9 @@ for (FeatureSelection in m){
   }
 }
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
-             "Variance (M, Cor)","KS-like", "Correlation", "PCA")
+             "Variance (M, Cor)","KS-like", "Correlation")
+methods <- c("KS-like", "Correlation")
+
 
 plotDF = NULL
 for (i in 1:length(methods)){
@@ -195,7 +196,9 @@ for (i in 1:length(methods)){
   if (methods[i] == "KS-like"){
     dataMatrix <- X_nonTest_KS
   }
-  
+  if (methods[i] == "Correlation"){
+    dataMatrix <- X_nonTest_Cor
+  }
   
   # Get Features
   features <- rownames(dataMatrix)
@@ -387,6 +390,27 @@ m <- c("S", "var", "varM", "varCor", "varMCor", "KS", "Cor")
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
              "Variance (M, Cor)", "KS-like", "Correlation")
 
+test <- data.frame(Features = unlist(featureList),
+                   Method = rep(methods, each = 10000))
+
+#install.packages("ggupset")
+library(ggupset)
+test <- test %>%
+  as_tibble() %>%
+  group_by(Features) %>%
+  summarize(Method = list(Method))
+
+p <- ggplot(data = test, aes(x=Method)) +
+  geom_bar(fill = "grey", color = "black") +
+  scale_x_upset() +
+  xlab(NULL) +
+  ylab("Count") +
+  theme_classic() +
+  theme_combmatrix()
+
+ggsave(p, file = "upsetDiagram.png", width = 10, height = 6)
+
+
 
 
 # Format data
@@ -553,6 +577,22 @@ p  <- ggplot(plotExplVar) +
         axis.text.x = element_blank())#element_text(angle = 45, vjust = 0.5))
   
 ggsave(p, file = "FeatureSelectionExplVar.png", width = 8, height = 5)
+
+# zoom-in
+selected <- paste0("PC",1:10)
+p  <- ggplot(plotExplVar[plotExplVar$PC %in% selected,]) +
+  geom_step(aes(x = PC, y = cumVar, group = FeatureSelection, color = FeatureSelection),
+            linewidth = 1.5) +
+  xlab("Principal Components (PC1 - 10)") +
+  ylab("Cumulative Explained Variance (%)") +
+  scale_color_brewer(palette = "Dark2") +
+  theme_classic() +
+  theme(legend.title  = element_blank(),
+        axis.text.x = element_blank(),
+        legend.position = "none")#element_text(angle = 45, vjust = 0.5))
+
+ggsave(p, file = "FeatureSelectionExplVar_zoom.png", width = 8, height = 5)
+
 
 ###############################################################################
 

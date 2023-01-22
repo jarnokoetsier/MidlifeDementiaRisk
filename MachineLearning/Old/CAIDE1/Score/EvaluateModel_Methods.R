@@ -350,12 +350,10 @@ main <- ggplot(plotDF) +
 
 topCoefs$CpG <- factor(topCoefs$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
 top <- ggplot(topCoefs) +
-  #geom_point(aes(x = fct_reorder(cpg, avgValue), y = avgValue), color = "blue") +
   geom_bar(aes(x = CpG, y = coefValue, fill = coefValue), stat = "identity", color = "black") +
   ylab("Coefficients\nFinal Model") +
   scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                        limits = c(-0.5,0.5), oob = scales::squish) +
-  #scale_color_viridis_c(limits = c(-0.5, 0.5), oob = scales::squish) +
   theme_classic() +
   theme(axis.text.x = element_blank(),
         axis.title.x = element_blank(),

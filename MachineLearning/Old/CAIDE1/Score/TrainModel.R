@@ -85,7 +85,8 @@ fitControl <- trainControl(method = "repeatedcv",
 lambdaCV <- exp(seq(log(0.01),log(2.5),length.out = 100))
 
 # Set grid for alpha
-alphaCV <- seq(0.1,1,length.out = 10)
+#alphaCV <- seq(0.1,1,length.out = 10)
+alphaCV = 1
 
 # Combine into a single data frame
 parameterGrid <- expand.grid(alphaCV, lambdaCV)
@@ -115,9 +116,13 @@ stopCluster(cl)
 # Get results
 trainResults <- fit$results
 
+rmseSD <- min(trainResults$RMSE) + trainResults$RMSESD[which.min(trainResults$RMSE)[1]]
+idx <- which.max(trainResults$RMSE[trainResults$RMSE < rmseSD])
 # Get optimal lambda and alpha
-optAlpha <- fit$bestTune$alpha
-optLambda <- fit$bestTune$lambda
+optAlpha <- trainResults$alpha[idx]
+optLambda <- trainResults$lambda[idx]
+#optAlpha <- 
+#optLambda <- 
 
 # Get coefficients, prediction, and performance during the repeated CV
 coefs <- matrix(NA, ncol(t(X_train))+1, nfold*nrep)

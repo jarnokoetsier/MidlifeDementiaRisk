@@ -30,9 +30,6 @@ for (f in files){
   load(paste0("Y/",f))
 }
 
-# Score and feature selection method
-Score = "CAIDE1"
-FeatureSelection = "Cor"
 
 # Load CV index
 load("CVindex_CAIDE1.RData")
@@ -43,7 +40,7 @@ load("CVindex_CAIDE1.RData")
 
 # Score and feature selection method
 Score = "CAIDE1"
-FeatureSelection = "Cor"
+FeatureSelection = "Cor_CAIDE1"
 
 # Load data
 files <- list.files(paste0("X/X_", FeatureSelection))
@@ -69,9 +66,6 @@ output <- list()
 
 ################################################################################
 
-#load("X/X_Non/X_test_Cor.RData")
-#testData <-  log2(X_test_Cor/(1-X_test_Cor))
-
 #****************************************************************************#
 # Cross-validation
 #****************************************************************************#
@@ -79,8 +73,12 @@ output <- list()
 #============================================================================#
 # Low risk
 #============================================================================#
+
 # Load low risk model training
-load(paste0("CV_CAIDE1/CV_", Score, "_", FeatureSelection,"_LowRisk.RData"))
+# Score and feature selection method
+Score = "CAIDE1"
+FeatureSelection = "Cor"
+load(paste0("CV_CAIDE1/CV_", Score, "_", FeatureSelection,"_LowRisk_EN.RData"))
 
 # Get observed and predicted values
 Y_train$Class <- factor(ifelse(Y_CAIDE1$CAIDE < 4, "Low", "Intermediate_High"),

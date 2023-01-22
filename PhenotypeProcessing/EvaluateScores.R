@@ -148,7 +148,7 @@ grid.draw(legend)
 
 ###############################################################################
 
-# Constitution of each score
+# Distribution of individual factors
 
 ###############################################################################
 
@@ -347,8 +347,9 @@ setwd("E:/Thesis/EXTEND/Phenotypes")
 load("CAIDE.Rdata")
 load("EPILIBRA.Rdata")
 
-
-
+#*****************************************************************************#
+# CAIDE
+#*****************************************************************************#
 
 CAIDE1 <- CAIDE[,c(1,10:17)]
 CAIDE1$Age3 <- ifelse(CAIDE1$age_c == 3, 3, 0)
@@ -439,6 +440,81 @@ p <- top + main +
 
 ggsave(p, file = "test.png", width = 8, height = 8)
 
+#*****************************************************************************#
+# LIBRA
+#*****************************************************************************#
+
+LIBRA <- EPILIBRA[,c(1,10:20)]
+colnames(LIBRA) <- c("ID", "Diet", "Physical Act.", "Smoking", "L-M Alcohol", 
+                      "Obesity", "Depression", "Diabetes", "Hypertension", "HDL", 
+                      "Heart Dis.", "Kidney Dis.")
+
+for (i in 2:ncol(LIBRA)){
+  LIBRA[,i] <- sign(LIBRA[,i])
+}
+LIBRA$LIBRA <- rowSums(LIBRA[,2:ncol(LIBRA)])
+scores <- table(LIBRA$LIBRA)
+
+plotDF <- NULL
+for (i in 1:length(scores)){
+  
+  temp <- LIBRA[LIBRA$LIBRA == names(scores)[i],]
+  temp1 <- colSums(temp[,2:(ncol(temp)-1)] != 0)/scores[i]
+  
+  collect <- data.frame(Factor = names(temp1),
+                        nonZero = temp1,
+                        Score = rep(names(scores[i]), length(temp1)))
+  
+  plotDF <- rbind.data.frame(plotDF, collect)
+}
+
+plotDF$Score <- factor(plotDF$Score,
+                       levels = as.character(-2:4))
+
+
+scoreValues <- data.frame(Factor = c("Diet", "Physical Act.", "Smoking", "L-M Alcohol", 
+                                     "Obesity", "Depression", "Diabetes", "Hypertension", "HDL", 
+                                     "Heart Dis.", "Kidney Dis."),
+                          Value =  c(-1.7,1.1,1.5,-1,1.6,2.1,1.3,1.6,1.4,1,1.1))
+
+plotDF <- inner_join(plotDF, scoreValues, by = c("Factor" = "Factor"))
+
+main <- ggplot(plotDF) +
+  geom_bar(aes(y = nonZero, x = Score, fill = as.factor(Value)), stat="identity", color = "black") +
+  facet_grid(rows = vars(Factor)) +
+  xlab("Unweighted LIBRA Score") +
+  ylab("Proportion with non-zero score") +
+  labs(fill = "Score") +
+  scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1), labels = c("", "", "0.5", "", "1")) +
+  scale_fill_manual(values = c(RColorBrewer::brewer.pal(n = 3, name = "Blues")[c(3,2)],
+                               RColorBrewer::brewer.pal(n = 8, name = "Reds")[2:8]))+
+  #scale_fill_manual(values = c("#4292C6","#EF3B2C")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(),
+        legend.position = "right",
+        strip.background = element_rect(fill= "grey", linewidth = 0, 
+                                        linetype="solid"),
+        strip.text = element_text(face = "bold"))
+
+LIBRA$LIBRA <- factor(LIBRA$LIBRA,
+                       levels = as.character(-2:4))
+top <- ggplot(LIBRA) +
+  geom_bar(aes(x = LIBRA), color = "black") +
+  ylab("# Samples") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+
+
+library(patchwork)
+
+p <- top + main +
+  plot_layout(nrow = 2, byrow = FALSE) +
+  plot_layout(heights = c(1,10))
+
+
+ggsave(p, file = "LIBRA_contribution.png", width = 10, height = 12)
+
 
 ###############################################################################
 
@@ -484,4 +560,211 @@ p <- ggplot(EPILIBRA) +
 ggsave(p, file = "Distribution_LIBRA.png", width = 8, height = 6)
 
 
+###############################################################################
 
+# Correlation with cell type
+
+###############################################################################
+rm(list = ls())
+cat("\014") 
+
+# Load packages
+library(readxl)
+library(tidyverse)
+library(ggpubr)
+library(patchwork)
+
+# Set working directory
+setwd("E:/Thesis/EXTEND/Phenotypes")
+
+# Load data
+load("CAIDE.Rdata")
+load("CAIDE2.RData")
+load("EPILIBRA.Rdata")
+load("metaData_ageFil.RData")
+load("E:/Thesis/EXTEND/Methylation/cellType.RData")
+
+cellType_CAIDE1 <- cellType[CAIDE$Basename,]
+all(cellType_CAIDE1$ID == CAIDE$Basename)
+
+Y_all <- CAIDE[,10:17]
+RSquared <- rep(NA, ncol(Y_all))
+for (i in 1:ncol(Y_all)){
+  dataMatrix <- cbind.data.frame(Y_all[,i], cellType_CAIDE1[,1:6])
+  colnames(dataMatrix) <- c("Factor", colnames(cellType_CAIDE1[,1:6]))
+  
+  model <- summary(lm(Factor ~ ., data = dataMatrix))
+  RSquared[i] <- model$r.squared
+}
+plotDF <- data.frame(Factor = factor(c("Age", "Sex", "Education", "Syst. BP", "BMI", 
+                                "Total Chol.", "Physical Act.","CAIDE1"),
+                                levels = c("Age", "Sex", "Education", "Syst. BP", "BMI", 
+                                           "Total Chol.", "Physical Act.","CAIDE1")),
+                     R2 = RSquared)
+
+p <- ggplot(plotDF) +
+  geom_bar(aes(x = Factor, y = R2, fill = Factor),
+           stat = "identity", position=position_dodge(),
+           color = "black") +
+  xlab(NULL) +
+  ylab(expression(R^2)) +
+  labs(fill = NULL) +
+  coord_flip() +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggsave(p, file = "VarianceExplByCellType.png", width = 8, height = 6)
+
+
+###############################################################################
+
+# Correlation with cell type
+
+###############################################################################
+rm(list = ls())
+cat("\014") 
+
+# Load packages
+library(readxl)
+library(tidyverse)
+library(ggpubr)
+library(patchwork)
+
+# Set working directory
+setwd("E:/Thesis/EXTEND/Phenotypes")
+
+# Load data
+load("CAIDE.Rdata")
+load("CAIDE2.RData")
+load("EPILIBRA.Rdata")
+load("metaData_ageFil.RData")
+load("E:/Thesis/EXTEND/Methylation/cellType.RData")
+
+# Age
+Age <- rep(NA, nrow(dat))
+Age[dat$Age < 47] <- 0
+Age[dat$Age >= 47 & dat$Age <= 53] <- 3
+Age[dat$Age > 53] <- 4
+
+# Sex
+Sex <- ifelse(dat$Sex == 1,1,0)
+
+# APOE
+APOE <- CAIDE2$APOE_c
+names(APOE) <- CAIDE2$Basename
+APOE <- APOE[dat$Basename]
+
+# High Education
+Education <- ifelse(dat$None.of.the.above == 1,1,0)
+
+# High Systolic Blood Pressure
+SysBP <- ifelse(dat$MeanSysBP <= 140,0,1)
+
+# High BMI
+BMI <-ifelse(dat$BMI <= 30,0,1)
+
+# High total Cholesterol
+TotalChol <- ifelse(as.numeric(dat$Chol_unloged) <= 6.5,0,1)
+
+# Low physical activity
+Physical <- ifelse(dat$Exercise.increased.pulse.more.than.2halfhrsawk == 1,0,1)
+
+# Healthy Diet
+Diet <- ifelse(as.numeric(dat$Fruit) > 3 | as.numeric(dat$Vegtables) > 3, 1, 0)
+
+# Smoking
+Smoking <- ifelse(dat$Do.you.currently.smoke==1,1,0)
+
+# Low alcohol intake
+Alcohol <- rep(NA,nrow(dat))
+Alcohol[dat$How.often.do.you.drink.alcohol==0] <- 1
+Alcohol[dat$alcoholic.drinks.per.day==1 &    dat$How.often.do.you.drink.alcohol==1]<- 1
+Alcohol[dat$alcoholic.drinks.per.day==2 &    dat$How.often.do.you.drink.alcohol==1]<-1
+Alcohol[dat$alcoholic.drinks.per.day==3 &    dat$How.often.do.you.drink.alcohol==1]<-1
+Alcohol[dat$alcoholic.drinks.per.day==4 &    dat$How.often.do.you.drink.alcohol==1]<-1
+Alcohol[dat$alcoholic.drinks.per.day==5 &    dat$How.often.do.you.drink.alcohol==1]<-1
+
+Alcohol[dat$alcoholic.drinks.per.day==1 &    dat$How.often.do.you.drink.alcohol==2]<-1
+Alcohol[dat$alcoholic.drinks.per.day==2 &    dat$How.often.do.you.drink.alcohol==2]<-1
+
+Alcohol[dat$alcoholic.drinks.per.day==1 &    dat$How.often.do.you.drink.alcohol==3]<-1
+Alcohol[dat$alcoholic.drinks.per.day==2 &    dat$How.often.do.you.drink.alcohol==3]<-1
+
+# High alcohol intake
+Alcohol[dat$alcoholic.drinks.per.day==5 &   dat$How.often.do.you.drink.alcohol==1]<-0
+Alcohol[dat$alcoholic.drinks.per.day==3  &  dat$How.often.do.you.drink.alcohol==2]<-0
+Alcohol[dat$alcoholic.drinks.per.day==4 &   dat$How.often.do.you.drink.alcohol==2]<-0
+Alcohol[dat$alcoholic.drinks.per.day==5 &   dat$How.often.do.you.drink.alcohol==2]<-0
+Alcohol[dat$alcoholic.drinks.per.day==3 &   dat$How.often.do.you.drink.alcohol==3]<-0
+Alcohol[dat$alcoholic.drinks.per.day==4 &   dat$How.often.do.you.drink.alcohol==3]<-0
+Alcohol[dat$alcoholic.drinks.per.day==5 &   dat$How.often.do.you.drink.alcohol==3]<-0
+Alcohol[dat$alcoholic.drinks.per.day==2 &   dat$How.often.do.you.drink.alcohol==4]<-0
+Alcohol[dat$alcoholic.drinks.per.day==3 &   dat$How.often.do.you.drink.alcohol==4]<-0
+Alcohol[dat$alcoholic.drinks.per.day==4 &   dat$How.often.do.you.drink.alcohol==4]<-0
+Alcohol[dat$alcoholic.drinks.per.day==5 &   dat$How.often.do.you.drink.alcohol==4]<-0
+Alcohol[dat$alcoholic.drinks.per.day=="." &    dat$How.often.do.you.drink.alcohol==4]<-0
+
+# Depression
+Depression <- ifelse(dat$Depression==1,1,0)
+
+# Diabetes
+Diabetes <-ifelse(dat$T2.Diabetes==1,1,0)
+
+# High HDL
+HDL <- ifelse(dat$HDL_unloged > 2.2, 1,0)
+
+# Heart Disease
+HeartDisease <- ifelse(dat$Heart.Disease==1,1,0)
+
+# Kidney Disease
+KidneyDisease <- ifelse(dat$Kidney..Disease==1,1,0)
+
+
+Y_all <- data.frame(Sex,
+                    Age,
+                    APOE,
+                    Education,
+                    SysBP,
+                    BMI,
+                    TotalChol,
+                    Physical,
+                    Diet,
+                    Smoking,
+                    Alcohol,
+                    Depression,
+                    Diabetes,
+                    HDL,
+                    HeartDisease,
+                    KidneyDisease
+)
+
+rownames(Y_all) <- dat$Basename
+
+save(Y_all, file = "Y_all.RData")
+
+all(rownames(Y_all) == cellType$ID)
+
+plotDF <- NULL
+for (i in 1:ncol(Y_all)){
+  temp <- apply(cellType[,1:6],2,function(x){
+    cor(x,Y_all[,i],use = "pairwise.complete.obs", method = "pearson")
+  })
+  plotDF <- rbind.data.frame(plotDF, temp)
+}
+colnames(plotDF) <- colnames(cellType[,1:6])
+rownames(plotDF) <- colnames(Y_all)
+
+test <- gather(plotDF)
+test$factor <- rep(rownames(plotDF), ncol(plotDF))
+
+ggplot(test) +
+  geom_bar(aes(x = factor, y = abs(value), fill = key),
+           stat = "identity", position=position_dodge()) +
+  xlab(NULL) +
+  ylab("|Correlation|") +
+  labs(fill = NULL) +
+  coord_flip() +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal() +
+  theme(legend.position = "bottom")

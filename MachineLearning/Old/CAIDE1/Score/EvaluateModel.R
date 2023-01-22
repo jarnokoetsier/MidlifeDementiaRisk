@@ -21,7 +21,7 @@ load("E:/Thesis/EXTEND/Phenotypes/metaData_ageFil.RData")
 # Load model information
 Score = "CAIDE1"
 FeatureSelection = "Cor"
-load(paste0("CV_CAIDE1/CV_", Score, "_", FeatureSelection,".RData"))
+load(paste0("CV_CAIDE1/CV_", Score, "_", FeatureSelection,"_EN.RData"))
 
 # Make subtitle of figure
 if (FeatureSelection == "Non"){
@@ -756,8 +756,8 @@ performanceDF_test$FeatureSelection <- factor(performanceDF_test$FeatureSelectio
 
   
 # Load data
-load(paste0("CV_CAIDE1/CV_CAIDE1_cor.RData"))
-load(paste0("X/X_", "Cor", "/", "X_test_", "Cor", ".RData"))
+load(paste0("CV_CAIDE1/CV_CAIDE1_Cor_EN.RData"))
+load("X/X_Cor_CAIDE1/X_test_Cor.RData")
 
 # Performance in training data
 optPar <- which.min(rowMeans(perf))

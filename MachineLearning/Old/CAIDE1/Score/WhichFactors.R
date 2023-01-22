@@ -101,6 +101,122 @@ p <- ggplot(plotDF_all) +
 
 ggsave(p, file = "ImportanceFactors_CAIDE1_all_horizontal.png", width = 10, height = 6)
 
+
+
+################################################################################
+
+# Cohen's f2
+
+################################################################################
+
+#Score and feature selection method
+Score = "CAIDE1"
+FeatureSelection = "Cor"
+
+# Load data
+files <- list.files(paste0("X/X_", FeatureSelection))
+for (f in files){
+  load(paste0("X/X_", FeatureSelection, "/", f))
+}
+# Load phenotype data
+files <- list.files('Y')
+for (f in files){
+  load(paste0("Y/",f))
+}
+
+# Load data
+methods = c("cor", "Cor_spls", "Cor_svm")
+methodNames <- c("ElasticNet", "sPLS", "SVM")
+plotDF_all <- NULL
+for (m in 1:length(methods)){
+  load(paste0("CV_CAIDE1/CV_CAIDE1_", methods[m], ".RData"))
+  
+  # Performance in test data
+  testData <- log2(X_test_Cor/(1-X_test_Cor))
+  pred_test <- predict(finalModel, t(testData))
+  
+  dataMatrix <- cbind.data.frame(Y_test[,c(26:32)],pred_test)
+  colnames(dataMatrix) <- c(colnames(Y_test[,c(26:32)]), "PredictedScore")
+  
+  formula <- paste0("PredictedScore ~ ", 
+                    paste0("0 + ", paste(colnames(Y_test[,26:32]), collapse = " + ")))
+  
+                            
+  model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+  
+  # Get fitted and residual values
+  fittedValues <- fitted(model)
+  residualValues <- residuals(model)
+  
+  # Calculate R-squared
+  sse <- sum(residualValues^2)
+  ssr <- sum(fittedValues^2)
+  Rsquared = ssr/(ssr + sse)
+  
+  # Get global effect size
+  globalEffect <- (Rsquared)/(1-Rsquared)
+  
+  cohenF <- list()
+  Y_factors <- Y_test[,26:32]
+  for (factor in 1:7){
+    formula <- paste0("PredictedScore ~ ", 
+                      paste0("0 + ", paste(colnames(Y_factors[,-factor]), collapse = " + ")))
+    
+    
+    model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+    
+    # Get fitted and residual values
+    fittedValues <- fitted(model)
+    residualValues <- residuals(model)
+    
+    # Calculate R-squared
+    sse <- sum(residualValues^2)
+    ssr <- sum(fittedValues^2)
+    Rsquared_factor = ssr/(ssr + sse)
+    
+    # Calculate cohen's f2 statistic (local effect size)
+    cohenF[[factor]] <- ((Rsquared - Rsquared_factor)/(1-Rsquared))
+  }
+  
+  factorNames <- c("Age", "Sex", "Education", "Systolic Blood Pressure", "BMI",
+                                "Total Cholesterol", "Physical Inactivity")
+  plotDF <- data.frame(Name = c(factorNames, "Global"), 
+                       cohenF2  = c(unlist(cohenF), globalEffect))
+  plotDF$Method <- rep(methodNames[m],nrow(plotDF))
+  
+  plotDF_all <- rbind.data.frame(plotDF_all, plotDF)
+}
+
+
+p <- ggplot(plotDF_all[plotDF$Name != "Global",])+
+  geom_bar(aes(x = Name, y = cohenF2, fill = Method),
+           stat = "identity", position=position_dodge()) +
+  coord_flip() +
+  xlab(NULL) +
+  ylab(expression("Cohen's " ~ f^2)) +
+  labs(fill = NULL) +
+  theme_minimal() +
+  scale_fill_manual(values = c("#FD841F", "#E14D2A", "#CD104D")) +
+  theme(legend.position = "bottom")
+
+ggsave(p, file = "WhichFactors_CohenF2.png", width = 8, height = 6)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ################################################################################
 
 # sPLS

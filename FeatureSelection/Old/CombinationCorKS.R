@@ -9,18 +9,17 @@ library(tidyverse)
 setwd("E:/Thesis/EXTEND/Methylation")
 
 
-m <- c("KS", "Cor", "CorKS")
-
-for (FeatureSelection in m){
-  files <- list.files(paste0("X/X_", FeatureSelection))
-  for (f in files){
-    load(paste0("X/X_", FeatureSelection, "/",f))
-  }
-}
-methods <- c("KS-like","Correlation", "Correlation + KS-like")
+m <- c("KS", "Cor", "CorKS", "CorKS1")
+methods <- c("KS-like","Correlation", "Corr (20,000) + KS-like", "Corr (40,000) + KS-like")
 
 plotExplVar = NULL
 for (i in 1:length(methods)){
+  
+  files <- list.files(paste0("X/X_", m[i]))
+  for (f in files){
+    load(paste0("X/X_", m[i], "/",f))
+  }
+  
   # Get data
   if (methods[i] == "KS-like"){
     dataMatrix <- X_nonTest_KS
@@ -28,7 +27,10 @@ for (i in 1:length(methods)){
   if (methods[i] == "Correlation"){
     dataMatrix <- X_nonTest_Cor
   }
-  if (methods[i] == "Correlation + KS-like"){
+  if (methods[i] == "Corr (20,000) + KS-like"){
+    dataMatrix <- X_nonTest_CorKS
+  }
+  if (methods[i] == "Corr (40,000) + KS-like"){
     dataMatrix <- X_nonTest_CorKS
   }
   
@@ -56,8 +58,8 @@ plotExplVar$PC <- factor(rep(paste0("PC", 1:924), length(methods)),
 plotExplVar$FeatureSelection <- factor(plotExplVar$FeatureSelection,
                                        levels = methods)
 
-color <- c(RColorBrewer::brewer.pal(n = 8, "Dark2")[6:7],"#C1121F")
-p  <- ggplot(plotExplVar) +
+color <- c(RColorBrewer::brewer.pal(n = 8, "Dark2")[7],"#FB5607","#C1121F")
+p  <- ggplot(plotExplVar[plotExplVar$FeatureSelection != "KS-like",]) +
   geom_step(aes(x = PC, y = cumVar, group = FeatureSelection, color = FeatureSelection),
             linewidth = 1.5) +
   geom_hline(yintercept = 100,  linetype = "dashed", linewidth = 1.5) +
@@ -71,7 +73,7 @@ p  <- ggplot(plotExplVar) +
         legend.position = "bottom",
         axis.text.x = element_blank())#element_text(angle = 45, vjust = 0.5))
 
-ggsave(p, file = "FeatureSelectionExplVar_CorKS.png", width = 8, height = 5)
+ggsave(p, file = "FeatureSelectionExplVar_CorKS1.png", width = 6, height = 5)
 
 
 ###############################################################################
@@ -82,11 +84,16 @@ ggsave(p, file = "FeatureSelectionExplVar_CorKS.png", width = 8, height = 5)
 
 library(ggvenn)
 
-plotList <- list(rownames(X_nonTest_KS), 
-                 rownames(X_nonTest_Cor), 
-                 rownames(X_nonTest_CorKS))
+m1 <- "CorKS"
+files <- list.files(paste0("X/X_", m1))
+for (f in files){
+  load(paste0("X/X_", m1, "/",f))
+}
+plotList <- list(rownames(X_nonTest_Cor), 
+                 rownames(X_nonTest_CorKS), 
+                 rownames(dataMatrix))
 
-names(plotList) <- c("KS-like","Correlation", "Correlation + KS-like")
+names(plotList) <- c("Correlation","Corr (20,000) + KS-like", "Corr (40,000) + KS-like")
 
 
 p <- ggvenn(plotList, show_percentage = FALSE, fill_color = color)
@@ -103,18 +110,6 @@ library(spls)
 library(kernlab)
 library(caret)
 
-
-m <- c("KS", "Cor", "CorKS")
-
-for (FeatureSelection in m){
-  files <- list.files(paste0("X/X_", FeatureSelection))
-  for (f in files){
-    load(paste0("X/X_", FeatureSelection, "/",f))
-  }
-}
-methods <- c("KS-like","Correlation", "Correlation + KS-like")
-
-
 # Load phenotype data
 files <- list.files('Y')
 for (f in files){
@@ -126,10 +121,12 @@ for (f in files){
 performanceDF <- NULL
 performanceDF_test <- NULL
 methods = c("cor", "Cor_spls", "Cor_svm", 
-            "KS", "KS_spls", "KS_svm", 
-            "CorKS", "CorKS_spls", "CorKS_svm")
+            "CorKS", "CorKS_spls", "CorKS_svm", 
+            "CorKS1", "CorKS1_spls", "CorKS1_svm")
 methodNames <- rep(c("ElasticNet", "sPLS", "SVM"),3)
-selectionNames <- c(rep("Correlation",3), rep("KS-like",3), rep("Correlation + KS-like",3))
+selectionNames <- c(rep("Correlation",3), 
+                    rep("Corr (20,000) + KS-like",3), 
+                    rep("Corr (40,000) + KS-like",3))
 for (j in 1:length(methods)){
   
   # Load data
@@ -139,6 +136,12 @@ for (j in 1:length(methods)){
     load(file)
     
     if (selectionNames[j] == "Correlation"){
+      
+      FeatureSelection <- "Cor"
+      files <- list.files(paste0("X/X_", FeatureSelection))
+      for (f in files){
+        load(paste0("X/X_", FeatureSelection, "/",f))
+      }
       
       # Performance in training data
       optPar <- which.min(rowMeans(perf))
@@ -164,8 +167,15 @@ for (j in 1:length(methods)){
       
       performanceDF_test <- rbind.data.frame(performanceDF_test,temp)
     }
-    if (selectionNames[j] == "KS-like"){
+    if (selectionNames[j] == "Corr (20,000) + KS-like"){
      
+      FeatureSelection <- "CorKS"
+      files <- list.files(paste0("X/X_", FeatureSelection))
+      for (f in files){
+        load(paste0("X/X_", FeatureSelection, "/",f))
+      }
+      
+      
       # Performance in training data
       temp <- data.frame(RMSE = perf,
                          Method = rep(methodNames[j], 25),
@@ -174,7 +184,7 @@ for (j in 1:length(methods)){
       performanceDF <- rbind.data.frame(performanceDF,temp)
       
       # Performance in test data
-      testData <- log2(X_test_KS/(1-X_test_KS))
+      testData <- log2(X_test_CorKS/(1-X_test_CorKS))
       pred_test <- predict(finalModel, t(testData))
       perf_test <- RMSE(pred = pred_test,
                          obs = Y_test$CAIDE)
@@ -185,7 +195,13 @@ for (j in 1:length(methods)){
       
       performanceDF_test <- rbind.data.frame(performanceDF_test,temp)
     }
-    if (selectionNames[j] == "Correlation + KS-like"){
+    if (selectionNames[j] == "Corr (40,000) + KS-like"){
+      
+      FeatureSelection <- "CorKS1"
+      files <- list.files(paste0("X/X_", FeatureSelection))
+      for (f in files){
+        load(paste0("X/X_", FeatureSelection, "/",f))
+      }
       
       # Performance in training data
       temp <- data.frame(RMSE = perf,
@@ -215,11 +231,11 @@ for (j in 1:length(methods)){
 
 # Make plot
 performanceDF$Selection <- factor(performanceDF$Selection, 
-                                  levels = c("KS-like", "Correlation", "Correlation + KS-like"))
+                                  levels = c("Correlation", "Corr (20,000) + KS-like", "Corr (40,000) + KS-like"))
 performanceDF_test$Selection <- factor(performanceDF_test$Selection, 
-                                  levels = c("KS-like", "Correlation", "Correlation + KS-like"))
+                                  levels = c("Correlation", "Corr (20,000) + KS-like", "Corr (40,000) + KS-like"))
 
-color <- c(RColorBrewer::brewer.pal(n = 8, "Dark2")[6:7],"#C1121F")
+color <- c(RColorBrewer::brewer.pal(n = 8, "Dark2")[7],"#FB5607","#C1121F")
 p <- ggplot() +
   geom_boxplot(data = performanceDF, aes(x = Method, y = RMSE, fill = Selection), alpha = 0.3) +
   geom_point(data = performanceDF, aes(x = Method, y = RMSE, color = Selection), 
