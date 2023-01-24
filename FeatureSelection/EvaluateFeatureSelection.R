@@ -169,7 +169,6 @@ for (FeatureSelection in m){
 }
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
              "Variance (M, Cor)","KS-like", "Correlation")
-methods <- c("KS-like", "Correlation")
 
 
 plotDF = NULL
@@ -242,6 +241,7 @@ plotDF$FeatureSelection <- factor(plotDF$FeatureSelection, levels = methods)
 p <- ggplot() +
   geom_bar(data = plotDF, aes(x = FeatureSelection, y = Value*100, fill = FeatureSelection),
            stat="identity", position=position_dodge(), color = "black", alpha = 0.8) +
+  coord_flip() +
   xlab("Feature Selection Method") +
   ylab("Variance explained (%) by cell type composition") +
   scale_fill_brewer(palette = "Dark2") +
@@ -259,6 +259,17 @@ ggsave(p, file = "R2_cellType_all.png", width = 8, height = 6)
 # 2. Multiple regression
 
 ###############################################################################
+
+
+# Load all files
+m <- c("S", "var", "varM", "varCor", "varMCor","KS", "Cor_CAIDE1", "PC")
+
+for (FeatureSelection in m){
+  files <- list.files(paste0("X/X_", FeatureSelection))
+  for (f in files){
+    load(paste0("X/X_", FeatureSelection, "/",f))
+  }
+}
 
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
              "Variance (M, Cor)", "KS-like", "Correlation", "PCA")
@@ -300,7 +311,7 @@ for (i in 1:length(methods)){
                     paste0("0 + ", paste(colnames(Y_nonTest[,7:12]), collapse = " + ")))
   
   # Scale data matrix
-  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix)))
+  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix))/(apply(dataMatrix,1,sd)))
   
   # Combine with cell type composition
   dataMatrix1 <- cbind(dataMatrix_scaled,Y_nonTest[,7:12])
@@ -334,7 +345,7 @@ plotDF$FeatureSelection <- factor(plotDF$FeatureSelection, levels = methods)
 
 # Make plot
 p <- ggplot() +
-  geom_bar(data = plotDF, aes(x = FeatureSelection, y = Value, fill = Threshold),
+  geom_bar(data = plotDF[plotDF$FeatureSelection != "PCA",], aes(x = FeatureSelection, y = Value, fill = Threshold),
            stat="identity", position=position_dodge(), color = "black", alpha = 0.8) +
   xlab("Feature Selection Method") +
   ylab("Proportion of Features") +
@@ -353,30 +364,25 @@ ggsave(p, file = "R2_cellType.png", width = 10, height = 6)
 
 
 
-
-###############################################################################
-
-# 3. Venn diagram
-
-###############################################################################
-
-library(ggvenn)
-
-plotList <- list(rownames(X_nonTest_S), 
-                 rownames(X_nonTest_var), 
-                 rownames(X_nonTest_varM))
-
-names(plotList) <- c("S-score", "Variance (\u03b2)", "Variance (M)")
-
-p <- ggvenn(plotList, show_percentage = FALSE, fill_color = RColorBrewer::brewer.pal(3, "Dark2"))
-ggsave(p, file = "FeatureSelectionVenn.png", width = 6, height = 6)
-
-
 ###############################################################################
 
 # 4. Upset diagram (overlap of features)
 
 ###############################################################################
+
+# Load all files
+m <- c("S", "var", "varM", "varCor", "varMCor","KS", "Cor_CAIDE1")
+
+for (FeatureSelection in m){
+  files <- list.files(paste0("X/X_", FeatureSelection))
+  for (f in files){
+    load(paste0("X/X_", FeatureSelection, "/",f))
+  }
+}
+
+methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
+             "Variance (M, Cor)", "KS-like", "Correlation")
+
 
 featureList <- list(features_S = rownames(X_nonTest_S),
                     features_var = rownames(X_nonTest_var),
@@ -385,10 +391,6 @@ featureList <- list(features_S = rownames(X_nonTest_S),
                     features_varMCor = rownames(X_nonTest_varMCor),
                     features_KS = rownames(X_nonTest_KS),
                     features_Cor = rownames(X_nonTest_Cor))
-# Load all files
-m <- c("S", "var", "varM", "varCor", "varMCor", "KS", "Cor")
-methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
-             "Variance (M, Cor)", "KS-like", "Correlation")
 
 test <- data.frame(Features = unlist(featureList),
                    Method = rep(methods, each = 10000))
@@ -413,96 +415,6 @@ ggsave(p, file = "upsetDiagram.png", width = 10, height = 6)
 
 
 
-# Format data
-nMethods = 7
-combinations <- expand.grid(1:nMethods,
-                            1:nMethods, 
-                            1:nMethods, 
-                            1:nMethods, 
-                            1:nMethods, 
-                            1:nMethods,
-                            1:nMethods)
-colnames(combinations) <- m
-
-for (i in 1:length(methods)){
-  combinations[combinations == i] <- m[i]
-}
-
-combinations1 <- combinations
-for (i in 1:ncol(combinations)) {
-  combinations1[,i] <- ifelse(apply(combinations, 1, function(x) {m[i] %in% x}),1,0)
-}
-combinations1 <- unique(combinations1)
-
-
-combinations1$Sum <- apply(combinations1, 1, function(x) {
-  length(Reduce(intersect, featureList[which(x != 0)]))
-})
-
-rownames(combinations1) <- as.character(1:nrow(combinations1))
-combinations1$ID <- as.character(1:nrow(combinations1))
-colnames(combinations1) <- c("S-score", "Variance (\u03b2)", "Variance (M)",
-                             "Variance (\u03b2, Cor)", "Variance (M, Cor)",
-                             "KS-like", "Correlation", "Sum", "ID")
-
-levelsID <- rev(names(sort(rowSums(combinations1[,1:nMethods]))))
-levelsSelection <- c("S-score", "Variance (\u03b2)", "Variance (M)",
-                     "Variance (\u03b2, Cor)", "Variance (M, Cor)",
-                     "KS-like", "Correlation")
-
-
-# Make heatmap part of the plot
-plotDF <- gather(combinations1[,1:nMethods])
-plotDF$ID <- factor(rep(combinations1$ID,nMethods),
-                    levels = levelsID)
-plotDF$key <- factor(plotDF$key,
-                     levels = levelsSelection)
-
-plotDF <- plotDF[plotDF$value == 1,]
-
-main <- ggplot(plotDF) +
-  geom_tile(aes(x = ID, y = key, fill = key),
-            color = 'white', width = 0.9, height = 0.9, size = 0.7) +
-  ylab("Feature Selection Method") +
-  theme_classic() +
-  scale_fill_brewer(palette = "Dark2") +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(),
-        axis.text.y = element_text(hjust = 1, size = 10, color = "black"),
-        axis.ticks.x = element_blank(),
-        axis.line.y = element_line(color = "black"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank())
-
-
-
-# Make bar chart part of the plot
-plotDF1 <- combinations1[,c("Sum", "ID")]
-plotDF1$ID <- factor(plotDF1$ID,
-                     levels = levelsID)
-
-top <- ggplot(plotDF1) +
-  geom_bar(aes(x = ID, y = Sum), stat = "identity", color = "black", fill = "grey", size = 0.7) +
-  ylab("# Features") +
-  theme_classic() +
-  scale_fill_brewer(palette = "Dark2") +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(),
-        axis.text.y = element_text(hjust = 1, size = 10, color = "black"),
-        axis.ticks.x = element_blank(),
-        axis.title.x = element_blank(),
-        axis.title.y = element_text(angle = 90, face = "italic"))
-
-
-library(patchwork)
-
-p <- top + main +
-  plot_layout(nrow = 2, ncol = 1) +
-  plot_layout(heights = c(1,1))
-
-ggsave(p, file = "UpsetDiagram.png", width = 12, height = 6)
-
-
 
 ###############################################################################
 
@@ -510,8 +422,19 @@ ggsave(p, file = "UpsetDiagram.png", width = 12, height = 6)
 
 ###############################################################################
 
+# Load all files
+m <- c("S", "var", "varM", "varCor", "varMCor","KS", "Cor_CAIDE1", "PC")
+
+for (FeatureSelection in m){
+  files <- list.files(paste0("X/X_", FeatureSelection))
+  for (f in files){
+    load(paste0("X/X_", FeatureSelection, "/",f))
+  }
+}
+
 methods <- c("S-score", "Variance (\u03b2)", "Variance (M)", "Variance (\u03b2, Cor)",
              "Variance (M, Cor)", "KS-like", "Correlation", "PCA")
+
 plotExplVar = NULL
 for (i in 1:length(methods)){
   # Get data
@@ -589,7 +512,7 @@ p  <- ggplot(plotExplVar[plotExplVar$PC %in% selected,]) +
   theme_classic() +
   theme(legend.title  = element_blank(),
         axis.text.x = element_blank(),
-        legend.position = "none")#element_text(angle = 45, vjust = 0.5))
+        legend.position = "right")#element_text(angle = 45, vjust = 0.5))
 
 ggsave(p, file = "FeatureSelectionExplVar_zoom.png", width = 8, height = 5)
 

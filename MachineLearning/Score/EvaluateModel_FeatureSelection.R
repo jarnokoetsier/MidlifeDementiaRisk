@@ -38,6 +38,8 @@ files <- list.files('Y')
 for (f in files){
   load(paste0("Y/",f))
 }
+X_test_Non <- X_test
+rm(X_test)
 
 # Retrieve performance in CV for the different feature selection methods
 Performances <- list()
@@ -45,7 +47,7 @@ Performances_test <- list()
 for (i in 1:length(methods)){
   
   # load output
-  load(paste0("CV_CAIDE1/CV_", Score, "_", methods[i],".RData"))
+  load(paste0("CV_CAIDE1/FeatureSelection/CV_", Score, "_", methods[i],".RData"))
   
   # Put performance into list
   Performances[[i]] <- perf

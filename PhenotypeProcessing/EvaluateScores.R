@@ -295,10 +295,10 @@ Score <-  c(names(table(EPILIBRA$MEDITERANIAN)/nrow(EPILIBRA)),
             names(table(EPILIBRA$kidneydisease)/nrow(EPILIBRA))
 )
 
-ScoreFactor <-  c(rep("Diet",2), 
+ScoreFactor <-  c(rep("Healthy Diet",2), 
                   rep("Physical Inactivity",2), 
                   rep("Smoking",2), 
-                  rep("Alcohol Intake",2),
+                  rep("L-M Alcohol Intake",2),
                   rep("Obesity",2), 
                   rep("Depression",2), 
                   rep("Type 2 Diabetes",2),
