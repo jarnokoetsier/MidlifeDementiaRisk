@@ -22,7 +22,7 @@ while(length(Iexact) < sparsity){
     Iloop <- c(Iexact, I[i])
     
     # Calculate regression coefficient of "new" feature
-    L02[i] <- t(Y_train)%*%X_train[,Iloop]%*%(t(X_train[,Iloop])%*%X_train[,Iloop])%*%(t(X_train[,Iloop])%*%Y_train)
+    L02[i] <- t(Y_train)%*%X_train[,Iloop]%*%inv(t(X_train[,Iloop])%*%X_train[,Iloop])%*%(t(X_train[,Iloop])%*%Y_train)
   }
   
   # select feature with maximum regression coefficient

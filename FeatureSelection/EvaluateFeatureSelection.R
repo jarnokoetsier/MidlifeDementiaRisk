@@ -27,7 +27,7 @@ for (f in files){
 ###############################################################################
 
 # Feature selection data
-FeatureSelection = "KS"
+FeatureSelection = "Cor_CAIDE1"
 files <- list.files(paste0("X/X_", FeatureSelection))
 for (f in files){
   load(paste0("X/X_", FeatureSelection, "/",f))
@@ -58,7 +58,7 @@ if (FeatureSelection == "PC"){
 if (FeatureSelection == "KS"){
   subtitle = "Kennard-Stone-like Feature Selection"
 }
-if (FeatureSelection == "Cor"){
+if (FeatureSelection == "Cor_CAIDE1"){
   subtitle = "Correlation-based Feature Selection"
 }
 if (FeatureSelection == "CorKS"){
@@ -69,23 +69,23 @@ if (FeatureSelection == "CorKS"){
 load("plot_all.RData")
 
 # Get beta- and M-values
-Bvalues <- X_nonTest_KS
+Bvalues <- X_nonTest_Cor
 Mvalues <- log2(Bvalues/(1 - Bvalues))
 
 # Format data
 plotDF <- data.frame(
   ID = rownames(Bvalues),
-  meanBeta = rowMeans(Bvalues),
-  sdBeta = apply(Bvalues, 1, sd),
+  meanB = rowMeans(Bvalues),
+  sdB = apply(Bvalues, 1, sd),
   meanM  = rowMeans(Mvalues),
   sdM = apply(Mvalues, 1, sd)
 )
 
 # Make plot
 p <- ggplot() +
-  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta), 
+  geom_point(data = plot_all, aes(x = meanB, y = sdB), 
              color = "lightgrey", alpha = 0.5) +
-  geom_point(data = plotDF, aes(x = meanBeta, y = sdBeta), 
+  geom_point(data = plotDF, aes(x = meanB, y = sdB), 
              color = RColorBrewer::brewer.pal(8, "Dark2")[7], alpha = 0.5) +
   xlim(c(0,1)) +
   ylim(c(0,0.5)) +
@@ -103,51 +103,6 @@ p <- ggplot() +
 
 # Save plot
 ggsave(p, file = paste0("MeanVsSD_", FeatureSelection, ".png"), width = 8, height = 6)
-
-
-# Get beta-values mean and SD of specific probe annotation
-load("E:/Thesis/MLData/probe_annotation.RData")
-
-plot_all<- inner_join(plot_all, probe_annotation, by = c("ID" = "ID"))
-
-p_island <- ggplot() +
-  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta, color = Relation_to_Island), alpha = 0.5) +
-  scale_color_brewer(palette = "Dark2") +
-  xlim(c(0,1)) +
-  ylim(c(0,0.5)) +
-  xlab("Mean of \u03b2-values") +
-  ylab("Standard Deviation of \u03b2-values") +
-  ggtitle("Relation to CpG Island") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "right",
-        legend.title = element_blank())
-
-ggsave(p_island, file = "MeanVsSD_island.png", width = 8, height = 6)
-
-
-p_island <- ggplot() +
-  geom_point(data = plot_all, aes(x = meanBeta, y = sdBeta, color = Class), alpha = 0.5) +
-  scale_color_brewer(palette = "Dark2") +
-  xlim(c(0,1)) +
-  ylim(c(0,0.5)) +
-  xlab("Mean of \u03b2-values") +
-  ylab("Standard Deviation of \u03b2-values") +
-  ggtitle("Probe Location") +
-  theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 14),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10),
-        legend.position = "right",
-        legend.title = element_blank())
-
-ggsave(p_island, file = "MeanVsSD_class.png", width = 8, height = 6)
 
 
 
@@ -349,6 +304,7 @@ p <- ggplot() +
            stat="identity", position=position_dodge(), color = "black", alpha = 0.8) +
   xlab("Feature Selection Method") +
   ylab("Proportion of Features") +
+  coord_flip() +
   scale_fill_manual(breaks = c("R2 > 0.1","R2 > 0.5","R2 > 0.8"),
                       labels = c(expression(R^2 > 0.1), 
                                  expression(R^2 > 0.5),
@@ -360,7 +316,7 @@ p <- ggplot() +
 
 
 # Save plot
-ggsave(p, file = "R2_cellType.png", width = 10, height = 6)
+ggsave(p, file = "R2_cellType_horizontal.png", width = 8, height = 6)
 
 
 
