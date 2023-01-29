@@ -21,6 +21,107 @@ for (f in files){
   load(paste0("Y/",f))
 }
 
+methods <- c("EN", "sPLS")
+methodNames <- c("ElasticNet", "sPLS")
+scores <- c("CAIDE1", "CAIDE2", "LIBRA")
+plotDF <- NULL
+plotDF_test <- NULL
+for (s in 1:length(scores)){
+  for (m in 1:length(methods)){
+    # Load data
+    if (file.exists(paste0("CV_",scores[s],"/CV_",scores[s],"_Cor_", methods[m],".RData"))){
+      load(paste0("CV_",scores[s],"/CV_",scores[s],"_Cor_", methods[m],".RData"))
+      load(paste0("CVindex_",scores[s],".RData"))
+      
+      if (scores[s] == "CAIDE1"){
+        load("X/X_Cor_CAIDE1/X_test_Cor.RData")
+        testData <- log2(X_test_Cor/(1-X_test_Cor))
+        pred_test <- predict(finalModel, t(testData))
+        perf_test <- RMSE(pred = pred_test,
+                          obs = Y_test$CAIDE)
+        perf_test <- perf_test/sd(Y_test$CAIDE)
+      }
+      if (scores[s] == "CAIDE2"){
+        load("X/X_Cor_CAIDE2/X_test_Cor2.RData")
+        testData <- log2(X_test_Cor2/(1-X_test_Cor2))
+        pred_test <- predict(finalModel, t(testData))
+        perf_test <- RMSE(pred = pred_test,
+                          obs = Y_test$CAIDE2)
+        perf_test <- perf_test/sd(Y_test$CAIDE2)
+      }
+      if (scores[s] == "LIBRA"){
+        load("X/X_Cor_LIBRA/X_test_CorL.RData")
+        testData <- log2(X_test_CorL/(1-X_test_CorL))
+        pred_test <- predict(finalModel, t(testData))
+        perf_test <- RMSE(pred = pred_test,
+                          obs = Y_test$LIBRA)
+        perf_test <- perf_test/sd(Y_test$LIBRA)
+      }
+      temp_test <- data.frame(RMSE = perf_test,
+                         Score = scores[s],
+                         Method = methodNames[m])
+      plotDF_test <- rbind.data.frame(plotDF_test, temp_test)
+      
+      # SD in CAIDE1 score
+      obs_sd <- rep(NA,length(CVindex))
+      for (i in 1:length(CVindex)){
+        if (scores[s] == "CAIDE1"){
+          obs_sd[i] <- sd(Y_CAIDE1$CAIDE[CVindex[[i]]])
+        }
+        if (scores[s] == "CAIDE2"){
+          obs_sd[i] <- sd(Y_CAIDE2$CAIDE2[CVindex[[i]]])
+        }
+        if (scores[s] == "LIBRA"){
+          obs_sd[i] <- sd(Y_LIBRA$LIBRA[CVindex[[i]]])
+        }
+        
+      }
+      
+      # Performance in CV
+      optPar <- which.min(rowMeans(perf))
+      optPerf <- NULL
+      for (i in 1:length(trainResults)){
+        optPerf <- c(optPerf,trainResults[[i]]$RMSE[optPar])
+      }
+      optPerf_scaled <- optPerf/obs_sd
+      
+      temp <- data.frame(RMSE = optPerf_scaled,
+                         Score = rep(scores[s], length(optPerf_scaled)),
+                         Method = rep(methodNames[m],length(optPerf_scaled)))
+      plotDF <- rbind.data.frame(plotDF, temp)
+  }
+ 
+  }
+ 
+}
+
+
+
+
+p <- ggplot(plotDF) +
+  geom_boxplot(aes(x = Score, y = RMSE, fill = Method), 
+               alpha = 1, outlier.shape = NA) +
+  geom_point(aes(x = Score, y = RMSE, color = Method), 
+             position=position_jitterdodge(jitter.width = 0.1), 
+             size = 2, alpha = 0.8) +
+  geom_point(data = plotDF_test, aes(x = Score, y = RMSE, color = Method), 
+            fill = "black", position=position_jitterdodge(jitter.width = 0), 
+            size = 5, shape = 23, alpha = 0.7) +
+  ylab("RMSE (scaled)") +
+  xlab(NULL) +
+  guides(color = "none") +
+  scale_fill_manual(values = c("#FB6A4A","#FEC44F", "#BCBDDC")) +
+  scale_color_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic"))
+
 ###############################################################################
 
 # CAIDE1

@@ -214,9 +214,10 @@ p <- ggplot(ObsPred_CV_all) +
              position=position_jitterdodge(jitter.width = 0.1, jitter.height = 0.2)) +
   xlab("Predicted Class") +
   ylab("CAIDE1 Score") +
+  scale_y_continuous(breaks = c(0,2,4,6,8,10,12), labels = c(0,2,4,6,8,10,12))+
   ggtitle("CAIDE1",subtitle = "Performance in cross-validation") +
-  scale_fill_manual(values = c("#FB6A4A","#6BAED6")) +
-  scale_color_manual(values = c("#A50F15","#08519C")) +
+  scale_fill_manual(values = c("#FB6A4A","#FEC44F", "#BCBDDC")) +
+  scale_color_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
   theme_classic() +
   theme(legend.position = "bottom",
         legend.title = element_blank(),
@@ -246,8 +247,11 @@ p <- ggplot(ObsPred_test_all) +
   xlab("Predicted Class") +
   ylab("CAIDE1 Score") +
   ggtitle("CAIDE1",subtitle = "Performance in test set") +
-  scale_fill_manual(values = c("#FB6A4A","#6BAED6")) +
-  scale_color_manual(values = c("#A50F15","#08519C")) +
+  scale_y_continuous(breaks = c(0,2,4,6,8,10), labels = c(0,2,4,6,8,10))+
+  scale_fill_manual(values = c("#FB6A4A","#FEC44F", "#BCBDDC")) +
+  scale_color_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
+  #scale_fill_manual(values = c("#FB6A4A","#6BAED6", "#FEC44F", "#BCBDDC")) +
+  #scale_color_manual(values = c("#A50F15","#08519C", "#CC4C02", "#6A51A3")) +
   theme_classic() +
   theme(legend.position = "bottom",
         legend.title = element_blank(),
@@ -258,6 +262,99 @@ p <- ggplot(ObsPred_test_all) +
                                      size = 10,
                                      face = "italic")) 
 
-ggsave(p, file = "CAIDE1_Cat_Cor_boxPlot_CV.png", height = 6, width = 9)
+ggsave(p, file = "CAIDE1_Cat_Cor_boxPlot_test.png", height = 6, width = 9)
 
 
+################################################################################
+
+# Which factors are being predicted
+
+################################################################################
+
+# Get factors of test set
+load("E:/Thesis/EXTEND/Phenotypes/CAIDE.Rdata")
+rownames(CAIDE) <- CAIDE$Basename
+Y_test_CAIDE1 <- CAIDE[colnames(testData),]
+
+load("X/X_Cor_CAIDE1/X_test_Cor.RData")
+testData <- log2(X_test_Cor/(1-X_test_Cor))
+
+
+# tested methods
+methods <- c("EN", "sPLSDA")
+methodNames <- c("ElasticNet",  "sPLS-DA")
+
+# Low Risk
+plotDF_all <- NULL
+for (i in 1:length(methods)){
+  # Load data
+  load(paste0("CV_CAIDE1/Performance_CAIDE1_LowRisk_Cor_", methods[i],".RData"))
+  load(paste0("CV_CAIDE1/Performance_CAIDE1_HighRisk_Cor_", methods[i],".RData"))
+  
+  # Combine observed and predicted
+  dataMatrix <- cbind.data.frame(Y_test_CAIDE1[,c(10:16)],factor(ObsPred_test_LowRisk$pred,
+                                                                 levels = c("Intermediate_High", "Low")))
+  dataMatrix <- cbind.data.frame(dataMatrix,factor(ObsPred_test_HighRisk$pred,
+                                                                 levels = c("Low_Intermediate", "High")))
+  colnames(dataMatrix) <- c(colnames(Y_test_CAIDE1[,c(10:16)]), "LowRisk", "HighRisk")
+  
+  Rsquared_obs <- rep(NA, 7)
+  Rsquared_pred <- rep(NA, 7)
+  Y_factors <- Y_test_CAIDE1[,c(10:16)]
+  for (factor in 1:ncol(Y_factors)){
+    
+    # Explained variance predicted score
+    formula <- paste0("LowRisk ~ ", colnames(Y_factors)[factor])
+    formula_null <- paste0("LowRisk ~ ",1)
+    
+    # Fit model
+    model <- glm(as.formula(formula), data = as.data.frame(dataMatrix), family = "binomial")
+    nullmodel <- glm(as.formula(formula_null), data = as.data.frame(dataMatrix), family = "binomial")
+    
+    # Calculate R-squared
+    Rsquared_pred[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    
+    #=========================================================================#
+    
+    # Explained variance observed score
+    formula <- paste0("HighRisk ~ ", colnames(Y_factors)[factor])
+    formula_null <- paste0("HighRisk ~ ",1)
+    
+    # Fit model
+    model <- glm(as.formula(formula), data = as.data.frame(dataMatrix), family = "binomial")
+    nullmodel <- glm(as.formula(formula_null), data = as.data.frame(dataMatrix), family = "binomial")
+    
+    # Calculate R-squared
+    Rsquared_obs[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+  }
+  
+  factorNames <- c("Age", "Sex", "Education", "Systolic Blood Pressure", "BMI",
+                   "Total Cholesterol", "Physical Inactivity")
+  plotDF <- data.frame(Name = rep(factorNames,2), 
+                       R2  = c(Rsquared_pred, Rsquared_obs),
+                       Model = c(rep("Low Risk Model",length(factorNames)),
+                                   rep("High Risk Model",length(factorNames))),
+                       Method = rep(methodNames[i],2*length(factorNames)))
+  
+  plotDF_all <- rbind.data.frame(plotDF_all, plotDF)
+}
+
+plotDF_all$Model <- factor(plotDF_all$Model,levels = c("Low Risk Model", "High Risk Model"))
+p <- ggplot(plotDF_all)+
+  geom_bar(aes(x = Name, y = R2, fill = Method),
+           stat = "identity", position=position_dodge(), color = "black") +
+  coord_flip() +
+  facet_grid(cols = vars(Model)) +
+  xlab(NULL) +
+  ylab(expression("McFadden's "~R^2)) +
+  ylim(c(0,0.5)) +
+  ggtitle("CAIDE1") +
+  labs(fill = NULL) +
+  theme_minimal() +
+  scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+
+ggsave(p, file = "CAIDE1_Cat_Cor_whichFactors_test.png", height = 6, width = 10)
