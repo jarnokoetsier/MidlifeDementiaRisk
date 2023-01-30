@@ -107,7 +107,7 @@ server <- function(input, output, session){
       plotCor$key1 <- rep(rownames(corrDF), ncol(corrDF))
       
       # Perform clustering to get sample order
-      model <- hclust(as.dist(abs(1-corrDF)), input$link_method)
+      model <- hclust(as.dist(1-abs(corrDF)), input$link_method)
       order <- model$labels[model$order]
       plotCor$key <- factor(plotCor$key, levels = order)
       plotCor$key1 <- factor(plotCor$key1, levels = order)
@@ -258,7 +258,7 @@ server <- function(input, output, session){
       plotCor$key1 <- rep(rownames(corrDF), ncol(corrDF))
       
       # Perform clustering to get sample order
-      model <- hclust(as.dist(abs(1-corrDF)), input$link_method)
+      model <- hclust(as.dist(1-abs(corrDF)), input$link_method)
       order <- model$labels[model$order]
       plotCor$key <- factor(plotCor$key, levels = order)
       plotCor$key1 <- factor(plotCor$key1, levels = order)
