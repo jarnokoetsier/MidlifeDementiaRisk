@@ -62,9 +62,10 @@ ui <- tagList(
                                  
                                  #Upload CELs
                                  shinyFilesButton(id = "bfile", 
-                                                  label = "Click here to select a PLINK file",
+                                                  label = "Click here to select data file",
                                                   title = "Please select a file:",
-                                                  multiple = FALSE),
+                                                  multiple = FALSE,
+                                                  icon = icon("fas fa-mouse-pointer")),
                                  br(),
                                  br()
                           )
@@ -82,7 +83,7 @@ ui <- tagList(
                                             label = "Example",
                                             style = "jelly",
                                             color = "danger",
-                                            icon("fas fa-mouse-pointer")),
+                                            icon = icon("fas fa-mouse-pointer")),
                                  
                                  #Start the analysis
                                  actionBttn(inputId = "startAnalysis",
@@ -116,8 +117,22 @@ ui <- tagList(
                                                label = "Select traits",
                                                choices = Traits,
                                                multiple = TRUE),
-                                 ),
-                                 br()
+                                 )
+                          )
+                          
+                        ),
+                        
+                        fluidRow(
+                          column(4, offset = 4, align = "center",
+                                 style = "background-color:#FFFFFF;",
+                                 hr(),
+                                 column(4, align = "center",
+                                       img(src = "MHENS_logo.png", width = "100%")),
+                                 column(4, align = "center",
+                                        img(src = "UM_logo.png", width = "100%")),
+                                 column(4, align = "center",
+                                        img(src = "EXETER_logo.png", width = "100%")),
+                                 
                           )
                           
                         ),
@@ -176,9 +191,43 @@ ui <- tagList(
                         
                         navlistPanel(id = "tabs_output",
                                      tabPanel("Table", value = "PRS_table",
-                                              dataTableOutput("PRS_table")),
+                                              h1(strong("PRS Data Table")),
+                                              hr(),
+                                              dataTableOutput("PRS_table"),
+                                              downloadButton("downloadPRS", 
+                                                             "Download Table")),
                                      
-                                     tabPanel("Heatmap", value = "PRS_heatmap")
+                                     tabPanel("Heatmap", value = "PRS_heatmap",
+                                              fluidRow(
+                                                column(3,
+                                                       selectInput(inputId = "cor_method",
+                                                                   label = "Correlation Method",
+                                                                   choices = c("pearson",
+                                                                               "spearman",
+                                                                               "kendall"),
+                                                                   selected = "pearson")
+                                                       ),
+                                                column(3,
+                                                       selectInput(inputId = "link_method",
+                                                                   label = "Linkage Method",
+                                                                   choices = c("ward.D2",
+                                                                               "ward.D",
+                                                                               "average",
+                                                                               "complete",
+                                                                               "centroid",
+                                                                               "median", 
+                                                                               "mcquitty"),
+                                                                   selected = "ward.D2")
+                                                ),
+                                                
+                                              ),
+                                              hr(),
+                                              plotOutput("heatmap_plot",
+                                                         width = 1000,
+                                                         height = 1000,
+                                                         click = NULL)%>% 
+                                                withSpinner(color="red")
+                                              )
                         )
                )
     ) #navbarpage

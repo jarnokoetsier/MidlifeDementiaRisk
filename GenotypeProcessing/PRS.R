@@ -34,6 +34,43 @@ df_Result_PGS = collect_all_PRS(cohort = "EXTEND_PostImpute_FINAL_bp_dup")
 rownames(df_Result_PGS) <- famFile$V2
 save(df_Result_PGS,file = "df_Result_PGS.RData")
 
+library(corrr)
+library(ggdendroplot)
+library(patchwork)
+# Calculate correlations
+corrDF <- as.data.frame(correlate(df_Result_PGS, diagonal = 1, method = "spearman"))
+rownames(corrDF) <- corrDF$term
+corrDF <- corrDF[,-1]
+
+# Format data for plotting
+plotCor <- gather(corrDF)
+plotCor$key1 <- rep(rownames(corrDF), ncol(corrDF))
+
+# Perform clustering to get sample order
+model <- hclust(as.dist(abs(1-corrDF)), "ward.D2")
+order <- model$labels[model$order]
+plotCor$key <- factor(plotCor$key, levels = order)
+plotCor$key1 <- factor(plotCor$key1, levels = order)
+
+main <- ggplot(plotCor) +
+  geom_tile(aes(x = key, y = key1, fill = value)) +
+  scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+                        limits = c(-1,1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  labs(fill = "Pearson\nCorrelation")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+dendroPlot <- ggplot() +
+  geom_tile(data = plotCor, aes(x = as.numeric(key), y = 1), fill = "white", alpha = 0) +
+  geom_dendro(model,xlim = c(1,length(unique(plotCor$key)))) +
+  theme_void() +
+  theme(legend.position = "none") 
+
+dendroPlot + main +
+  plot_layout(nrow = 2, ncol = 1,
+              heights = c(1,3))
+
 # Set working directory
 setwd("E:/Thesis/EXTEND/Methylation")
 

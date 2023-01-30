@@ -1,6 +1,9 @@
 
 # Requared packages
 library(tidyverse)
+library(corrr)
+library(ggdendroplot)
+library(patchwork)
 library(DT)
 library(shinyWidgets)
 library(shinycssloaders)
