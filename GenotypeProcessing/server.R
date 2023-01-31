@@ -94,8 +94,10 @@ server <- function(input, output, session){
       }
     )
     
+    # Heatmap
     output$heatmap_plot <- renderPlot({
       req(input$cor_method)
+      req(input$link_method)
       
       # Calculate correlations
       corrDF <- as.data.frame(correlate(PRS_result(), diagonal = 1, method = input$cor_method))
@@ -120,7 +122,8 @@ server <- function(input, output, session){
         xlab(NULL) +
         ylab(NULL) +
         labs(fill = paste0(str_to_title(input$cor_method),"\nCorrelation"))+
-        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 15),
+              axis.text.y = element_text(size = 15))
       
       # Dendrogram
       dendroPlot <- ggplot() +
@@ -132,13 +135,63 @@ server <- function(input, output, session){
       # Combine plots
       p <- dendroPlot + main +
         plot_layout(nrow = 2, ncol = 1,
-                    heights = c(1,4))
+                    heights = c(1,6))
       
       # Return output
       return(p)
       
     })
     
+    #x-axis
+    output$ui_X <- renderUI({
+      selectInput(inputId = "X",
+                  label = "X-axis",
+                  choices = colnames(PRS_result()),
+                  selected = colnames(PRS_result())[1])
+    })
+    
+    # y-axis
+    output$ui_Y <- renderUI({
+        selectInput(inputId = "Y",
+                    label = "Y-axis",
+                    choices = colnames(PRS_result()),
+                    selected = colnames(PRS_result())[2])
+      
+    })
+    
+    # Correlation plot
+    output$correlation_plot <- renderPlot({
+      req(input$cor_method2)
+      req(input$X)
+      req(input$Y)
+      
+      plotScatter <- data.frame(X = PRS_result()[,input$X],
+                                Y = PRS_result()[,input$Y])
+      
+      corrValue = cor(plotScatter$X,plotScatter$Y, method = input$cor_method2,
+                      use = "pairwise.complete.obs")
+      pValue = cor.test(plotScatter$X,plotScatter$Y, method = input$cor_method2,
+                        use = "pairwise.complete.obs")$p.value
+      p <- ggplot(plotScatter) +
+        geom_point(aes(x = X, y = Y), color = "#DC3535") +
+        xlab(input$X) +
+        ylab(input$Y) +
+        ggtitle(paste0(input$X, " vs ", input$Y),
+                subtitle = paste0("Corr. coeff = ", round(corrValue,3), ", p-value = ", round(pValue,3))) +
+        theme_minimal() +
+        theme(plot.title = element_text(hjust = 0.5,
+                                        face = "bold",
+                                        size = 24),
+              plot.subtitle = element_text(hjust = 0.5,
+                                           size = 18,
+                                           face = "italic"),
+              axis.text = element_text(size = 15),
+              axis.title = element_text(size = 18))
+      
+      return(p)
+      
+      
+    })
   }) #observeEvent
   
 
@@ -245,8 +298,10 @@ server <- function(input, output, session){
       }
     )
 
+    # Heatmap
     output$heatmap_plot <- renderPlot({
       req(input$cor_method)
+      req(input$link_method)
       
       # Calculate correlations
       corrDF <- as.data.frame(correlate(PRS_result(), diagonal = 1, method = input$cor_method))
@@ -271,7 +326,8 @@ server <- function(input, output, session){
         xlab(NULL) +
         ylab(NULL) +
         labs(fill = paste0(str_to_title(input$cor_method),"\nCorrelation"))+
-        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 15),
+              axis.text.y = element_text(size = 15))
       
       # Dendrogram
       dendroPlot <- ggplot() +
@@ -283,10 +339,61 @@ server <- function(input, output, session){
       # Combine plots
       p <- dendroPlot + main +
         plot_layout(nrow = 2, ncol = 1,
-                    heights = c(1,4))
+                    heights = c(1,6))
       
       # Return output
       return(p)
+      
+    })
+    
+    #x-axis
+    output$ui_X <- renderUI({
+      selectInput(inputId = "X",
+                  label = "X-axis",
+                  choices = colnames(PRS_result()),
+                  selected = colnames(PRS_result())[1])
+    })
+    
+    # y-axis
+    output$ui_Y <- renderUI({
+      selectInput(inputId = "Y",
+                  label = "Y-axis",
+                  choices = colnames(PRS_result()),
+                  selected = colnames(PRS_result())[2])
+      
+    })
+    
+    # Correlation plot
+    output$correlation_plot <- renderPlot({
+      req(input$cor_method2)
+      req(input$X)
+      req(input$Y)
+      
+      plotScatter <- data.frame(X = PRS_result()[,input$X],
+                                Y = PRS_result()[,input$Y])
+      
+      corrValue = cor(plotScatter$X,plotScatter$Y, method = input$cor_method2,
+                      use = "pairwise.complete.obs")
+      pValue = cor.test(plotScatter$X,plotScatter$Y, method = input$cor_method2,
+                        use = "pairwise.complete.obs")$p.value
+      p <- ggplot(plotScatter) +
+        geom_point(aes(x = X, y = Y), color = "#DC3535") +
+        xlab(input$X) +
+        ylab(input$Y) +
+        ggtitle(paste0(input$X, " vs ", input$Y),
+                subtitle = paste0("Corr. coeff = ", round(corrValue,3), ", p-value = ", round(pValue,3))) +
+        theme_minimal() +
+        theme(plot.title = element_text(hjust = 0.5,
+                                        face = "bold",
+                                        size = 24),
+              plot.subtitle = element_text(hjust = 0.5,
+                                           size = 18,
+                                           face = "italic"),
+              axis.text = element_text(size = 15),
+              axis.title = element_text(size = 18))
+      
+      return(p)
+      
       
     })
     

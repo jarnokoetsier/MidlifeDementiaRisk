@@ -97,3 +97,30 @@ colnames(test) <- c(colnames(test)[1:11], "Y")
 model <- lm(data = test, Y ~.)
 
 cor(test$ObesityClass1, Y_CAIDE2$BMI_c, method = "spearman")
+
+
+
+setwd("E:/Thesis/EXTEND/Genotypes")
+load("df_Result_PGS.RData")
+
+plotScatter <- data.frame(X = df_Result_PGS[,"AD_jans"],
+                          Y = df_Result_PGS[,"Ad_no_APOE"])
+
+corrValue = cor(plotScatter$X,plotScatter$Y, method = "spearman",
+                     use = "pairwise.complete.obs")
+pValue = cor.test(plotScatter$X,plotScatter$Y, method = "spearman",
+                  use = "pairwise.complete.obs")$p.value
+ggplot(plotScatter) +
+  geom_point(aes(x = X, y = Y), color = "#DC3535") +
+  xlab("AD_jans") +
+  ylab("Ad_no_APOE") +
+  ggtitle(paste0("AD_jans", " vs ", "Ad_no_APOE"),
+          subtitle = paste0("Corr. coeff = ", round(corrValue,2), ", p-value = ", round(pValue,2))) +
+  theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5,
+                                    face = "bold",
+                                    size = 14),
+          plot.subtitle = element_text(hjust = 0.5,
+                                       size = 10))
+
+

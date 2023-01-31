@@ -25,7 +25,7 @@ ui <- tagList(
     
     useSweetAlert(),
     
-    navbarPage(title = "-   PRS Multi-Trait", id = "navbar",
+    navbarPage(title = "I PRS Multi-Trait", id = "navbar",
                
                ###################################################################
                #  Data selection                                                   
@@ -224,10 +224,40 @@ ui <- tagList(
                                               hr(),
                                               plotOutput("heatmap_plot",
                                                          width = 1000,
-                                                         height = 1000,
+                                                         height = 800,
                                                          click = NULL)%>% 
                                                 withSpinner(color="red")
-                                              )
+                                              ),
+                                     tabPanel("Correlations", value = "PRS_correlation",
+                                              fluidRow(
+                                                column(3,
+                                                       selectInput(inputId = "cor_method2",
+                                                                   label = "Correlation Method",
+                                                                   choices = c("pearson",
+                                                                               "spearman",
+                                                                               "kendall"),
+                                                                   selected = "pearson")
+                                                ),
+                                                column(3,
+                                                       uiOutput("ui_X")
+                                                ),
+                                                column(3,
+                                                       uiOutput("ui_Y")
+                                                )
+                                                
+                                              ),
+                                              hr(),
+                                              plotOutput("correlation_plot",
+                                                         width = 1000,
+                                                         height = 600,
+                                                         click = NULL)%>% 
+                                                withSpinner(color="red")
+                                     )
+                                     
+                                     
+                                     
+                                     
+                                     
                         )
                )
     ) #navbarpage

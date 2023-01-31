@@ -122,6 +122,8 @@ p <- ggplot(plotDF) +
                                      size = 10,
                                      face = "italic"))
 
+ggsave(p,file = "RiskScores_test.png", width = 8, height = 6)
+
 ###############################################################################
 
 # CAIDE1
