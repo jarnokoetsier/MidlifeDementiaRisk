@@ -15,3 +15,4 @@ library("PRSMultiTrait")
 getManifest()
 Traits <- Manifest_env$Ref_gwas_manifest$short
 
+

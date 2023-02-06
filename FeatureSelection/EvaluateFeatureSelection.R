@@ -4,6 +4,7 @@ cat("\014")
 
 # Load packages
 library(tidyverse)
+library(ggbreak)
 
 # Set working directory
 setwd("E:/Thesis/EXTEND/Methylation")
@@ -162,7 +163,7 @@ for (i in 1:length(methods)){
                     paste0("0 + ", paste(colnames(Y_nonTest[,7:12]), collapse = " + ")))
   
   # Scale data matrix
-  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix))/apply(dataMatrix,1,sd))
+  dataMatrix_scaled <- t((dataMatrix - rowMeans(dataMatrix)))
   
   # Combine with cell type composition
   dataMatrix1 <- cbind(dataMatrix_scaled,Y_nonTest[,7:12])
@@ -180,7 +181,7 @@ for (i in 1:length(methods)){
   sse <- colSums(residualValues^2)
   ssr <- colSums(fittedValues^2)
   sst <- colSums(dataMatrix_scaled^2)
-  explVar <- sum(ssr)/sum(sst)
+  explVar <- sum(ssr)/sum(ssr + sse)
   
   # Prepare data for plotting
   temp <- data.frame(
@@ -287,9 +288,9 @@ for (i in 1:length(methods)){
   
   # Prepare data for plotting
   temp <- data.frame(
-    Value = c(sum(Rsquared > 0.1)/length(features),
-              sum(Rsquared > 0.5)/length(features),
-              sum(Rsquared > 0.8)/length(features)),
+    Value = c(sum(Rsquared > 0.1),
+              sum(Rsquared > 0.5),
+              sum(Rsquared > 0.8)),
     FeatureSelection = c(rep(methods[i], 3)),
     Threshold = rep(c("R2 > 0.1","R2 > 0.5","R2 > 0.8"))
   )
@@ -301,22 +302,24 @@ plotDF$FeatureSelection <- factor(plotDF$FeatureSelection, levels = methods)
 # Make plot
 p <- ggplot() +
   geom_bar(data = plotDF[plotDF$FeatureSelection != "PCA",], aes(x = FeatureSelection, y = Value, fill = Threshold),
-           stat="identity", position=position_dodge(), color = "black", alpha = 0.8) +
-  xlab("Feature Selection Method") +
-  ylab("Proportion of Features") +
+           stat="identity", position=position_dodge(), color = "black", alpha = 1) +
+  #xlab("Feature Selection Method") +
+  scale_y_break(c(1800,4500), ticklabels=c(4500,5000)) +
+  xlab(NULL) +
+  ylab("# Features") +
   coord_flip() +
   scale_fill_manual(breaks = c("R2 > 0.1","R2 > 0.5","R2 > 0.8"),
                       labels = c(expression(R^2 > 0.1), 
                                  expression(R^2 > 0.5),
                                  expression(R^2 > 0.8)),
                       values = RColorBrewer::brewer.pal(3, "Reds")) +
-  theme_classic() +
+  theme_bw() +
   theme(legend.title = element_blank(),
-        legend.position = "bottom")
+        legend.position = "right")
 
 
 # Save plot
-ggsave(p, file = "R2_cellType_horizontal.png", width = 8, height = 6)
+ggsave(p, file = "R2_cellType_horizontal.png", width = 8, height = 4)
 
 
 
@@ -455,7 +458,7 @@ p  <- ggplot(plotExplVar) +
   theme(legend.title  = element_blank(),
         axis.text.x = element_blank())#element_text(angle = 45, vjust = 0.5))
   
-ggsave(p, file = "FeatureSelectionExplVar.png", width = 8, height = 5)
+ggsave(p, file = "FeatureSelectionExplVar.png", width = 10, height = 5)
 
 # zoom-in
 selected <- paste0("PC",1:10)
@@ -470,7 +473,7 @@ p  <- ggplot(plotExplVar[plotExplVar$PC %in% selected,]) +
         axis.text.x = element_blank(),
         legend.position = "right")#element_text(angle = 45, vjust = 0.5))
 
-ggsave(p, file = "FeatureSelectionExplVar_zoom.png", width = 8, height = 5)
+ggsave(p, file = "FeatureSelectionExplVar_zoom.png", width = 10, height = 5)
 
 
 ###############################################################################

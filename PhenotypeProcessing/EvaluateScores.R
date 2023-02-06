@@ -603,18 +603,19 @@ plotDF <- data.frame(Factor = factor(c("Age", "Sex", "Education", "Syst. BP", "B
                      R2 = RSquared)
 
 p <- ggplot(plotDF) +
-  geom_bar(aes(x = Factor, y = R2, fill = Factor),
+  geom_bar(aes(x = Factor, y = R2, fill = R2),
            stat = "identity", position=position_dodge(),
            color = "black") +
   xlab(NULL) +
   ylab(expression(R^2)) +
-  labs(fill = NULL) +
+  labs(fill = expression(R^2)) +
   coord_flip() +
-  scale_fill_brewer(palette = "Set1") +
-  theme_minimal() +
-  theme(legend.position = "none")
+  scale_fill_gradient(low = "#FEE5D9", high = "#DE2D26",
+                       limits = c(0,0.2)) +
+  theme_bw() +
+  theme(legend.position = "right")
 
-ggsave(p, file = "VarianceExplByCellType.png", width = 8, height = 6)
+ggsave(p, file = "VarianceExplByCellType.png", width = 8, height = 4)
 
 
 ###############################################################################
