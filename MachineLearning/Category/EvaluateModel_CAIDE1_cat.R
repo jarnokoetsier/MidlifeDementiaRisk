@@ -33,8 +33,8 @@ for (f in files){
 
 ################################################################################
 
-methods <- c("EN", "sPLSDA")
-methodNames <- c("ElasticNet",  "sPLS-DA")
+methods <- c("EN", "sPLSDA", "RF")
+methodNames <- c("ElasticNet",  "sPLS-DA", "Random Forest")
 
 # Low Risk
 plotDF_LowRisk_CV <- NULL
@@ -102,19 +102,33 @@ for (i in 1:length(methods)){
   
 }
 
+plotDF_all_CV <- rbind.data.frame(plotDF_LowRisk_CV, plotDF_HighRisk_CV)
+plotDF_all_CV$Method <- factor(plotDF_all_CV$Method,
+                                   levels = c("ElasticNet (Low Risk)",
+                                              "sPLS-DA (Low Risk)",
+                                              "Random Forest (Low Risk)",
+                                              "ElasticNet (High Risk)",
+                                              "sPLS-DA (High Risk)",
+                                              "Random Forest (High Risk)"))
+plotDF_all_test <- rbind.data.frame(plotDF_LowRisk_test, plotDF_HighRisk_test)
+plotDF_all_test$Method <- factor(plotDF_all_test$Method,
+                               levels = c("ElasticNet (Low Risk)",
+                                          "sPLS-DA (Low Risk)",
+                                          "Random Forest (Low Risk)",
+                                          "ElasticNet (High Risk)",
+                                          "sPLS-DA (High Risk)",
+                                          "Random Forest (High Risk)"))
 
-
-colors <- c(brewer.pal(n = 4, name = "Reds")[c(3)],
-            brewer.pal(n = 4, name = "Blues")[c(3)],
-            brewer.pal(n = 4, name = "Reds")[c(4)],
-            brewer.pal(n = 4, name = "Blues")[c(4)])
+colors <- c(brewer.pal(n = 5, name = "Reds")[c(3)],
+            brewer.pal(n = 5, name = "Reds")[c(4)],
+            brewer.pal(n = 5, name = "Reds")[c(5)],
+            brewer.pal(n = 5, name = "Blues")[c(3)],
+            brewer.pal(n = 5, name = "Blues")[c(4)],
+            brewer.pal(n = 5, name = "Blues")[c(5)])
 
 p <- ggplot() +
-  geom_path(data = plotDF_LowRisk_CV, aes(y = Sensitivity, x = 1- Specificity,
+  geom_path(data = plotDF_all_CV, aes(y = Sensitivity, x = 1- Specificity,
                                           color = Method), 
-            linewidth = 1.5, linetype = "solid") +
-  geom_path(data = plotDF_HighRisk_CV, aes(y = Sensitivity, x = 1- Specificity,
-                                            color = Method), 
             linewidth = 1.5, linetype = "solid") +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
   scale_color_manual(values = colors) +
@@ -135,11 +149,8 @@ ggsave(p, file = "CAIDE1_Cat_Cor_AUC_CV.png", height = 6, width = 9)
 
 
 p <- ggplot() +
-  geom_path(data = plotDF_LowRisk_test, aes(y = Sensitivity, x = 1- Specificity,
+  geom_path(data = plotDF_all_test, aes(y = Sensitivity, x = 1- Specificity,
                                           color = Method), 
-            linewidth = 1.5, linetype = "solid") +
-  geom_path(data = plotDF_HighRisk_test, aes(y = Sensitivity, x = 1- Specificity,
-                                           color = Method), 
             linewidth = 1.5, linetype = "solid") +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
   scale_color_manual(values = colors) +
@@ -164,8 +175,8 @@ ggsave(p, file = "CAIDE1_Cat_Cor_AUC_test.png", height = 6, width = 9)
 # Boxplots
 
 ################################################################################
-methods <- c("EN", "sPLSDA")
-methodNames <- c("ElasticNet",  "sPLS-DA")
+methods <- c("EN", "sPLSDA", "RF")
+methodNames <- c("ElasticNet",  "sPLS-DA", "Random Forest")
 
 ObsPred_CV_all <- NULL
 ObsPred_test_all <- NULL
@@ -202,6 +213,9 @@ for (i in 1:length(methods)){
 
 ObsPred_CV_all$Class <- factor(ObsPred_CV_all$Class,
                                levels = c("Low Risk (0-3)","Intermediate Risk (4-7)","High Risk (8-14)"))
+
+ObsPred_CV_all$Method <- factor(ObsPred_CV_all$Method,
+                               levels = methodNames)
 p <- ggplot(ObsPred_CV_all) +
   geom_rect(ymin = -Inf, ymax = 4, xmin = -Inf, xmax = Inf,fill = "#FFF5F0", alpha = 0.5) +
   geom_rect(ymin = 4, ymax = 7, xmin = -Inf, xmax = Inf,fill = "#FEE0D2", alpha = 0.5) +
@@ -234,6 +248,9 @@ ggsave(p, file = "CAIDE1_Cat_Cor_boxPlot_CV.png", height = 6, width = 9)
 
 ObsPred_test_all$Class <- factor(ObsPred_test_all$Class,
                                levels = c("Low Risk (0-3)","Intermediate Risk (4-7)","High Risk (8-14)"))
+ObsPred_test_all$Method <- factor(ObsPred_test_all$Method,
+                                levels = methodNames)
+
 p <- ggplot(ObsPred_test_all) +
   geom_rect(ymin = -Inf, ymax = 4, xmin = -Inf, xmax = Inf,fill = "#FFF5F0", alpha = 0.5) +
   geom_rect(ymin = 4, ymax = 7, xmin = -Inf, xmax = Inf,fill = "#FEE0D2", alpha = 0.5) +
@@ -272,17 +289,16 @@ ggsave(p, file = "CAIDE1_Cat_Cor_boxPlot_test.png", height = 6, width = 9)
 ################################################################################
 
 # Get factors of test set
+load("X/X_Cor_CAIDE1/X_test_Cor.RData")
+testData <- log2(X_test_Cor/(1-X_test_Cor))
+
 load("E:/Thesis/EXTEND/Phenotypes/CAIDE.Rdata")
 rownames(CAIDE) <- CAIDE$Basename
 Y_test_CAIDE1 <- CAIDE[colnames(testData),]
 
-load("X/X_Cor_CAIDE1/X_test_Cor.RData")
-testData <- log2(X_test_Cor/(1-X_test_Cor))
-
-
 # tested methods
-methods <- c("EN", "sPLSDA")
-methodNames <- c("ElasticNet",  "sPLS-DA")
+methods <- c("EN", "sPLSDA", "RF")
+methodNames <- c("ElasticNet",  "sPLS-DA", "Random Forest")
 
 # Low Risk
 plotDF_all <- NULL
@@ -298,8 +314,10 @@ for (i in 1:length(methods)){
                                                                  levels = c("Low_Intermediate", "High")))
   colnames(dataMatrix) <- c(colnames(Y_test_CAIDE1[,c(10:16)]), "LowRisk", "HighRisk")
   
-  Rsquared_obs <- rep(NA, 7)
-  Rsquared_pred <- rep(NA, 7)
+  Rsquared_low <- rep(NA, 7)
+  Rsquared_high <- rep(NA, 7)
+  Sig_low <- rep(NA, 7)
+  Sig_high <- rep(NA, 7)
   Y_factors <- Y_test_CAIDE1[,c(10:16)]
   for (factor in 1:ncol(Y_factors)){
     
@@ -312,7 +330,8 @@ for (i in 1:length(methods)){
     nullmodel <- glm(as.formula(formula_null), data = as.data.frame(dataMatrix), family = "binomial")
     
     # Calculate R-squared
-    Rsquared_pred[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    Rsquared_low[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    Sig_low[factor] <- summary(model)$coefficients[2,4]
     
     #=========================================================================#
     
@@ -325,13 +344,15 @@ for (i in 1:length(methods)){
     nullmodel <- glm(as.formula(formula_null), data = as.data.frame(dataMatrix), family = "binomial")
     
     # Calculate R-squared
-    Rsquared_obs[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    Rsquared_high[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    Sig_high[factor] <- summary(model)$coefficients[2,4]
   }
   
   factorNames <- c("Age", "Sex", "Education", "Systolic Blood Pressure", "BMI",
                    "Total Cholesterol", "Physical Inactivity")
   plotDF <- data.frame(Name = rep(factorNames,2), 
-                       R2  = c(Rsquared_pred, Rsquared_obs),
+                       R2  = c(Rsquared_low, Rsquared_high),
+                       Sig = c(Sig_low, Sig_high),
                        Model = c(rep("Low Risk Model",length(factorNames)),
                                    rep("High Risk Model",length(factorNames))),
                        Method = rep(methodNames[i],2*length(factorNames)))
@@ -340,9 +361,16 @@ for (i in 1:length(methods)){
 }
 
 plotDF_all$Model <- factor(plotDF_all$Model,levels = c("Low Risk Model", "High Risk Model"))
+plotDF_all$Method <- factor(plotDF_all$Method,
+                                  levels = methodNames)
+plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
+
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
            stat = "identity", position=position_dodge(), color = "black") +
+  geom_point(aes(x = Name, y = X, color = Method),
+             position=position_jitterdodge(jitter.width = 0, jitter.height = 0, dodge.width = 0.9),
+             shape = 18) +
   coord_flip() +
   facet_grid(cols = vars(Model)) +
   xlab(NULL) +
@@ -350,8 +378,10 @@ p <- ggplot(plotDF_all)+
   ylim(c(0,0.5)) +
   ggtitle("CAIDE1") +
   labs(fill = NULL) +
+  guides(color = "none") +
   theme_minimal() +
   scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
+  scale_color_manual(values = c("black","black", "black")) +
   theme(legend.position = "bottom",
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",

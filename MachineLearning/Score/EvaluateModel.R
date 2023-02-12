@@ -236,7 +236,7 @@ plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
 # Make plot
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
-           stat = "identity", position=position_dodge()) +
+           stat = "identity", position=position_dodge(), color = "black") +
   geom_point(aes(x = Name, y = X, color = Method),
              position=position_jitterdodge(jitter.width = 0, jitter.height = 0, dodge.width = 0.9),
              shape = 18) +
@@ -248,7 +248,7 @@ p <- ggplot(plotDF_all)+
   labs(fill = NULL) +
   guides(color = "none") +
   theme_minimal() +
-  scale_fill_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
+  scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
   scale_color_manual(values = c("black","black", "black")) +
   theme(legend.position = "bottom",
         plot.title = element_text(hjust = 0.5,
@@ -386,7 +386,7 @@ plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
 # Make plot
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
-           stat = "identity", position=position_dodge()) +
+           stat = "identity", position=position_dodge(), color = "black") +
   geom_point(aes(x = Name, y = X, color = Method),
              position=position_jitterdodge(jitter.width = 0, jitter.height = 0, dodge.width = 0.9),
              shape = 18) +
@@ -398,7 +398,7 @@ p <- ggplot(plotDF_all)+
   labs(fill = NULL) +
   guides(color = "none") +
   theme_minimal() +
-  scale_fill_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
+  scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
   scale_color_manual(values = c("black","black", "black")) +
   theme(legend.position = "bottom",
         plot.title = element_text(hjust = 0.5,
@@ -433,7 +433,7 @@ for (i in 1:length(methods)){
   pred_test <- predict(finalModel, t(testData))
   
   # Get observed value
-  obs_test <- Y_test$CAIDE
+  obs_test <- Y_test$LIBRA
   
   # Combine into data frame
   temp <- data.frame(Predicted = pred_test,
@@ -539,7 +539,7 @@ plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
 # Make plot
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
-           stat = "identity", position=position_dodge()) +
+           stat = "identity", position=position_dodge(), color = "black") +
   geom_point(aes(x = Name, y = X, color = Method),
              position=position_jitterdodge(jitter.width = 0, jitter.height = 0, dodge.width = 0.9),
              shape = 18) +
@@ -547,11 +547,11 @@ p <- ggplot(plotDF_all)+
   xlab(NULL) +
   ylab(expression(R^2)) +
   ylim(c(0,1)) +
-  ggtitle("CAIDE1") +
+  ggtitle("LIBRA") +
   labs(fill = NULL) +
   guides(color = "none") +
   theme_minimal() +
-  scale_fill_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
+  scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
   scale_color_manual(values = c("black","black", "black")) +
   theme(legend.position = "bottom",
         plot.title = element_text(hjust = 0.5,

@@ -33,8 +33,8 @@ for (f in files){
 
 ################################################################################
 
-methods <- c("EN")
-methodNames <- c("ElasticNet")
+methods <- c("EN", "sPLSDA")
+methodNames <- c("ElasticNet", "sPLS-DA")
 
 # Low Risk
 plotDF_LowRisk_CV <- NULL
@@ -101,13 +101,31 @@ for (i in 1:length(methods)){
   plotDF_HighRisk_test <- rbind.data.frame(plotDF_HighRisk_test, temp)
   
 }
+plotDF_all_CV <- rbind.data.frame(plotDF_LowRisk_CV, plotDF_HighRisk_CV)
+plotDF_all_CV$Method <- factor(plotDF_all_CV$Method,
+                               levels = c("ElasticNet (Low Risk)",
+                                          "sPLS-DA (Low Risk)",
+                                          "Random Forest (Low Risk)",
+                                          "ElasticNet (High Risk)",
+                                          "sPLS-DA (High Risk)",
+                                          "Random Forest (High Risk)"))
+plotDF_all_test <- rbind.data.frame(plotDF_LowRisk_test, plotDF_HighRisk_test)
+plotDF_all_test$Method <- factor(plotDF_all_test$Method,
+                                 levels = c("ElasticNet (Low Risk)",
+                                            "sPLS-DA (Low Risk)",
+                                            "Random Forest (Low Risk)",
+                                            "ElasticNet (High Risk)",
+                                            "sPLS-DA (High Risk)",
+                                            "Random Forest (High Risk)"))
 
+colors <- c(brewer.pal(n = 5, name = "Reds")[c(3)],
+            brewer.pal(n = 5, name = "Reds")[c(4)],
+            #brewer.pal(n = 5, name = "Reds")[c(5)],
+            brewer.pal(n = 5, name = "Blues")[c(3)],
+            brewer.pal(n = 5, name = "Blues")[c(4)],
+            #brewer.pal(n = 5, name = "Blues")[c(5)]
+            )
 
-
-colors <- c(brewer.pal(n = 4, name = "Reds")[c(3)],
-            brewer.pal(n = 4, name = "Blues")[c(3)],
-            brewer.pal(n = 4, name = "Reds")[c(4)],
-            brewer.pal(n = 4, name = "Blues")[c(4)])
 
 p <- ggplot() +
   geom_path(data = plotDF_LowRisk_CV, aes(y = Sensitivity, x = 1- Specificity,
@@ -164,8 +182,8 @@ ggsave(p, file = "LIBRA_Cat_Cor_AUC_test.png", height = 6, width = 9)
 # Boxplots
 
 ################################################################################
-methods <- c("EN")
-methodNames <- c("ElasticNet")
+methods <- c("EN", "sPLSDA")
+methodNames <- c("ElasticNet", "sPLS-DA")
 
 ObsPred_CV_all <- NULL
 ObsPred_test_all <- NULL
@@ -202,6 +220,9 @@ for (i in 1:length(methods)){
 
 ObsPred_CV_all$Class <- factor(ObsPred_CV_all$Class,
                                levels = c("Low Risk (-2.7-0)","Intermediate Risk (0-2)","High Risk (2-12.7)"))
+ObsPred_CV_all$Method <- factor(ObsPred_CV_all$Method,
+                                levels = methodNames)
+
 p <- ggplot(ObsPred_CV_all) +
   geom_rect(ymin = -Inf, ymax = 0, xmin = -Inf, xmax = Inf,fill = "#FFF5F0", alpha = 0.5) +
   geom_rect(ymin = 0, ymax = 2, xmin = -Inf, xmax = Inf,fill = "#FEE0D2", alpha = 0.5) +
@@ -234,6 +255,9 @@ ggsave(p, file = "LIBRA_Cat_Cor_boxPlot_CV.png", height = 6, width = 9)
 
 ObsPred_test_all$Class <- factor(ObsPred_test_all$Class,
                                  levels = c("Low Risk (-2.7-0)","Intermediate Risk (0-2)","High Risk (2-12.7)"))
+ObsPred_test_all$Method <- factor(ObsPred_test_all$Method,
+                                  levels = methodNames)
+
 p <- ggplot(ObsPred_test_all) +
   geom_rect(ymin = -Inf, ymax = 0, xmin = -Inf, xmax = Inf,fill = "#FFF5F0", alpha = 0.5) +
   geom_rect(ymin = 0, ymax = 2, xmin = -Inf, xmax = Inf,fill = "#FEE0D2", alpha = 0.5) +
@@ -272,12 +296,12 @@ ggsave(p, file = "LIBRA_Cat_Cor_boxPlot_test.png", height = 6, width = 9)
 ################################################################################
 
 # Get factors of test set
-load("E:/Thesis/EXTEND/Phenotypes/EPILIBRA.Rdata")
-rownames(LIBRA) <- LIBRA$Basename
-Y_test_LIBRA <- LIBRA[colnames(testData),]
-
 load("X/X_Cor_LIBRA/X_test_CorL.RData")
-testData <- log2(X_test_Cor/(1-X_test_Cor))
+testData <- log2(X_test_CorL/(1-X_test_CorL))
+
+load("E:/Thesis/EXTEND/Phenotypes/EPILIBRA.Rdata")
+rownames(EPILIBRA) <- EPILIBRA$Basename
+Y_test_LIBRA <- EPILIBRA[colnames(testData),]
 
 
 # tested methods
@@ -288,19 +312,21 @@ methodNames <- c("ElasticNet",  "sPLS-DA")
 plotDF_all <- NULL
 for (i in 1:length(methods)){
   # Load data
-  load(paste0("CV_CAIDE1/Performance_CAIDE1_LowRisk_Cor_", methods[i],".RData"))
-  load(paste0("CV_CAIDE1/Performance_CAIDE1_HighRisk_Cor_", methods[i],".RData"))
+  load(paste0("CV_LIBRA/Performance_LIBRA_LowRisk_Cor_", methods[i],".RData"))
+  load(paste0("CV_LIBRA/Performance_LIBRA_HighRisk_Cor_", methods[i],".RData"))
   
   # Combine observed and predicted
-  dataMatrix <- cbind.data.frame(Y_test_CAIDE1[,c(10:16)],factor(ObsPred_test_LowRisk$pred,
+  dataMatrix <- cbind.data.frame(Y_test_LIBRA[,c(10:20)],factor(ObsPred_test_LowRisk$pred,
                                                                  levels = c("Intermediate_High", "Low")))
   dataMatrix <- cbind.data.frame(dataMatrix,factor(ObsPred_test_HighRisk$pred,
                                                    levels = c("Low_Intermediate", "High")))
-  colnames(dataMatrix) <- c(colnames(Y_test_CAIDE1[,c(10:16)]), "LowRisk", "HighRisk")
+  colnames(dataMatrix) <- c(colnames(Y_test_LIBRA[,c(10:20)]), "LowRisk", "HighRisk")
   
-  Rsquared_obs <- rep(NA, 7)
-  Rsquared_pred <- rep(NA, 7)
-  Y_factors <- Y_test_CAIDE1[,c(10:16)]
+  Rsquared_low <- rep(NA, 11)
+  Rsquared_high <- rep(NA, 11)
+  Sig_low <- rep(NA, 11)
+  Sig_high <- rep(NA, 11)
+  Y_factors <- Y_test_LIBRA[,c(10:20)]
   for (factor in 1:ncol(Y_factors)){
     
     # Explained variance predicted score
@@ -312,7 +338,8 @@ for (i in 1:length(methods)){
     nullmodel <- glm(as.formula(formula_null), data = as.data.frame(dataMatrix), family = "binomial")
     
     # Calculate R-squared
-    Rsquared_pred[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    Rsquared_low[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    Sig_low[factor] <- summary(model)$coefficients[2,4]
     
     #=========================================================================#
     
@@ -325,13 +352,16 @@ for (i in 1:length(methods)){
     nullmodel <- glm(as.formula(formula_null), data = as.data.frame(dataMatrix), family = "binomial")
     
     # Calculate R-squared
-    Rsquared_obs[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    Rsquared_high[factor] = as.numeric(1-logLik(model)/(logLik(nullmodel)))
+    Sig_high[factor] <- summary(model)$coefficients[2,4]
   }
   
-  factorNames <- c("Age", "Sex", "Education", "Systolic Blood Pressure", "BMI",
-                   "Total Cholesterol", "Physical Inactivity")
+  factorNames <- c("Healthy Diet", "Physical Inactivity", "Smoking", "L-M Alcohol Intake",
+                   "BMI", "Depression", "Type 2 Diabetes","Systolic Blood Pressure", 
+                   "HDL Cholesterol", "Heart Disease", "Kidney Disease")
   plotDF <- data.frame(Name = rep(factorNames,2), 
-                       R2  = c(Rsquared_pred, Rsquared_obs),
+                       R2  = c(Rsquared_low, Rsquared_high),
+                       Sig = c(Sig_low, Sig_high),
                        Model = c(rep("Low Risk Model",length(factorNames)),
                                  rep("High Risk Model",length(factorNames))),
                        Method = rep(methodNames[i],2*length(factorNames)))
@@ -340,21 +370,31 @@ for (i in 1:length(methods)){
 }
 
 plotDF_all$Model <- factor(plotDF_all$Model,levels = c("Low Risk Model", "High Risk Model"))
+plotDF_all$Method <- factor(plotDF_all$Method,
+                            levels = methodNames)
+plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
+
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
            stat = "identity", position=position_dodge(), color = "black") +
+  geom_point(aes(x = Name, y = X, color = Method),
+             position=position_jitterdodge(jitter.width = 0, jitter.height = 0, dodge.width = 0.9),
+             shape = 18) +
   coord_flip() +
   facet_grid(cols = vars(Model)) +
   xlab(NULL) +
   ylab(expression("McFadden's "~R^2)) +
   ylim(c(0,0.5)) +
-  ggtitle("CAIDE1") +
+  ggtitle("LIBRA") +
   labs(fill = NULL) +
+  guides(color = "none") +
   theme_minimal() +
   scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
+  scale_color_manual(values = c("black","black", "black")) +
   theme(legend.position = "bottom",
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
 
-ggsave(p, file = "CAIDE1_Cat_Cor_whichFactors_test.png", height = 6, width = 10)
+
+ggsave(p, file = "LIBRA_Cat_Cor_whichFactors_test.png", height = 6, width = 10)
