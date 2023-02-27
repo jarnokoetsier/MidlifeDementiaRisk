@@ -1,23 +1,80 @@
 
-library(data.table)
-bimFile <- fread("E:/Thesis/EXTEND/Genotypes/ChrBPData/Output_all/FINAL/EXTEND_PostImpute_FINAL_bp_dup.bim")
-
-dupVar1 <- bimFile$V2[duplicated(bimFile$V2)]
-
-setwd("E:/Thesis/EXTEND/Genotypes/")
-write.table(dupVar, file = "plink.dupvar", quote = FALSE, col.names = FALSE, row.names = FALSE,
-           sep = "\t")
-
-devtools::install_github("Rrtk2/PRS-multi-trait/Package/PRSMultiTrait")
+# Clear workspace and console
+rm(list = ls())
+cat("\014") 
 
 
-
-
+# Install PRSMultiTrait package
+#devtools::install_github("Rrtk2/PRS-multi-trait/Package/PRSMultiTrait")
 library("PRSMultiTrait")
 #PRSMultiTrait::installDependenciesAndData()
 
+library(data.table)
+famFile <- fread("E:/Thesis/EXTEND/Genotypes/ChrBPData/Output_all/FINAL/EXTEND_PostImpute_FINAL_bp_dup.fam")
+
+
+
+#C:\Users\Gebruiker\AppData\Local\R\win-library\4.2\PRSMultiTrait\Core\Internal_files\Predict
 getManifest()
-Traits <- Manifest_env$Ref_gwas_manifest$short
+Manifest_env$Traits <- Manifest_env$Ref_gwas_manifest$short
+Traits <- Manifest_env$Traits[Manifest_env$Ref_gwas_manifest$processed == 2]
+Models <- c("lasso","lasso-sparse", "ridge", "bolt", "bayesr", "bayesr-shrink")
+
+df_list <- list()
+for (m in 1:length(Models)){
+  traitDF <-  collect_all_PRS(cohort = "EXTEND_PostImpute_FINAL_bp_dup",
+                              Model = Models[m])
+  
+  if ((Models[m] != "bayesr-shrink") & (Models[m] != "lasso-sparse")){
+    colnames(traitDF) <- str_remove(colnames(traitDF), paste0("_",Models[m]))
+  } else{
+    colnames(traitDF) <- str_remove(colnames(traitDF), "_bayesr.shrink")
+    colnames(traitDF) <- str_remove(colnames(traitDF), "_lasso.sparse")
+  }
+  
+  #colnames(traitDF) <- Traits
+  rownames(traitDF) <- famFile$V2
+  df_list[[m]] <- traitDF
+}
+names(df_list) <- Models
+
+
+
+save(df_list, file = "E:/Thesis/EXTEND/df_list.RData")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 for (t in Traits){
@@ -26,6 +83,7 @@ for (t in Traits){
           OverlapSNPsOnly=FALSE, 
           Force = FALSE)
 }
+
 
 
 

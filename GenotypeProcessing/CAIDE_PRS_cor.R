@@ -1,7 +1,81 @@
+# Clear workspace and console
+rm(list = ls())
+cat("\014") 
+
+# Load packages
 library(tidyverse)
 library(patchwork)
-setwd("E:/Thesis/EXTEND/Genotypes")
-load("df_Result_PGS.RData")
+library(data.table)
+library(corrr)
+library(ggdendroplot)
+
+# Load PGS
+load("E:/Thesis/EXTEND/df_list.RData")
+
+
+PGSresult <- df_list$`bayesr-shrink`
+
+PGS_names <- c("AD (w/o APOE)", "AD (stage I)", "AD (stage I-II)", "Adiponectin", "Alchol consumption",
+               "ASD", "BD", "BL", "BMI", "BW", "BW (fetal genetics)", "BW (maternal genetcis)",
+               "CAD", "Childhood obsesity", "Chronotype", "CKD (European)", "CKD (trans-ethnic)",
+               "DC2", "EA (Lee, 2014)", "EA (Okbay, 2022)","Extreme BMI", "Extreme height",
+               "Extreme HWR", "AD (family history)", "HbA1c", "HC", "HDL", "Infant Head Circumference",
+               "LDL", "LST","MDD", "MVPA","Obesity (class I)", "Obsesity (Class II)", "Obesity (Class III)",
+               "Overweigth", "PD", "Pubertal Growth", "RA", "SBP (automated reading)", "SBP (manual reading)",
+               "SHR", "Sleep duration", "T2D", "TC",
+               "TG", "WC", "WHR")
+
+colnames(PGSresult) <- PGS_names
+
+# Calculate correlations
+corrDF <- as.data.frame(correlate(PGSresult, diagonal = 1, method = "spearman"))
+rownames(corrDF) <- corrDF$term
+corrDF <- corrDF[,-1]
+
+# Format data for plotting
+plotCor <- gather(corrDF)
+plotCor$key1 <- rep(rownames(corrDF), ncol(corrDF))
+
+# Perform clustering to get sample order
+model <- hclust(as.dist(1-abs(corrDF)), "ward.D2")
+order <- model$labels[model$order]
+plotCor$key <- factor(plotCor$key, levels = order)
+plotCor$key1 <- factor(plotCor$key1, levels = order)
+
+# Main correlation plot
+main <- ggplot(plotCor) +
+  geom_tile(aes(x = key, y = key1, fill = value),
+            width = 0.95, height = 0.95) +
+  scale_fill_gradient2(low = "#000072", mid = "#FFFBF5", high = "red", midpoint = 0,
+                       limits = c(-1,1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  labs(fill = paste0(str_to_title("spearman"),"\nCorrelation"))+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 11),
+        axis.text.y = element_text(size = 11))
+
+# Dendrogram
+dendroPlot <- ggplot() +
+  geom_tile(data = plotCor, aes(x = as.numeric(key), y = 1), fill = "white", alpha = 0) +
+  geom_dendro(model,xlim = c(1,length(unique(plotCor$key)))) +
+  theme_void() +
+  theme(legend.position = "none") 
+
+# Combine plots
+p <- dendroPlot + main +
+  plot_layout(nrow = 2, ncol = 1,
+              heights = c(1,6))
+
+
+setwd("E:/Thesis/EXTEND/Phenotypes")
+ggsave(p, file = "PGS_correlations.png", width = 11, height = 10)
+
+
+
+# samples
+famFile <- fread("E:/Thesis/EXTEND/Genotypes/ChrBPData/Output_all/FINAL/EXTEND_PostImpute_FINAL_bp_dup.fam")
+
 
 setwd("E:/Thesis/EXTEND/Phenotypes")
 load("metaData_ageFil.Rdata")
@@ -111,68 +185,70 @@ Y_all <- data.frame(Education,
 rownames(Y_all) <- dat$ID
 
 
-Y_PGS <- Y_all[rownames(df_Result_PGS),]
+Y_PGS <- Y_all[famFile$V2,]
+
+PGS_names <- c("AD (w/o APOE)", "AD (stage I)", "AD (stage I-II)", "Adiponectin", "Alchol consumption",
+               "ASD", "BD", "BL", "BMI", "BW", "BW (fetal genetics)", "BW (maternal genetcis)",
+               "CAD", "Childhood obsesity", "Chronotype", "CKD (European)", "CKD (trans-ethnic)",
+               "DC2", "EA (Lee, 2014)", "EA (Okbay, 2022)","Extreme BMI", "Extreme height",
+               "Extreme HWR", "AD (family history)", "HbA1c", "HC", "HDL", "Infant Head Circumference",
+               "LDL", "LST","MDD", "MVPA","Obesity (class I)", "Obesity (Class II)", "Obesity (Class III)",
+               "Overweigth", "PD", "Pubertal Growth", "RA", "SBP (automated reading)", "SBP (manual reading)",
+               "SHR", "Sleep duration", "T2D", "TC",
+               "TG", "WC", "WHR")
 
 
-corMatrix <- matrix(NA, nrow = ncol(df_Result_PGS), ncol = ncol(Y_PGS))
-for (i in 1:ncol(Y_PGS)){
-  corMatrix[,i] <- apply(df_Result_PGS,2,function(x){cor(x,Y_PGS[,i], method = "spearman",
-                                                   use = "pairwise.complete.obs")})
+plotCor_all <- NULL
+plotSig_all <- NULL
+for (m in 1:length(df_list)){
+
+  corMatrix <- matrix(NA, nrow = ncol(df_list[[m]]), ncol = ncol(Y_PGS))
+  sigMatrix <- matrix(NA, nrow = ncol(df_list[[m]]), ncol = ncol(Y_PGS))
+  for (i in 1:ncol(Y_PGS)){
+    sigMatrix[,i] <- apply(df_list[[m]],2,function(x){cor.test(x,Y_PGS[,i], method = "spearman",
+                                                               use = "pairwise.complete.obs")$p.value})
+    corMatrix[,i] <- apply(df_list[[m]],2,function(x){cor.test(x,Y_PGS[,i], method = "spearman",
+                                                               use = "pairwise.complete.obs")$estimate})
+  }
+  colnames(corMatrix) <- colnames(Y_PGS)
+  colnames(corMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Act.", "Healthy Diet", "Smoking",
+                           "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", "Heart Disease", "Kidney Disease",
+                           "Age", "Sex", "APOE \u03b54")
+  rownames(corMatrix) <- PGS_names
+  
+  # Format data for plotting
+  plotCor <- gather(as.data.frame(corMatrix))
+  plotCor$key1 <- rep(rownames(corMatrix), ncol(corMatrix))
+  plotCor$Method <- rep(names(df_list)[m], nrow(plotCor))
+  
+  plotCor_all <- rbind.data.frame(plotCor_all, plotCor)
+  
+  
+
+  colnames(sigMatrix) <- colnames(Y_PGS)
+  colnames(sigMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Act.", "Healthy Diet", "Smoking",
+                           "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", "Heart Disease", "Kidney Disease",
+                           "Age", "Sex", "APOE \u03b54")
+  rownames(sigMatrix) <- colnames(df_list[[m]])
+  
+  # Format data for plotting
+  plotSig <- gather(as.data.frame(sigMatrix))
+  plotSig$key1 <- rep(rownames(sigMatrix), ncol(sigMatrix))
+  plotSig$Method <- rep(names(df_list)[m], nrow(plotSig))
+  
+  plotSig_all <- rbind.data.frame(plotSig_all, plotSig)
 }
 
 
-colnames(corMatrix) <- colnames(Y_PGS)
-colnames(corMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Act.", "Healthy Diet", "Smoking",
-  "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", "Heart Disease", "Kidney Disease",
-  "Age", "Sex", "APOE \u03b54")
-rownames(corMatrix) <- colnames(df_Result_PGS)
+plotCor_all$pvalue <- plotSig_all$value
+plotCor_all$FDR <- p.adjust(plotCor_all$pvalue, method = "fdr")
+plotCor_all$Sig <- ifelse(plotCor_all$FDR < 0.05, "Yes", "No")
 
-# Format data for plotting
-plotCor <- gather(as.data.frame(corMatrix))
-plotCor$key1 <- rep(rownames(corMatrix), ncol(corMatrix))
-
-
-
-################################################################################
-sigMatrix <- matrix(NA, nrow = ncol(df_Result_PGS), ncol = ncol(Y_PGS))
-for (i in 1:ncol(Y_PGS)){
-  sigMatrix[,i] <- apply(df_Result_PGS,2,function(x){cor.test(x,Y_PGS[,i], method = "spearman",
-                                                         use = "pairwise.complete.obs")$p.value})
-}
-
-
-colnames(sigMatrix) <- colnames(Y_PGS)
-colnames(sigMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Act.", "Healthy Diet", "Smoking",
-                         "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", "Heart Disease", "Kidney Disease",
-                         "Age", "Sex", "APOE \u03b54")
-rownames(sigMatrix) <- colnames(df_Result_PGS)
-
-plotSig <- gather(as.data.frame(sigMatrix))
-plotSig$key1 <- rep(rownames(sigMatrix), ncol(sigMatrix))
-plotSig$FDR <- p.adjust(plotSig$value, method = "fdr")
-plotSig_fil <- plotSig[plotSig$FDR < 0.05,]
-
-plotCor$Sig <- rep("No", nrow(plotCor))
-for (i in 1:nrow(plotSig_fil)){
-  plotCor$Sig[(plotCor$key == plotSig_fil$key[i]) &(plotCor$key1 == plotSig_fil$key1[i])] <- "Yes"
-}
-
-################################################################################
-
-
-# Highest correlation for each factor
-maxCor <- data.frame(
-  Factor = names(apply(corMatrix,2,function(x){which.max(abs(x))})),
-  MaxPGS = rownames(corMatrix)[apply(corMatrix,2,function(x){which.max(abs(x))})])
-
-plotCor <- inner_join(plotCor, maxCor, by = c("key" =  "Factor"))
-plotCor$MaxPGS[plotCor$MaxPGS != plotCor$key1] <- "No"
-plotCor$MaxPGS[plotCor$MaxPGS == plotCor$key1] <- "Yes"
 
 # Main correlation plot
-main <- ggplot(plotCor) +
+main <- ggplot(plotCor_all[plotCor_all$Method == "bayesr-shrink",]) +
   geom_tile(aes(x = key, y = key1, fill = value, color = Sig), 
-            linewidth = 0.7, width = 0.8, height = 0.9) +
+            linewidth = 0.7, width = 0.8, height = 0.8) +
   scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                        limits = c(-0.5,0.5)) +
   xlab(NULL) +
@@ -180,9 +256,11 @@ main <- ggplot(plotCor) +
   labs(fill = paste0(str_to_title("spearman"),"\nCorrelation"))+
   scale_color_manual(values = c("white","black")) +
   guides(color = "none") +
-  theme_classic() +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())
+  theme_bw() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0, hjust = 1))
 
 
 
@@ -212,7 +290,7 @@ bottom <- ggplot(whichScore) +
 
 p <- main + bottom + 
 plot_layout(nrow = 2, ncol = 1,
-            heights = c(8,1))
+            heights = c(10,1))
 
 setwd("E:/Thesis/EXTEND/Phenotypes")
 ggsave(p, file = "PRS_Score_Cor.png", width = 8, height = 10)
@@ -221,17 +299,17 @@ ggsave(p, file = "PRS_Score_Cor.png", width = 8, height = 10)
 # Horizontal
 
 # Main correlation plot
-main <- ggplot(plotCor) +
+main <- ggplot(plotCor_all[plotCor_all$Method == "bayesr-shrink",]) +
   geom_tile(aes(x = key1, y = key, fill = value, color = Sig), 
             linewidth = 0.7, width = 0.8, height = 0.9) +
-  scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+  scale_fill_gradient2(low = "#000072", mid = "#FFFBF5", high = "red", midpoint = 0,
                        limits = c(-0.5,0.5)) +
   xlab(NULL) +
   ylab(NULL) +
   labs(fill = paste0(str_to_title("spearman"),"\nCorrelation"))+
   scale_color_manual(values = c("white","black")) +
   guides(color = "none") +
-  theme_classic() +
+  theme_bw() +
   theme(axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))

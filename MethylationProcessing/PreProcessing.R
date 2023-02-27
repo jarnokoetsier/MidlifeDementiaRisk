@@ -9,19 +9,19 @@
 ###############################################################################
 
 # Install Bioconductor packages
-#BiocManager::install(c("minfi", 
-#                       "wateRmelon", 
-#                       "IlluminaHumanMethylationEPICmanifest",
-#                       "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
-#                       "minfiData",
-#                       "FlowSorted.Blood.EPIC"))
+BiocManager::install(c("minfi", 
+                       "wateRmelon", 
+                       "IlluminaHumanMethylationEPICmanifest",
+                       "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
+                      "minfiData",
+                      "FlowSorted.Blood.EPIC"))
 
 # Install CRAN packages
-#install.packages("RPMM")
-#install.packages("ggrepel")
+install.packages("RPMM")
+install.packages("ggrepel")
 
 # Install GitHub packages
-#devtools::install_github("markgene/maxprobes")
+devtools::install_github("markgene/maxprobes")
 
 # Load packages
 library(minfi)
@@ -30,9 +30,13 @@ library(tidyverse)
 library(maxprobes)
 library(ggrepel)
 
+DataDir <- "Data/"
+OutputDir <- "PreProcessing/"
+
 # Load data
-load("rgsetAll.rdata")
-load("metaData_ageFil.RData")
+load(paste0(DataDir,"rgsetAll.rdata"))
+load(paste0(DataDir,"metaData_ageFil.RData"))
+
 
 ###############################################################################
 
@@ -63,7 +67,7 @@ bisulfiteConv <- ggplot(bsc, aes(x = bsc)) +
                                   face = "bold",
                                   size = 16))
 
-ggsave(bisulfiteConv, file = "bisulfiteConv.png", height = 6, width = 8)
+ggsave(bisulfiteConv, file = paste0(OutputDir,"bisulfiteConv.png"), height = 6, width = 8)
 
 #=============================================================================#
 # 1.2. Sample Quality
@@ -92,7 +96,7 @@ p <- ggplot(plotQC) +
                                   size = 16))
 
 # Save plot
-ggsave(p, file = "sampleQuality.png", width = 8, height = 6)
+ggsave(p, file = paste0(OutputDir,"sampleQuality.png"), width = 8, height = 6)
 
 
 #=============================================================================#
@@ -125,7 +129,7 @@ matchingSex <- ggplot(predictedSex) +
   scale_color_brewer(palette = "Set1")
 
 # Save plot
-ggsave(matchingSex, file = "matchingSex.png", width = 8, height = 6)
+ggsave(matchingSex, file = paste0(OutputDir,"matchingSex.png"), width = 8, height = 6)
 
 
 ###############################################################################
@@ -134,18 +138,20 @@ ggsave(matchingSex, file = "matchingSex.png", width = 8, height = 6)
 
 ###############################################################################
 
-#single sample Noob (minfi) 
+#single sample Noob (minfi)
+set.seed(123)
 methSet_noob1 <- preprocessNoob(RGset, 
                                offset = 15, 
                                dyeCorr = TRUE, 
                                verbose = FALSE,
                                dyeMethod = "single")
 
-# BMIQ (wateRmelon) (nfit = 50000)
+# BMIQ (wateRmelon)
+set.seed(123)
 methSet_allNorm <- BMIQ(methSet_noob1, nfit = 10000)
 
 # Save R objects
-save(methSet_allNorm, file = "methSet_allNorm1.RData")
+save(methSet_allNorm, file = paste0(DataDir,"methSet_allNorm1.RData"))
 
 ###############################################################################
 
@@ -154,7 +160,9 @@ save(methSet_allNorm, file = "methSet_allNorm1.RData")
 ###############################################################################
 
 gc()
-#load("methSet_allNorm1.RData")
+
+# Load normalized data
+load("methSet_allNorm1.RData")
 
 #=============================================================================#
 # 3.1. Detection P-value
@@ -196,24 +204,33 @@ methSet_allNorm_fil <- methSet_allNorm_fil[rownames(methSet_allNorm_fil) %in% ke
 
 
 #=============================================================================#
-# 3.4. Missing/unrealistic values & non-unique rows
+# 3.4. Sex-chromosomal probes
+#=============================================================================#
+
+load("probe_annotation.RData")
+probe_ann_fil <- probe_annotation[(probe_annotation$Chr != "chrX") &
+                                    (probe_annotation$Chr != "chrY"), ]
+methSet_allNorm_fil <- methSet_allNorm_fil[rownames(methSet_allNorm_fil) %in% probe_ann_fil$ID,]
+
+#=============================================================================#
+# 3.5. Missing/unrealistic values & non-unique rows
 #=============================================================================#
 
 # Check for NA values
-# sum(is.na(methSet_allNorm_fil))
+sum(is.na(methSet_allNorm_fil))
 
 # Check if values are lower or equal to zero
-# sum(methSet_allNorm_fil <= 0)
+sum(methSet_allNorm_fil <= 0)
 
 # Check if values are larger or equal to one
-# sum(methSet_allNorm_fil >= 1)
+sum(methSet_allNorm_fil >= 1)
 
 # Check for non-unique probes
-# length(unique(rownames(methSet_allNorm_fil))) == nrow(methSet_allNorm_fil)
-# nrow(methSet_allNorm_fil)
+length(unique(rownames(methSet_allNorm_fil))) == nrow(methSet_allNorm_fil)
+nrow(methSet_allNorm_fil)
 
 # Save methylation matrix
-save(methSet_allNorm_fil, file = "methSet_allNorm_fil.RData")
+save(methSet_allNorm_fil, file = paste0(DataDir,"methSet_allNorm_fil.RData"))
 
 
 ###############################################################################
@@ -272,11 +289,10 @@ ggsave(densityRaw, file = "densityRaw.png", width = 8, height = 6)
 pcaList <-  prcomp(t(methSet_allNorm_fil),        
                    retx = TRUE,
                    center =TRUE,
-                   scale = TRUE,
-                   rank. = 10)
+                   scale = TRUE)
 
 # Save pcaList object
-save(pcaList, file = "pcaList.RData")
+save(pcaList, file = paste0(DataDir,"pcaList.RData"))
 
 # Get PCA scores
 PCAscores <- as.data.frame(pcaList$x)
@@ -396,35 +412,37 @@ residuals <- t(data_scaled) - reconstruction
 ortDist<- sqrt(rowSums(residuals^2))
 
 # Calculate the mahalanobis distances
-coVar <- cov(t(t(PCAscores[,1:10])*(explVar[1:10]/100)))
-center <- colMeans(t(t(PCAscores[,1:10])*(explVar[1:10]/100)))
-mahalanobisDist <- mahalanobis(as.matrix(PCAscores[,1:10]), center = center, cov = coVar)
+coVar <- cov(t(t(PCAscores[,1:2])*(explVar[1:2]/100)))
+center <- colMeans(t(t(PCAscores[,1:2])*(explVar[1:2]/100)))
+#coVar <- cov(PCAscores[,1:10])
+#center <- colMeans(PCAscores[,1:10])
+mahalanobisDist <- mahalanobis(as.matrix(t(t(PCAscores[,1:2])*(explVar[1:2]/100))), center = center, cov = coVar)
 
 # Save distance metrics into a data frame
 distanceDF <- data.frame(OD = ortDist,
                          MD = mahalanobisDist,
-                         Age = PCAscores$Age,
+                         CD8T = PCAscores$CD8T,
                          ID = PCAscores$ID)
 
 # Distance-distance plot, colored by age
 DDplot <- ggplot() +
-  geom_point(data = distanceDF, aes(x = MD, y = OD, color = Age), 
+  geom_point(data = distanceDF, aes(x = MD, y = OD, color = CD8T), 
              alpha = 0.9, size = 2) +
   geom_text_repel(data = distanceDF[(distanceDF$MD > 690000) |
                                       (distanceDF$OD > 2000),], 
             aes(x = MD, y = OD, label = ID), size = 2) +
   #geom_vline(xintercept = log(500000), linetype = "dashed", color = 'red') +
   #geom_hline(yintercept = log(1500), linetype = "dashed", color = "red") +
-  xlab("Score distance (10 PC)") + 
+  xlab("Score distance (PC1-2)") + 
   ylab("Orthogonal distance") +
-  labs(color = "Age") +
+  labs(color = "CD8 T-cells") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 14),
         plot.subtitle = element_text(hjust = 0.5,
                                      size = 10),
-        legend.position = "right") +
+        legend.position = "bottom") +
   scale_color_viridis_c()
 
 # Save plot

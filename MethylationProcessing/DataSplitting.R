@@ -260,8 +260,9 @@ plotCell$ID <- rep(plotData$ID,6)
 plotCell$Test <- rep(plotData$Test,6)
 
 plot_cell <- ggplot(plotCell, aes(x = key, y = value, fill = Set, color = Set)) +
-  geom_point(position = position_jitterdodge(), alpha = 0.2) +
-  geom_violin(alpha = 0.5, draw_quantiles = 0.5, color = "black", size = 0.5) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.9), alpha = 0.2) +
+  geom_violin(alpha = 0.5, draw_quantiles = 0.5, color = "black", size = 0.5,
+              scale = "area") +
   scale_color_brewer(palette = "Dark2") +
   scale_fill_brewer(palette = "Dark2") +
   ylab("Cell Type Proportion") +
@@ -281,8 +282,8 @@ ggsave(plot_cell, file = "Cell_TrainingAndTest.png", width = 10, height = 6)
 
 # Make plot
 plot_caide <- ggplot() +
-  geom_histogram(data = CAIDE[CAIDE$ID %in% Y_CAIDE1$ID,], aes(x = CAIDE, fill = "Train"), bins = 10, alpha = 0.5) +
-  geom_histogram(data = CAIDE[CAIDE$ID %in% Y_test$ID,], aes(x = CAIDE, fill = "Test"), bins = 10, alpha = 0.5) +
+  geom_histogram(data = CAIDE[CAIDE$ID %in% Y_CAIDE1$ID,], aes(x = CAIDE, fill = "Train"), bins = 50, alpha = 0.5) +
+  geom_histogram(data = CAIDE[CAIDE$ID %in% Y_test$ID,], aes(x = CAIDE, fill = "Test"), bins = 50, alpha = 0.5) +
   ylab("Count") +
   xlab("CAIDE1 Score") +
   labs(fill = NULL) +
@@ -290,7 +291,23 @@ plot_caide <- ggplot() +
   theme_classic() +
   theme(legend.position = "bottom")
 
-ks.test(CAIDE$CAIDE[CAIDE$ID %in% Y_CAIDE1$ID], CAIDE$CAIDE[CAIDE$ID %in% Y_test$ID])
+plotData <- CAIDE
+plotData$Set <- rep("Training", nrow(plotData))
+plotData$Set[plotData$ID %in% Y_test$ID] <- "Test"
+
+plot_caide <- ggplot() + 
+  geom_bar(data = plotData[plotData$Set == "Training",], aes(x = CAIDE, fill = Set), 
+           position = "identity", width = 0.8, alpha = 0.9, color = "black") +
+  geom_bar(data = plotData[plotData$Set == "Test",], aes(x = CAIDE, fill = Set), 
+           position = "identity", width = 0.6, alpha = 0.9, color = "black") +
+  ylab("Count") +
+  xlab("CAIDE1 score") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
+#ks.test(CAIDE$CAIDE[CAIDE$ID %in% Y_CAIDE1$ID], CAIDE$CAIDE[CAIDE$ID %in% Y_test$ID])
 
 # Save plot
 ggsave(plot_caide, file = "CAIDE1_TrainingAndTest.png", width = 8, height = 6)
@@ -299,22 +316,28 @@ ggsave(plot_caide, file = "CAIDE1_TrainingAndTest.png", width = 8, height = 6)
 # LIBRA score
 #=============================================================================#
 
-# Make plot
-plot_libra <- ggplot() +
-  geom_histogram(data = EPILIBRA[EPILIBRA$ID %in% Y_LIBRA$ID,], aes(x = LIBRA, fill = "Train"), bins = 10, alpha = 0.5) +
-  geom_histogram(data = EPILIBRA[EPILIBRA$ID %in% Y_test$ID,], aes(x = LIBRA, fill = "Test"), bins = 10, alpha = 0.5) +
+ks.test(EPILIBRA$LIBRA[EPILIBRA$ID %in% Y_LIBRA$ID], EPILIBRA$LIBRA[EPILIBRA$ID %in% Y_test$ID])
+
+EPILIBRA$LIBRA <- round(rowSums(EPILIBRA[,10:20]),1)
+plotData <- data.frame(EPILIBRA)
+plotData$Set <- rep("Training", nrow(plotData))
+plotData$Set[plotData$ID %in% Y_test$ID] <- "Test"
+
+plot_libra <- ggplot() + 
+  geom_histogram(data = plotData[plotData$Set == "Training",], aes(x = LIBRA, fill = Set),
+                 bins = 12, alpha = 0.9, color = "black") +
+  geom_histogram(data = plotData[plotData$Set == "Test",], aes(x = LIBRA, fill = Set),
+                 width = 0.7, bins = 12, alpha = 0.9, color = "black") +
   ylab("Count") +
-  xlab("LIBRA Score") +
-  labs(fill = NULL) +
+  xlab("LIBRA score") +
   scale_fill_brewer(palette = "Set1") +
   theme_classic() +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
 
-ks.test(EPILIBRA$LIBRA[EPILIBRA$ID %in% Y_LIBRA$ID], EPILIBRA$LIBRA[EPILIBRA$ID %in% Y_test$ID])
 
 # Save plot
 ggsave(plot_libra, file = "LIBRA_TrainingAndTest.png", width = 8, height = 6)
-
 
 #=============================================================================#
 # PCA
@@ -326,8 +349,8 @@ trainingData_scaled <- t((X_nonTest - rowMeans(X_nonTest))/(apply(X_nonTest,1,sd
 # Make PCA model
 pcaList_train <-  prcomp(trainingData_scaled,        
                          retx = TRUE,
-                         center = TRUE,
-                         scale = TRUE,
+                         center = FALSE,
+                         scale = FALSE,
                          rank. = 6)
 
 # Get the PCA scores of the training data

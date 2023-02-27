@@ -22,6 +22,13 @@ for (f in files){
   load(paste0("Y/",f))
 }
 
+
+###############################################################################
+
+# All scores
+
+###############################################################################
+
 methods <- c("EN", "sPLS", "RF")
 methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 scores <- c("CAIDE1", "CAIDE2", "LIBRA")
@@ -122,6 +129,7 @@ testData <- log2(X_test_Cor/(1-X_test_Cor))
 
 methods <- c("EN", "sPLS", "RF")
 methodNames <- c("ElasticNet", "sPLS", "Random Forest")
+perf_rmse <- rep(NA, length(methods))
 plotDF <-  NULL
 for (i in 1:length(methods)){
   # Load model
@@ -139,6 +147,8 @@ for (i in 1:length(methods)){
                      Method = rep(methodNames[i], length(obs_test)))
   
   plotDF <- rbind.data.frame(plotDF, temp)
+  
+  perf_rmse[i] <- RMSE(pred = pred_test, obs = obs_test)
 }
 plotDF$Method <- factor(plotDF$Method,
                         levels = methodNames)
@@ -258,6 +268,154 @@ p <- ggplot(plotDF_all)+
 
 ggsave(p, file = "WhichFactors_CAIDE1.png", width = 8, height = 6)
 
+
+###############################################################################
+
+# mCAIDE1
+
+###############################################################################
+
+# Get test data
+load("X/X_Cor_mCAIDE1/X_test_Corm.RData")
+testData <- log2(X_test_Corm/(1-X_test_Corm))
+
+methods <- c("EN")
+methodNames <- c("ElasticNet")
+plotDF <-  NULL
+for (i in 1:length(methods)){
+  # Load model
+  load(paste0("CV_mCAIDE1/CV_mCAIDE1_Cor_", methods[i],".RData"))
+  
+  # make prediction
+  pred_test <- predict(finalModel, t(testData))
+  
+  # Get observed value
+  obs_test <- Y_test$mCAIDE1
+  
+  # Combine into data frame
+  temp <- data.frame(Predicted = pred_test,
+                     Observed = obs_test,
+                     Method = rep(methodNames[i], length(obs_test)))
+  
+  plotDF <- rbind.data.frame(plotDF, temp)
+}
+plotDF$Method <- factor(plotDF$Method,
+                        levels = methodNames)
+
+p <- ggplot(plotDF) +
+  geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
+  geom_point(aes(x = Observed, y = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
+  facet_grid(rows = vars(Method)) +
+  scale_color_gradient2(low = "#000072", mid = "#F49D1A", high = "red", midpoint = 0) +
+  ggtitle("mCAIDE1") +
+  xlab("Observed Score") +
+  ylab("Predicted Score") +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic")) 
+
+g <- ggplot_gtable(ggplot_build(p))
+
+strips <- which(grepl('strip-', g$layout$name))
+
+pal <- c("#A50F15","#CC4C02", "#6A51A3")
+
+
+for (i in seq_along(strips)) {
+  k <- which(grepl('rect', g$grobs[[strips[i]]]$grobs[[1]]$childrenOrder))
+  l <- which(grepl('titleGrob', g$grobs[[strips[i]]]$grobs[[1]]$childrenOrder))
+  g$grobs[[strips[i]]]$grobs[[1]]$children[[k]]$gp$fill <- pal[i]
+  g$grobs[[strips[i]]]$grobs[[1]]$children[[l]]$children[[1]]$gp$col <- "white"
+}
+
+plot(g)
+
+ggsave(g, file = "ObsVsPred_test_mCAIDE1.png", width = 8, height = 8)
+
+#*****************************************************************************#
+#* Which factors (R2)
+#*****************************************************************************#
+
+# Get factors of test set
+load("E:/Thesis/EXTEND/Phenotypes/CAIDE.Rdata")
+rownames(CAIDE) <- CAIDE$Basename
+Y_test_CAIDE1 <- CAIDE[colnames(testData),]
+
+# tested methods
+methods <- c("EN")
+methodNames <- c("ElasticNet")
+
+# For each method calculate R2 for each factor
+plotDF_all <- NULL
+for (i in 1:length(methods)){
+  # Load data
+  load(paste0("CV_mCAIDE1/CV_mCAIDE1_Cor_",methods[i],".RData"))
+  
+  # Make prediction
+  pred_test <- predict(finalModel, t(testData))
+  
+  # Combine observed and predicted
+  dataMatrix <- cbind.data.frame(Y_test_CAIDE1[,c(10:16)],pred_test)
+  colnames(dataMatrix) <- c(colnames(Y_test_CAIDE1[,c(10:16)]), "PredictedScore")
+  
+  Rsquared_factor <- rep(NA, 7)
+  Sig_factor <- rep(NA, 7)
+  Y_factors <- Y_test_CAIDE1[,c(10:16)]
+  for (factor in 1:ncol(Y_factors)){
+    formula <- paste0("PredictedScore ~ ", colnames(Y_factors)[factor])
+    
+    # Fit model
+    model <- lm(as.formula(formula), data = as.data.frame(dataMatrix))
+    
+    # Calculate R-squared
+    Rsquared_factor[factor] <-  summary(model)$r.squared
+    Sig_factor[factor] <- summary(model)$coefficients[2,4]
+  }
+  
+  factorNames <- c("Age", "Sex", "Education", "Systolic Blood Pressure", "BMI",
+                   "Total Cholesterol", "Physical Inactivity")
+  plotDF <- data.frame(Name = factorNames, 
+                       R2  = Rsquared_factor,
+                       Sig = Sig_factor,
+                       Method = rep(methodNames[i],length(factorNames)))
+  
+  plotDF_all <- rbind.data.frame(plotDF_all, plotDF)
+}
+
+plotDF_all$Method <- factor(plotDF_all$Method,
+                            levels = methodNames)
+
+
+plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
+# Make plot
+p <- ggplot(plotDF_all)+
+  geom_bar(aes(x = Name, y = R2, fill = Method),
+           stat = "identity", position=position_dodge(), color = "black") +
+  geom_point(aes(x = Name, y = X, color = Method),
+             position=position_jitterdodge(jitter.width = 0, jitter.height = 0, dodge.width = 0.9),
+             shape = 18) +
+  coord_flip() +
+  xlab(NULL) +
+  ylab(expression(R^2)) +
+  ylim(c(0,1)) +
+  ggtitle("mCAIDE1") +
+  labs(fill = NULL) +
+  guides(color = "none") +
+  theme_minimal() +
+  scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
+  scale_color_manual(values = c("black","black", "black")) +
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16))
+
+
+ggsave(p, file = "WhichFactors_mCAIDE1.png", width = 8, height = 6)
 
 
 ###############################################################################

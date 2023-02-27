@@ -54,7 +54,7 @@ type <- c("CAT",
           "CAT",
           "CAT",
           "CONT")
-
+addGWAStoManifest()
 for (i in 5:6){
   # load file
   dataObj <- fread(paste0("E:/Thesis/GWAS/New/", files[i]))
