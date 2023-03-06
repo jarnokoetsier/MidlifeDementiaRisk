@@ -13,7 +13,7 @@ library(ggdendroplot)
 load("E:/Thesis/EXTEND/df_list.RData")
 
 
-PGSresult <- df_list$`bayesr-shrink`
+PGSresult <- df_list$bayesr
 
 PGS_names <- c("AD (w/o APOE)", "AD (stage I)", "AD (stage I-II)", "Adiponectin", "Alchol consumption",
                "ASD", "BD", "BL", "BMI", "BW", "BW (fetal genetics)", "BW (maternal genetcis)",

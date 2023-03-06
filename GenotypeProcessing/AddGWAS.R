@@ -3,12 +3,46 @@ rm(list = ls())
 cat("\014") 
 
 # Install package
-devtools::install_github("Rrtk2/PRS-multi-trait/Package/PRSMultiTrait")
-library("PRSMultiTrait")
-PRSMultiTrait::installDependenciesAndData()
+#devtools::install_github("Rrtk2/PRS-multi-trait/Package/PRSMultiTrait")
+#library("PRSMultiTrait")
+#PRSMultiTrait::installDependenciesAndData()
 
 library("PRSMultiTrait")
 library(data.table)
+
+getManifest()
+Manifest_env$Traits <- Manifest_env$Ref_gwas_manifest$short
+Manifest_env$Models <- c("bolt", "bayesr", "bayesr-shrink")
+
+GWAS_name <-"SBPmanual"
+
+for (m in Manifest_env$Models){
+  PRSMultiTrait::calcPGS_LDAK(Trait = GWAS_name,
+                              Model = m)
+}
+
+traits <- c("SBPmanual", "SBPauto")
+models <-  c("lasso","lasso-sparse", "ridge", "bolt", "bayesr", "bayesr-shrink")
+path <- "E:/Thesis/EXTEND/Genotypes/ChrBPData/Output_all/FINAL/EXTEND_PostImpute_FINAL_bp_dup"
+for (m in models){
+  for (t in traits){
+    predPRS(bfile = wslPath(path), 
+            Trait = t,
+            Model = m,
+            OverlapSNPsOnly=TRUE,
+            Force = TRUE)
+    
+  }
+}
+
+
+
+
+
+
+
+
+
 
 files <- c("CKD_transEthnic_2019_Wuttke_curated.summaries",
            "CKD_European_2019_Wuttke_curated.summaries",

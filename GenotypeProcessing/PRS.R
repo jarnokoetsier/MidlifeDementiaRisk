@@ -10,6 +10,7 @@ library("PRSMultiTrait")
 #PRSMultiTrait::installDependenciesAndData()
 
 library(data.table)
+library(tidyverse)
 famFile <- fread("E:/Thesis/EXTEND/Genotypes/ChrBPData/Output_all/FINAL/EXTEND_PostImpute_FINAL_bp_dup.fam")
 
 

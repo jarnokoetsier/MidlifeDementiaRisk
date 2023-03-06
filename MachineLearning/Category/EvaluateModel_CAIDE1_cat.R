@@ -132,8 +132,7 @@ p <- ggplot() +
             linewidth = 1.5, linetype = "solid") +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
   scale_color_manual(values = colors) +
-  ggtitle("CAIDE1",
-          subtitle = "Performance in cross-validation") +
+  ggtitle("CAIDE1") +
   theme_classic() +
   theme(legend.title = element_blank(),
         legend.position = "right",
@@ -154,8 +153,7 @@ p <- ggplot() +
             linewidth = 1.5, linetype = "solid") +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
   scale_color_manual(values = colors) +
-  ggtitle("CAIDE1",
-          subtitle = "Performance in test set") +
+  ggtitle("CAIDE1") +
   theme_classic() +
   theme(legend.title = element_blank(),
         legend.position = "right",
@@ -229,7 +227,7 @@ p <- ggplot(ObsPred_CV_all) +
   xlab("Predicted Class") +
   ylab("CAIDE1 Score") +
   scale_y_continuous(breaks = c(0,2,4,6,8,10,12), labels = c(0,2,4,6,8,10,12))+
-  ggtitle("CAIDE1",subtitle = "Performance in cross-validation") +
+  ggtitle("CAIDE1") +
   scale_fill_manual(values = c("#FB6A4A","#FEC44F", "#BCBDDC")) +
   scale_color_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
   theme_classic() +
@@ -263,7 +261,7 @@ p <- ggplot(ObsPred_test_all) +
              position=position_jitterdodge(jitter.width = 0.1, jitter.height = 0.2)) +
   xlab("Predicted Class") +
   ylab("CAIDE1 Score") +
-  ggtitle("CAIDE1",subtitle = "Performance in test set") +
+  ggtitle("CAIDE1") +
   scale_y_continuous(breaks = c(0,2,4,6,8,10), labels = c(0,2,4,6,8,10))+
   scale_fill_manual(values = c("#FB6A4A","#FEC44F", "#BCBDDC")) +
   scale_color_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
@@ -280,6 +278,13 @@ p <- ggplot(ObsPred_test_all) +
                                      face = "italic")) 
 
 ggsave(p, file = "CAIDE1_Cat_Cor_boxPlot_test.png", height = 6, width = 9)
+
+model <- "Random Forest"
+test <- ObsPred_test_all[ObsPred_test_all$Method == model,]
+test$obs <- rep("Intermediate Risk (4-7)", nrow(test))
+test$obs[test$Score < 4] <- "Low Risk (0-3)"
+test$obs[test$Score > 7] <- "High Risk (8-14)"
+confusionMatrix(factor(test$obs, levels = levels(test$Class)), test$Class)
 
 
 ################################################################################

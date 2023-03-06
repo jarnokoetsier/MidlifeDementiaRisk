@@ -166,3 +166,283 @@ finalModel <- train(x = t(X_train),
 
 save(trainResults, optLambda, optAlpha, perf, finalModel,
      file = paste0("CV_CAIDE2_Cor_EN.RData"))
+
+
+################################################################################
+#
+# sPLS
+#
+################################################################################
+
+# Number of component (K)
+K_CV <- 1:20
+
+# Thresholding parameter (eta)
+eta_CV <- seq(0.1,0.9,length.out = 20)
+
+# kappa (default = 0.5, only relevant for multivariate outcome variables)
+kappa_CV = 0.5
+
+# Combine into a single data frame
+parameterGrid <- expand.grid(K_CV, eta_CV, kappa_CV)
+colnames(parameterGrid) <- c(".K", ".eta", ".kappa")
+
+# Use MSE as performance metric
+performance_metric = "RMSE"
+MLmethod = "spls"
+
+trainResults <- list()
+for (i in 1:length(CVindex)){
+  
+  # Select samples from specific fold
+  index <- list(CVindex[[i]])
+  X_CV <- X_train[,index[[1]]]
+  
+  # Calculate correlations (using X_CV)
+  factors <- Y_train[index[[1]],14:21]
+  correlations_CV <- matrix(NA, nrow = nrow(X_CV), ncol = ncol(factors))
+  for (f in 1:ncol(factors)) {
+    correlations_CV[,f] <- apply(X_CV, 1, 
+                                 function(x){cor(x, 
+                                                 factors[,f], 
+                                                 method = "spearman")})
+  }
+  rownames(correlations_CV) <- rownames(X_CV)
+  colnames(correlations_CV) <- colnames(factors)
+  
+  # Select top correlated features for each factor
+  probes <- list()
+  for (p in 1:ncol(correlations_CV)){
+    probes[[p]] <- names(tail(sort(abs(correlations_CV[,p])),1650))
+  }
+  
+  # get exactly 10,000 probes
+  n = 1
+  finalProbes <- unique(unlist(probes))
+  while (length(finalProbes) > 10000){
+    probes[[n]] <- probes[[n]][-1]
+    finalProbes <- unique(unlist(probes))
+    
+    if (n < ncol(correlations_CV)){
+      n = n + 1
+    } else {
+      n = 1
+    }
+  }
+  
+  # Settings for repeated cross-validation
+  fitControl <- trainControl(method = "repeatedcv", 
+                             search = "grid", 
+                             savePredictions = FALSE,
+                             summaryFunction = regressionSummary,
+                             index = index)
+  
+  
+  # Actual training
+  set.seed(123)
+  fit <- train(x = t(X_train[finalProbes,]),
+               y = Y_train$CAIDE,
+               metric= performance_metric,
+               method = MLmethod,
+               tuneGrid = parameterGrid,
+               trControl = fitControl,
+               maximize = FALSE)
+  
+  trainResults[[i]] <- fit$results
+  
+}
+save(trainResults, file = "CAIDE2_Cor/trainResults_CAIDE2_Cor_sPLS.RData")
+
+#==============================================================================#
+# Train final model
+#==============================================================================#
+
+perf <- matrix(NA, nrow = 400, ncol = 25)
+for (i in 1:length(trainResults)){
+  perf[,i] <- trainResults[[i]]$RMSE
+}
+optPar <- which.min(rowMeans(perf))
+
+optK <- trainResults[[1]]$K[optPar]
+optEta <- trainResults[[1]]$eta[optPar]
+optKappa <- trainResults[[1]]$kappa[optPar]
+
+
+
+X_train = log2(X_CAIDE2_Cor2/(1-X_CAIDE2_Cor2))
+Y_train = Y_CAIDE2
+all(colnames(X_train) == Y_train$Basename)
+
+# Actual training
+set.seed(123)
+fitControl <- fitControl <- trainControl(method = "none")
+finalModel <- train(x = t(X_train),
+                    y = Y_train$CAIDE2,
+                    metric= "RMSE",
+                    method = "spls",
+                    tuneGrid = data.frame(
+                      .K = optK,
+                      .eta = optEta,
+                      .kappa = optKappa
+                    ),
+                    trControl = fitControl,
+                    maximize = FALSE)
+
+
+save(trainResults, optK, optEta, optKappa, perf, finalModel,
+     file ="CAIDE2_Cor/CV_CAIDE2_Cor_sPLS.RData")
+
+
+
+X_test = log2(X_test_Cor2/(1-X_test_Cor2))
+test <- predict(finalModel, t(X_test))
+p <- ggplot(data.frame(pred = test,
+                       obs = Y_test$CAIDE2)) +
+  geom_point(aes(x = obs, y = pred))
+
+ggsave(p, file = "test.png")
+plot(test, Y_test$LIBRA)
+
+RMSE(pred = test, obs = Y_test$CAIDE2)
+
+
+################################################################################
+#
+# RF
+#
+################################################################################
+library(e1071)
+library(ranger)
+library(dplyr)
+
+# Number of randomly selected predictors
+mtry_CV <- c(1000, 2000,3000,4000,5000,6000,7000,8000)
+
+# split rule
+splitrule_CV <- "variance"
+
+# minimal node size
+min.node.size_CV = c(10,20,30,40,50,60)
+
+# Combine into a single data frame
+parameterGrid <- expand.grid(mtry_CV, splitrule_CV, min.node.size_CV)
+colnames(parameterGrid) <- c(".mtry", ".splitrule", ".min.node.size")
+
+# Use MSE as performance metric
+performance_metric = "RMSE"
+MLmethod = "ranger"
+
+trainResults <- list()
+for (i in 1:length(CVindex)){
+  
+  # Select samples from specific fold
+  index <- list(CVindex[[i]])
+  X_CV <- X_train[,index[[1]]]
+  
+  # Calculate correlations (using X_CV)
+  factors <- Y_train[index[[1]],14:21]
+  correlations_CV <- matrix(NA, nrow = nrow(X_CV), ncol = ncol(factors))
+  for (f in 1:ncol(factors)) {
+    correlations_CV[,f] <- apply(X_CV, 1, 
+                                 function(x){cor(x, 
+                                                 factors[,f], 
+                                                 method = "spearman")})
+  }
+  rownames(correlations_CV) <- rownames(X_CV)
+  colnames(correlations_CV) <- colnames(factors)
+  
+  # Select top correlated features for each factor
+  probes <- list()
+  for (p in 1:ncol(correlations_CV)){
+    probes[[p]] <- names(tail(sort(abs(correlations_CV[,p])),1650))
+  }
+  
+  # get exactly 10,000 probes
+  n = 1
+  finalProbes <- unique(unlist(probes))
+  while (length(finalProbes) > 10000){
+    probes[[n]] <- probes[[n]][-1]
+    finalProbes <- unique(unlist(probes))
+    
+    if (n < ncol(correlations_CV)){
+      n = n + 1
+    } else {
+      n = 1
+    }
+  }
+  
+  # Settings for repeated cross-validation
+  fitControl <- trainControl(method = "repeatedcv", 
+                             search = "grid", 
+                             savePredictions = FALSE,
+                             summaryFunction = regressionSummary,
+                             index = index)
+  
+  
+  # Actual training
+  set.seed(123)
+  fit <- train(x = t(X_train[finalProbes,]),
+               y = Y_train$CAIDE,
+               metric= performance_metric,
+               method = MLmethod,
+               tuneGrid = parameterGrid,
+               trControl = fitControl,
+               maximize = FALSE)
+  
+  trainResults[[i]] <- fit$results
+  
+}
+save(trainResults, file = "CAIDE2_Cor/trainResults_CAIDE2_Cor_RF.RData")
+
+#==============================================================================#
+# Train final model
+#==============================================================================#
+
+perf <- matrix(NA, nrow = 48, ncol = 25)
+for (i in 1:length(trainResults)){
+  perf[,i] <- trainResults[[i]]$RMSE
+}
+optPar <- which.min(rowMeans(perf))
+
+opt_mtry <- trainResults[[1]]$mtry[optPar]
+opt_splitrule <- trainResults[[1]]$splitrule[optPar]
+opt_min.node.size <- trainResults[[1]]$min.node.size[optPar]
+
+
+
+X_train = log2(X_CAIDE2_Cor2/(1-X_CAIDE2_Cor2))
+Y_train = Y_CAIDE2
+all(colnames(X_train) == Y_train$Basename)
+
+# Actual training
+fitControl <- fitControl <- trainControl(method = "none")
+set.seed(123)
+finalModel <- train(x = t(X_train),
+                    y = Y_train$CAIDE2,
+                    metric= "RMSE",
+                    method = "ranger",
+                    tuneGrid = data.frame(
+                      .mtry = opt_mtry,
+                      .splitrule = opt_splitrule,
+                      .min.node.size = opt_min.node.size
+                    ),
+                    trControl = fitControl,
+                    maximize = FALSE)
+
+
+save(trainResults, opt_mtry, opt_splitrule, opt_min.node.size, perf, finalModel,
+     file ="CAIDE2_Cor/CV_CAIDE2_Cor_RF.RData")
+
+
+
+X_test = log2(X_test_Cor/(1-X_test_Cor))
+test <- predict(finalModel, t(X_test))
+p <- ggplot(data.frame(pred = test,
+                       obs = Y_test$CAIDE)) +
+  geom_point(aes(x = obs, y = pred))
+
+ggsave(p, file = "test.png")
+plot(test, Y_test$LIBRA)
+
+RMSE(pred = test, obs = Y_test$CAIDE)
+
