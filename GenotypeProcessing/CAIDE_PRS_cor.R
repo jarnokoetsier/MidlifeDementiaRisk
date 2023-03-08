@@ -211,7 +211,7 @@ for (m in 1:length(df_list)){
                                                                use = "pairwise.complete.obs")$estimate})
   }
   colnames(corMatrix) <- colnames(Y_PGS)
-  colnames(corMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Act.", "Healthy Diet", "Smoking",
+  colnames(corMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Inact.", "Healthy Diet", "Smoking",
                            "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", "Heart Disease", "Kidney Disease",
                            "Age", "Sex", "APOE \u03b54")
   rownames(corMatrix) <- PGS_names
@@ -226,7 +226,7 @@ for (m in 1:length(df_list)){
   
 
   colnames(sigMatrix) <- colnames(Y_PGS)
-  colnames(sigMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Act.", "Healthy Diet", "Smoking",
+  colnames(sigMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Inact.", "Healthy Diet", "Smoking",
                            "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", "Heart Disease", "Kidney Disease",
                            "Age", "Sex", "APOE \u03b54")
   rownames(sigMatrix) <- colnames(df_list[[m]])
@@ -266,10 +266,10 @@ main <- ggplot(plotCor_all[plotCor_all$Method == "bayesr-shrink",]) +
 
 whichScore <- data.frame(
   Factor <- c(c("Age", "Sex", "BMI", "Education", "Total Chol.", 
-              "Physical Act.", "Syst. BP"),
+              "Physical Inact.", "Syst. BP"),
               c("Age", "Sex", "APOE \u03b54", "BMI", "Education", "Total Chol.", 
-                "Physical Act.", "Syst. BP"),
-              c("Syst. BP", "BMI",  "Physical Act.", "Healthy Diet", "Smoking",
+                "Physical Inact.", "Syst. BP"),
+              c("Syst. BP", "BMI",  "Physical Inact.", "Healthy Diet", "Smoking",
                 "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", 
                 "Heart Disease", "Kidney Disease")),
   Score <- c(rep("CAIDE1",7), rep("CAIDE2", 8), rep("LIBRA",11))
@@ -318,10 +318,10 @@ main <- ggplot(plotCor_all[plotCor_all$Method == "bayesr-shrink",]) +
 
 whichScore <- data.frame(
   Factor <- c(c("Age", "Sex", "BMI", "Education", "Total Chol.", 
-                "Physical Act.", "Syst. BP"),
+                "Physical Inact.", "Syst. BP"),
               c("Age", "Sex", "APOE \u03b54", "BMI", "Education", "Total Chol.", 
-                "Physical Act.", "Syst. BP"),
-              c("Syst. BP", "BMI",  "Physical Act.", "Healthy Diet", "Smoking",
+                "Physical Inact.", "Syst. BP"),
+              c("Syst. BP", "BMI",  "Physical Inact.", "Healthy Diet", "Smoking",
                 "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", 
                 "Heart Disease", "Kidney Disease")),
   Score <- c(rep("CAIDE1",7), rep("CAIDE2", 8), rep("LIBRA",11))
