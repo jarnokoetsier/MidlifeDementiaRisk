@@ -30,8 +30,8 @@ testData <- log2(X_test_Cor/(1-X_test_Cor))
 
 accuracy <- rep(NA,9)
 
-methods <- c("EN", "RF")
-methodNames <- c("ElasticNet", "Random Forest")
+methods <- c("EN", "sPLS", "RF")
+methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 load("PerFactor/CombineFactors/predictedScore_factors_EXTEND.RData")
 for (i in 1:length(methods)){
   # Load model
@@ -126,8 +126,8 @@ testData <- log2(X_test_Cor2/(1-X_test_Cor2))
 
 accuracy <- rep(NA,9)
 
-methods <- c("EN", "RF")
-methodNames <- c("ElasticNet", "Random Forest")
+methods <- c("EN", "sPLS", "RF")
+methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 load("PerFactor/CombineFactors/predictedScore_factors_EXTEND.RData")
 for (i in 1:length(methods)){
   # Load model
@@ -225,8 +225,8 @@ testData <- log2(X_test_CorL/(1-X_test_CorL))
 
 accuracy <- rep(NA,9)
 
-methods <- c("EN", "RF")
-methodNames <- c("ElasticNet", "Random Forest")
+methods <- c("EN", "sPLS", "RF")
+methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 load("PerFactor/CombineFactors/predictedScore_factors_EXTEND.RData")
 for (i in 1:length(methods)){
   # Load model
@@ -316,15 +316,39 @@ plotDF_LIBRA <- data.frame(Accuracy = accuracy,
 
 
 plotDF <- rbind.data.frame(plotDF_CAIDE1, plotDF_CAIDE2, plotDF_LIBRA)
+plotDF$Model <- factor(plotDF$Model,  levels = c("Per Factor Model",
+                                                 "Regression Model",
+                                                 "Classification Model"))
+
+
+p <- ggplot(plotDF) +
+  geom_bar(aes(x = Model, y = Accuracy, fill = Score, alpha = Method), 
+           stat = "identity", position = position_dodge(), color = "black") +
+  facet_grid(rows = vars(Score)) +
+  scale_fill_manual(values = c("#CB181D","#D94801", "#CE1256")) +
+  scale_alpha_manual(values = c(0.5, 0.7, 0.9)) +
+  coord_flip()+
+  xlab(NULL) +
+  ylab("Cohen's kappa") +
+  labs(alpha = NULL) +
+  guides(fill = "none") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+
 p <- ggplot(plotDF) +
   geom_bar(aes(x = Model, y = Accuracy, fill = Method), 
-           stat = "identity", position = position_dodge(), color = "grey", linewidth = 1) +
-  facet_grid(cols = vars(Score)) +
+           stat = "identity", position = position_dodge(), linewidth = 1,
+           alpha = 1) +
+  facet_grid(rows = vars(Score)) +
   scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
+  coord_flip()+
   xlab(NULL) +
   ylab("Cohen's kappa") +
   labs(fill = NULL) +
   theme_bw() +
   theme(legend.position = "bottom")
+
+
 
 ggsave(p, file = "Compare_CatCon.png", width = 8, height = 6)

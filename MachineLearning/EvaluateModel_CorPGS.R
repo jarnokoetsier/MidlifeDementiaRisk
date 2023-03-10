@@ -199,21 +199,41 @@ p <- ggplot(plotDF_all) +
                                      size = 10,
                                      face = "italic"))
 
-g <- ggplot_gtable(ggplot_build(p))
 
-strips <- which(grepl('strip-', g$layout$name))
-
-pal <- c("#A50F15","#CC4C02", "#6A51A3")
+ggsave(p,file = "Evaluate_CorPGS.png", width = 8, height = 5)
 
 
-for (i in seq_along(strips)) {
-  k <- which(grepl('rect', g$grobs[[strips[i]]]$grobs[[1]]$childrenOrder))
-  l <- which(grepl('titleGrob', g$grobs[[strips[i]]]$grobs[[1]]$childrenOrder))
-  g$grobs[[strips[i]]]$grobs[[1]]$children[[k]]$gp$fill <- pal[i]
-  g$grobs[[strips[i]]]$grobs[[1]]$children[[l]]$children[[1]]$gp$col <- "white"
-}
-
-plot(g)
 
 
-ggsave(p,file = "RiskScores_test.png", width = 8, height = 5)
+plotDF_test_all$Group <- paste0(plotDF_test_all$Score, "_", plotDF_test_all$Method)
+
+testDF <- plotDF_test_all %>%
+  group_by(Group) %>%
+  summarise(Color = -1*sign(diff(R2)),
+            Method = Method,
+            Score = Score,
+            R2 = R2,
+            Feature = Feature)
+
+testDF$Color <- as.character(testDF$Color)
+testDF$Color1 <- paste0(testDF$Color,"_",testDF$Feature)
+
+p <- ggplot(testDF) +
+  geom_line(aes(x = R2, y = Method, group = Group, color = Color), linewidth = 1.5) +
+  geom_point(aes(x = R2,y = Method, shape = Feature, size = Feature, color = Color1)) +
+  facet_grid(rows = vars(Score)) +
+  guides(color = "none") +
+  xlab(expression(R^2)) +
+  ylab(NULL)+
+  scale_size_manual(values = c(3,3)) +
+  scale_shape_manual(values = c(15,16)) +
+  scale_color_manual(values = c("red","black", "red", "blue","black", "blue")) +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
+
+ggsave(p,file = "Evaluate_CorPGS_test.png", width = 6, height = 6)
+
+
+  
+  
