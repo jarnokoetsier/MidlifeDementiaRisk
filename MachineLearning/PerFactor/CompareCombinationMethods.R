@@ -446,22 +446,21 @@ for (i in 1:length(methods)){
 
 ################################################################################
 
-
 plotDF <- data.frame(R2 = perf,
-                     Method = rep(c("Continuous", "Discrete", 
-                                    "Data-driven\n(ElasticNet)",
-                                "Data-driven\n(sPLS)", 
-                                "Data-driven\n(Random Forest)"),3),
+                     Method = rep(c("CAIDE1 weights\n(Continuous)", "CAIDE1 weights\n(Discrete)", 
+                                      "ElasticNet",
+                                      "sPLS", 
+                                      "Random Forest"),3),
                      Score = c(rep("CAIDE1",5), rep("CAIDE2",5), rep("LIBRA",5)))
 
 plotDF$Method <- factor(plotDF$Method, 
-                        levels = rev(c("Discrete", "Continuous", "Data-driven\n(ElasticNet)",
-                                   "Data-driven\n(sPLS)", "Data-driven\n(Random Forest)")))
+                        levels = rev(c("CAIDE1 weights\n(Discrete)", "CAIDE1 weights\n(Continuous)",
+                                       "ElasticNet","sPLS", "Random Forest")))
 
 plotDF$Color <- factor(paste0(plotDF$Score, "_", plotDF$Method),
                        levels = paste0(plotDF$Score, "_", 
-                                       rev(c("Discrete", "Continuous", "Data-driven\n(ElasticNet)",
-                                                                "Data-driven\n(sPLS)", "Data-driven\n(Random Forest)"))))
+                                       rev(c("CAIDE1 weights\n(Discrete)", "CAIDE1 weights\n(Continuous)",
+                                             "ElasticNet","sPLS", "Random Forest"))))
 
 colors <- c(RColorBrewer::brewer.pal(n = 8, name = "Reds")[4:8],
             RColorBrewer::brewer.pal(n = 8, name = "Oranges")[4:8],
