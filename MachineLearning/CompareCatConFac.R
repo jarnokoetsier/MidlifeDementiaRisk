@@ -325,8 +325,9 @@ p <- ggplot(plotDF) +
   geom_bar(aes(x = Model, y = Accuracy, fill = Score, alpha = Method), 
            stat = "identity", position = position_dodge(), color = "black") +
   facet_grid(rows = vars(Score)) +
-  scale_fill_manual(values = c("#CB181D","#D94801", "#CE1256")) +
-  scale_alpha_manual(values = c(0.5, 0.7, 0.9)) +
+  #scale_fill_manual(values = c("#CB181D","#D94801", "#CE1256")) +
+  scale_fill_manual(values =  c("#EF3B2C","#FE9929", "#807DBA")) +
+  scale_alpha_manual(values = c(0.6, 0.8, 1)) +
   coord_flip()+
   xlab(NULL) +
   ylab("Cohen's kappa") +

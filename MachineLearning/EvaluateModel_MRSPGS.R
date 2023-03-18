@@ -153,6 +153,29 @@ testDF <- plotDF_test_all %>%
 testDF$Color <- as.character(testDF$Color)
 testDF$Color1 <- paste0(testDF$Color,"_",testDF$Feature)
 
+
+colors <- c(RColorBrewer::brewer.pal(n = 8, name = "Reds")[6],
+            RColorBrewer::brewer.pal(n = 8, name = "Oranges")[6],
+            RColorBrewer::brewer.pal(n = 8, name = "PuRd")[6])
+
+p <- ggplot(testDF) +
+  geom_bar(aes(y = R2, x = Method, fill = Score, alpha = Feature), linewidth = 0.7, 
+           position = position_dodge(), stat = "identity", color = "black") +
+  facet_grid(cols = vars(Score), scale = "free", space = "free") +
+  guides(fill = "none") +
+  ylab(expression(R^2)) +
+  xlab(NULL)+
+  scale_alpha_manual(values = c(0.5,1)) +
+  scale_fill_manual(values = c("#FB6A4A","#FEC44F", "#BCBDDC")) +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+
+ggsave(p,file = "Evaluate_MRSPGS_test1.png", width = 8, height = 5)
+
+
 p <- ggplot(testDF) +
   #geom_segment(aes(y = 0, yend = R2, x = Method, xend = Method), linewidth = 1, color = "black") +
   geom_line(aes(y = R2, x = Method, group = Group, color = Color), linewidth = 1.5) +

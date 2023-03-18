@@ -447,32 +447,52 @@ for (i in 1:length(methods)){
 ################################################################################
 
 plotDF <- data.frame(R2 = perf,
-                     Method = rep(c("CAIDE1 weights\n(Continuous)", "CAIDE1 weights\n(Discrete)", 
-                                      "ElasticNet",
-                                      "sPLS", 
-                                      "Random Forest"),3),
+                     Method = c("CAIDE1 weights\n(Continuous)", 
+                                "CAIDE1 weights\n(Discrete)", 
+                                "ElasticNet",
+                                "sPLS", 
+                                "Random Forest",
+                                "CAIDE2 weights\n(Continuous)", 
+                                "CAIDE2 weights\n(Discrete)", 
+                                "ElasticNet",
+                                "sPLS", 
+                                "Random Forest",
+                                "LIBRA weights\n(Continuous)", 
+                                "LIBRA weights\n(Discrete)", 
+                                "ElasticNet",
+                                "sPLS", 
+                                "Random Forest"
+                                ),
                      Score = c(rep("CAIDE1",5), rep("CAIDE2",5), rep("LIBRA",5)))
 
 plotDF$Method <- factor(plotDF$Method, 
-                        levels = rev(c("CAIDE1 weights\n(Discrete)", "CAIDE1 weights\n(Continuous)",
-                                       "ElasticNet","sPLS", "Random Forest")))
+                        levels = rev(c("CAIDE1 weights\n(Continuous)", 
+                                       "CAIDE1 weights\n(Discrete)", 
+                                       "CAIDE2 weights\n(Continuous)", 
+                                       "CAIDE2 weights\n(Discrete)", 
+                                       "LIBRA weights\n(Continuous)", 
+                                       "LIBRA weights\n(Discrete)", 
+                                       "ElasticNet",
+                                       "sPLS", 
+                                       "Random Forest"
+                        )))
 
 plotDF$Color <- factor(paste0(plotDF$Score, "_", plotDF$Method),
-                       levels = paste0(plotDF$Score, "_", 
-                                       rev(c("CAIDE1 weights\n(Discrete)", "CAIDE1 weights\n(Continuous)",
-                                             "ElasticNet","sPLS", "Random Forest"))))
+                       levels = paste0(plotDF$Score, "_", plotDF$Method
+                                       ))
 
 colors <- c(RColorBrewer::brewer.pal(n = 8, name = "Reds")[4:8],
             RColorBrewer::brewer.pal(n = 8, name = "Oranges")[4:8],
             RColorBrewer::brewer.pal(n = 8, name = "PuRd")[4:8])
 p <- ggplot(plotDF) +
-  geom_bar(aes(x = Method, y = R2, fill = Color), stat = "identity", color = "black") +
-  facet_grid(rows = vars(Score)) +
+  geom_bar(aes(x = Method, y = R2, fill = Score, alpha = Method), stat = "identity", color = "black") +
+  facet_grid(rows = vars(Score), scale = "free", space = "free") +
   coord_flip() +
   theme_bw() +
   xlab(NULL) +
   ylab(expression(R^2)) +
-  scale_fill_manual(values = colors) +
+  scale_alpha_manual(values = rev(c(0.45,0.6,0.45,0.6,0.45,0.6,0.75,0.9,1))) +
+  scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
   theme(legend.position = "none")
 
 ggsave(p, file = "CombinationMethods.png", width = 8, height = 6)

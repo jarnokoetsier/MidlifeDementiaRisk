@@ -638,6 +638,11 @@ plot(g)
 
 ggsave(g, file = "ObsVsPred_test_LIBRA.png", width = 8, height = 8)
 
+
+test <- plotDF[plotDF$Method == "Random Forest",]
+cor.test(test$Predicted, test$Observed)
+
+
 #*****************************************************************************#
 #* Which factors (R2)
 #*****************************************************************************#

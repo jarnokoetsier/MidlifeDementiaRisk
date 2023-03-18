@@ -175,18 +175,20 @@ plotDF_all <- rbind.data.frame(plotDF, plotDF1)
 plotDF_test_all <- rbind.data.frame(plotDF_test, plotDF_test1)
 
 p <- ggplot(plotDF_all) +
-  geom_boxplot(aes(x = Feature, y = R2, fill = Method), 
-               alpha = 1, outlier.shape = NA) +
-  geom_point(aes(x = Feature, y = R2, color = Method), 
+  geom_boxplot(aes(x = Method, y = R2, fill = Score, alpha = Feature), 
+               outlier.shape = NA) +
+  geom_point(aes(x = Method, y = R2, color = Score, shape = Feature), 
              position=position_jitterdodge(jitter.width = 0.1), 
              size = 2, alpha = 0.8) +
-  geom_point(data = plotDF_test_all, aes(x = Feature, y = R2, color = Method), 
+  geom_point(data = plotDF_test_all, aes(x = Method, y = R2, shape = Feature), 
              fill = "black", position=position_jitterdodge(jitter.width = 0), 
-             size = 4, shape = 23, alpha = 0.7) +
+             size = 4, alpha = 0.7) +
   facet_grid(cols = vars(Score)) +
   ylab(expression(R^2)) +
   xlab(NULL) +
-  guides(color = "none") +
+  guides(color = "none", fill = "none") +
+  scale_shape_manual(values = c(18,20)) +
+  scale_alpha_manual(values = c(0.5, 1)) +
   scale_fill_manual(values = c("#FB6A4A","#FEC44F", "#BCBDDC")) +
   scale_color_manual(values = c("#A50F15","#CC4C02", "#6A51A3")) +
   theme_bw() +
@@ -200,7 +202,7 @@ p <- ggplot(plotDF_all) +
                                      face = "italic"))
 
 
-ggsave(p,file = "Evaluate_CorPGS.png", width = 8, height = 5)
+ggsave(p,file = "Evaluate_CorPGS1.png", width = 8, height = 5)
 
 
 
