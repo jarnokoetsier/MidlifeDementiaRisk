@@ -39,6 +39,8 @@ methodNames <- c("ElasticNet",  "sPLS-DA", "Random Forest")
 # Low Risk
 plotDF_LowRisk_CV <- NULL
 plotDF_LowRisk_test <- NULL
+aucDF_LowRisk_CV <- NULL
+aucDF_LowRisk_test <- NULL
 for (i in 1:length(methods)){
   
   # load data
@@ -56,6 +58,12 @@ for (i in 1:length(methods)){
   
   plotDF_LowRisk_CV <- rbind.data.frame(plotDF_LowRisk_CV, temp)
   
+  temp_auc <- data.frame(AUC = as.numeric(auc(roc_list_CV)),
+                         Method = paste0(methodNames[i]," (Low Risk)")
+  )
+  
+  aucDF_LowRisk_CV <- rbind.data.frame(aucDF_LowRisk_CV, temp_auc)
+  
   
   roc_list_test <- roc(response = factor(ObsPred_test_LowRisk$obs,
                                          levels = c("Intermediate_High", "Low")), 
@@ -67,11 +75,19 @@ for (i in 1:length(methods)){
   
   plotDF_LowRisk_test <- rbind.data.frame(plotDF_LowRisk_test, temp)
   
+  temp_auc <- data.frame(AUC = as.numeric(auc(roc_list_test)),
+                         Method = paste0(methodNames[i]," (Low Risk)")
+  )
+  
+  aucDF_LowRisk_test <- rbind.data.frame(aucDF_LowRisk_test, temp_auc)
+  
 }
 
 # High Risk
 plotDF_HighRisk_CV <- NULL
 plotDF_HighRisk_test <- NULL
+aucDF_HighRisk_CV <- NULL
+aucDF_HighRisk_test <- NULL
 for (i in 1:length(methods)){
   
   # load data
@@ -90,6 +106,14 @@ for (i in 1:length(methods)){
   plotDF_HighRisk_CV <- rbind.data.frame(plotDF_HighRisk_CV, temp)
   
   
+  temp_auc <- data.frame(AUC = as.numeric(auc(roc_list_CV)),
+                         Method = paste0(methodNames[i]," (High Risk)")
+  )
+  
+  aucDF_HighRisk_CV <- rbind.data.frame(aucDF_HighRisk_CV, temp_auc)
+  
+  
+  
   roc_list_test <- roc(response = factor(ObsPred_test_HighRisk$obs,
                                          levels = c("Low_Intermediate", "High")), 
                        predictor = ObsPred_test_HighRisk$p)
@@ -99,6 +123,13 @@ for (i in 1:length(methods)){
                      Method = paste0(rep(methodNames[i], length(roc_list_test$specificities))," (High Risk)"))
   
   plotDF_HighRisk_test <- rbind.data.frame(plotDF_HighRisk_test, temp)
+  
+  temp_auc <- data.frame(AUC = as.numeric(auc(roc_list_test)),
+                         Method = paste0(methodNames[i]," (High Risk)")
+  )
+  
+  aucDF_HighRisk_test <- rbind.data.frame(aucDF_HighRisk_test, temp_auc)
+  
   
 }
 
@@ -110,6 +141,14 @@ plotDF_all_CV$Method <- factor(plotDF_all_CV$Method,
                                           "ElasticNet (High Risk)",
                                           "sPLS-DA (High Risk)",
                                           "Random Forest (High Risk)"))
+aucDF_all_CV <- rbind.data.frame(aucDF_LowRisk_CV, aucDF_HighRisk_CV)
+aucDF_all_CV$Method <- factor(aucDF_all_CV$Method,
+                              levels = c("ElasticNet (Low Risk)",
+                                         "sPLS-DA (Low Risk)",
+                                         "Random Forest (Low Risk)",
+                                         "ElasticNet (High Risk)",
+                                         "sPLS-DA (High Risk)",
+                                         "Random Forest (High Risk)"))
 plotDF_all_test <- rbind.data.frame(plotDF_LowRisk_test, plotDF_HighRisk_test)
 plotDF_all_test$Method <- factor(plotDF_all_test$Method,
                                  levels = c("ElasticNet (Low Risk)",
@@ -118,7 +157,14 @@ plotDF_all_test$Method <- factor(plotDF_all_test$Method,
                                             "ElasticNet (High Risk)",
                                             "sPLS-DA (High Risk)",
                                             "Random Forest (High Risk)"))
-
+aucDF_all_test <- rbind.data.frame(aucDF_LowRisk_test, aucDF_HighRisk_test)
+aucDF_all_test$Method <- factor(aucDF_all_test$Method,
+                                levels = c("ElasticNet (Low Risk)",
+                                           "sPLS-DA (Low Risk)",
+                                           "Random Forest (Low Risk)",
+                                           "ElasticNet (High Risk)",
+                                           "sPLS-DA (High Risk)",
+                                           "Random Forest (High Risk)"))
 colors <- c(brewer.pal(n = 5, name = "Reds")[c(3)],
             brewer.pal(n = 5, name = "Reds")[c(4)],
             brewer.pal(n = 5, name = "Reds")[c(5)],
@@ -131,6 +177,9 @@ p <- ggplot() +
                                       color = Method), 
             linewidth = 1.5, linetype = "solid") +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
+  geom_text(data = aucDF_all_CV, aes(x = 0.9, y = rev(c(0.05,0.1,0.15,0.2,0.25, 0.3)),
+                                       label = paste0("AUC: ", format(round(AUC,2), nsmall = 2)), 
+                                       color = Method), fontface = "bold") +
   scale_color_manual(values = colors) +
   ggtitle("CAIDE2") +
   theme_classic() +
@@ -152,6 +201,9 @@ p <- ggplot() +
                                         color = Method), 
             linewidth = 1.5, linetype = "solid") +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
+  geom_text(data = aucDF_all_test, aes(x = 0.9, y = rev(c(0.05,0.1,0.15,0.2,0.25, 0.3)),
+                                       label = paste0("AUC: ", format(round(AUC,2), nsmall = 2)), 
+                                       color = Method), fontface = "bold") +
   scale_color_manual(values = colors) +
   ggtitle("CAIDE2") +
   theme_classic() +

@@ -1,6 +1,6 @@
 # Variables:
 # finalModel:   ElasticNet (glmnet) model object
-# X_CAIDE1:     methylation data:
+# X_CAIDE1_Cor:     methylation data:
 #                 -rows: probes/CpGs/features
 #                 -columns: samples
 # Y_CAIDE1:     meta data: contains values for CAIDE1 factors (column 14-20)
@@ -9,15 +9,38 @@
 library(tidyverse)
 library(patchwork)
 
+# Clear workspace and console
+rm(list = ls())
+cat("\014") 
+
+# Score and feature selection method
+Score = "CAIDE1"
+FeatureSelection = "Cor"
+
+# Load data
+setwd("E:/Thesis/EXTEND/Methylation")
+files <- list.files("X/X_Cor_CAIDE1")
+for (f in files){
+  load(paste0("X/X_Cor_CAIDE1", "/", f))
+}
+# Load phenotype data
+files <- list.files('Y')
+for (f in files){
+  load(paste0("Y/",f))
+}
+# Load model
+load(paste0("CV_CAIDE1/CV_CAIDE1_Cor_EN.RData"))
+
 # Extract features from model
-modelFeatures <- names(coef(finalModel)[-1,1])[abs(coef(finalModel)[-1,1])>0]
+coefs <- as.matrix(coef(finalModel$finalModel,finalModel$finalModel$lambdaOpt))
+modelFeatures <- names(coefs[-1,1])[abs(coefs[-1,1])>0]
 
 # Extract coefficients
 modelCoefs <- data.frame(CpG = modelFeatures,
-                         coefValue = coef(finalModel)[modelFeatures,1])
+                         coefValue = coefs[modelFeatures,1])
 
 # Data matrix with model features only
-X_CAIDE1_modelFeatures <- X_CAIDE1[modelFeatures,]
+X_CAIDE1_modelFeatures <- X_CAIDE1_Cor[modelFeatures,]
 
 # Check whether samples are in correct order
 all(colnames(X_CAIDE1_modelFeatures) == Y_CAIDE1$Basename)
@@ -27,7 +50,7 @@ formula <- paste0("cbind(",paste(modelFeatures, collapse = ", "),") ~ ",
                   paste0("0 + ", paste(colnames(Y_CAIDE1[,14:20]), collapse = " + ")))
 
 # Mean center the data
-X_coefs_scaled <- (X_CAIDE1_top - rowMeans(X_CAIDE1_top))
+X_coefs_scaled <- (X_CAIDE1_modelFeatures - rowMeans(X_CAIDE1_modelFeatures))
 
 # Combine data matrix with independent variables (CAIDE1 factors)
 dataMatrix <- cbind(t(X_coefs_scaled),Y_CAIDE1[,14:20])
@@ -53,7 +76,7 @@ factors <- colnames(Y_CAIDE1[,14:20])
 for (i in 1:length(factors)){
   
   # Formula without factor
-  formula <- paste0("cbind(",paste(topFeatures, collapse = ", "),") ~ ", 
+  formula <- paste0("cbind(",paste(modelFeatures, collapse = ", "),") ~ ", 
                     paste0("0 + ", paste(factors[-i], collapse = " + ")))
   
   # Fit model
@@ -73,16 +96,16 @@ for (i in 1:length(factors)){
 }
 
 # Combine results into data frame
-factorNames <- c("Age", "Sex", "Edu", "BP", "BMI", "Chol", "Physical")
+factorNames <- c("Age", "Sex", "Edu", "SBP", "BMI", "TC", "Physical")
 plotDF <- data.frame(cohenF = c(unlist(cohenF), globalEffect),
                      Effect = rep(c(factorNames, "Global"), each = nrow(X_coefs_scaled)),
-                     CpG = rep(topFeatures,length(factorNames) +1))
+                     CpG = rep(modelFeatures,length(factorNames) +1))
 
 # Reorder CAIDE1 factors for plot
 plotDF$Effect <- factor(plotDF$Effect, levels = c(factorNames, "Global"))
 
 # Combine with coefficient values in final model
-plotDF <- inner_join(plotDF, topCoefs, by = c("CpG" = "CpG"))
+plotDF <- inner_join(plotDF, modelCoefs, by = c("CpG" = "CpG"))
 
 # Reorder the CpG sites based on their regression coefficient in final model
 plotDF$CpG <- factor(plotDF$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
@@ -106,8 +129,8 @@ main <- ggplot(plotDF) +
                                   size = 13))
 
 # make top part of the plot (regression coefficients) 
-topCoefs$CpG <- factor(topCoefs$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
-top <- ggplot(topCoefs) +
+modelCoefs$CpG <- factor(modelCoefs$CpG, levels = unique(arrange(plotDF, coefValue)$CpG))
+top <- ggplot(modelCoefs) +
   geom_bar(aes(x = CpG, y = coefValue, fill = coefValue), stat = "identity", color = "black") +
   ylab("Coefficients\nFinal Model") +
   scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,

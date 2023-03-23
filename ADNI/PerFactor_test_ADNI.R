@@ -1,3 +1,5 @@
+
+# Load packages
 library(tidyverse)
 library(caret)
 
@@ -7,34 +9,387 @@ cat("\014")
 
 # Load data
 load("ADNI/predictedScore_factors_ADNI.RData")
-load("~/Fit_CombineFactors_CAIDE1_RF.RData")
 load("ADNI/MetaData_ADNI.RData")
 load("~/ADNI/ADNI_metadata_classes_640.Rdata")
 
-# Make predictions
+
+# Select midlife samples
 MetaData_test <- as.data.frame(MetaData_baseline)
 rownames(MetaData_test) <- MetaData_test$Basename
-midlife_samples <- MetaData_test$Basename[MetaData_test$Age < 75]
+midlife_samples <- intersect(MetaData_test$Basename[MetaData_test$Age <= 92], 
+                             rownames(predictedScore_factors))
+
+
+# Filter for midlife samples
 MetaData_test <- MetaData_test[midlife_samples,]
 X_test <-  predictedScore_factors[midlife_samples,]
-testPred <- predict(fit,X_test)
 
+
+# Add PGS
+PGS <- read.delim("ADNI/PGS_all_ADNI.tsv")
+common_samples <- intersect(MetaData_test$PTID, PGS$X)
+MetaData_test <- inner_join(MetaData_test, PGS, by = c("PTID" = "X"))
+X_test <- X_test[MetaData_test$Basename,]
+
+# Make prediction
+load("~/Fit_CombineFactors_CAIDE1_RF.RData")
+pred_CAIDE1 <- predict(fit, X_test)
+load("~/Fit_CombineFactors_LIBRA_RF.RData")
+pred_LIBRA <- predict(fit, X_test)
+
+# Combine into data frame
 testDF <- data.frame(RID = MetaData_test$RID,
                      Age = MetaData_test$Age,
-                     Pred = testPred)
+                     Sex = MetaData_test$Sex,
+                     DX = MetaData_test$DX.bl,
+                     EpiCAIDE1 = pred_CAIDE1,
+                     EpiLIBRA = pred_LIBRA,
+                     AD_noAPOE = MetaData_test$Ad_no_APOE_bayesr,
+                     AD1 = MetaData_test$AD1_bayesr,
+                     AD2 = MetaData_test$AD2_bayesr)
 
+# Get mean predicted score for the same sample
 testDF <- testDF %>%
   group_by(RID) %>%
-  reframe(Pred = mean(Pred),
+  reframe(EpiCAIDE1 = mean(EpiCAIDE1),
+          EpiLIBRA = mean(EpiLIBRA),
           Age = Age,
-          RID = RID)
+          Sex = Sex,
+          DX = DX,
+          RID = RID,
+          AD_noAPOE = AD_noAPOE,
+          AD1 = AD1,
+          AD2 = AD2)
 
 testDF <- unique(testDF)
 
+
+# Combine with filtered meta data
 plotDF <- inner_join(testDF, ADNI_model_res, by = c("RID" = "RID"))
+plotDF <- plotDF[plotDF$diagbl != "SMC", ]
+plotDF$MCI <- ifelse(plotDF$diagbl == "CN", "Control", "MCI")
+table(plotDF$MCI)
+
+
+
+#==============================================================================#
+# Correlation at baseline
+#==============================================================================#
+
+
+# Get cognitive biomarkers
+factorNames <- c("FDG", "AV45", "TAU",
+                 "PTAU", "CDRSB", "ADAS11", "ADAS13", "ADASQ4", "MMSE", 
+                 "RAVLT.immediate","RAVLT.learning","RAVLT.forgetting","RAVLT.perc.forgetting",
+                 "LDELTOTAL", "TRABSCOR", "FAQ", "MOCA", "EcogPtMem", "EcogPtLang",
+                 "EcogPtVisspat", "EcogPtPlan", "EcogPtOrgan", "EcogPtDivatt", "EcogPtTotal",
+                 "Ventricles", "Hippocampus", "WholeBrain",
+                 "Entorhinal", "Fusiform", "MidTemp", "ICV", "mPACCdigit", "mPACCtrailsB")
+
+
+
+# Get samples
+factorsDF <- unique(MetaData_test[,c("RID",factorNames)])
+plotDF_factors <- inner_join(plotDF[,c("RID")], factorsDF, 
+                            by = c("RID" = "RID"))
+all(plotDF_factors$RID == plotDF$RID)
+
+colnames(plotDF_factors) <- c("RID","FDG", "AV45", "TAU",
+                         "PTAU", "CDRSB", "ADAS11", "ADAS13", "ADASQ4", "MMSE", 
+                         "RAVLT (immediate)","RAVLT (learning)","RAVLT (forgetting)","RAVLT (% forgetting)",
+                         "LDELTOTAL", "TRABSCOR", "FAQ", "MOCA", "EcogPtMem", "EcogPtLang",
+                         "EcogPtVisspat", "EcogPtPlan", "EcogPtOrgan", "EcogPtDivatt", "EcogPtTotal",
+                         "Ventricles", "Hippocampus", "WholeBrain",
+                         "Entorhinal", "Fusiform", "MidTemp", "ICV", "mPACCdigit", "mPACCtrailsB")
+
+plotDF_factors <- as.data.frame(plotDF_factors)
+
+# Calculate correlations
+pred <- as.data.frame(plotDF[, c("EpiCAIDE1", "EpiLIBRA", "AD1","AD_noAPOE","Age", "Sex")])
+pred$Sex <- ifelse(pred$Sex == "M",1,0)
+colnames(pred) <- c("Epi-CAIDE1", "Epi-LIBRA", "AD",
+                    "AD\n(w/o APOE)","Age", "Sex")
+  
+  
+correlation <- matrix(NA, nrow = ncol(pred), ncol = ncol(plotDF_factors)-1)
+significance <- matrix(NA, nrow = ncol(pred), ncol = ncol(plotDF_factors)-1)
+for (i in 2:ncol(plotDF_factors)){
+  correlation[,i-1] <- apply(pred,2, function(x) {cor(x, plotDF_factors[,i], method = "spearman", 
+                                                    use = "pairwise.complete.obs")})
+  significance[,i-1] <- apply(pred,2, function(x) {cor.test(x, plotDF_factors[,i], method = "spearman", 
+                                                          use = "pairwise.complete.obs")$p.value})
+  
+}
+
+colnames(correlation) <- colnames(plotDF_factors[,-1])
+rownames(correlation) <- colnames(pred)
+colnames(significance) <- colnames(plotDF_factors[,-1])
+rownames(significance) <- colnames(pred)
+
+plotDF_cor <- gather(as.data.frame(correlation))
+plotDF_cor$key2 <- rep(rownames(correlation),ncol(correlation))
+plotDF_sig <- gather(as.data.frame(significance))
+plotDF_all <- cbind.data.frame(plotDF_cor, plotDF_sig$value)
+plotDF_all$Sig <- ifelse(p.adjust(plotDF_all$`plotDF_sig$value`, "fdr") < 0.05, "Yes", "No")
+
+
+plotDF_all$key <- factor(plotDF_all$key, levels = c("FDG", "AV45", "TAU",
+                                                    "PTAU", "CDRSB", "ADAS11", "ADAS13", "ADASQ4", "MMSE", 
+                                                    "RAVLT (immediate)","RAVLT (learning)","RAVLT (forgetting)","RAVLT (% forgetting)",
+                                                    "LDELTOTAL", "TRABSCOR", "FAQ", "MOCA", "EcogPtMem", "EcogPtLang",
+                                                    "EcogPtVisspat", "EcogPtPlan", "EcogPtOrgan", "EcogPtDivatt", "EcogPtTotal",
+                                                    "Ventricles", "Hippocampus", "WholeBrain",
+                                                    "Entorhinal", "Fusiform", "MidTemp", "ICV", "mPACCdigit", "mPACCtrailsB"))
+
+plotDF_all$Group <- rep(c("Epigenetic", "Epigenetic", "Genetic",
+                          "Genetic","Demographic", "Demographic"), ncol(correlation))
+
+plotDF_all$Group <- factor(plotDF_all$Group, levels = c("Epigenetic", "Genetic", "Demographic"))
+
+p <- ggplot(plotDF_all) +
+  geom_tile(aes(x = key, y = key2, fill = value, color = Sig),
+            stat = "identity", width = 0.9, height = 0.9, size = 0.5) +
+  facet_grid(cols = vars(Group), scale = "free", space = "free") +
+  xlab(NULL) +
+  ylab(NULL) +
+  labs(fill  = "Spearman\nCorrelation")+
+  ggtitle("ADNI", subtitle = "Correlations with cognitive biomarkers") +
+  coord_flip() +
+  theme_bw()+
+  scale_color_manual(values = c("grey","black")) +
+  scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
+                       oob = scales::squish,
+                       limits = c(-0.5,0.5))+
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic")) +
+  guides(color = "none")
+
+
+ggsave(p, file = "ADNI_Correlations_baseline.png", width = 8, height = 8)
+
+
+
+
+#==============================================================================#
+# Prediction of MCI
+#==============================================================================#
+table(plotDF$MCI)
+t.test(plotDF$EpiCAIDE1 ~ plotDF$MCI, var = FALSE)
+
+colors <- RColorBrewer::brewer.pal(n = 8, name = "Set1")[c(2,1)]
+plotDF$MCI_name <- ifelse(plotDF$MCI == "MCI", "Mild Cognitive Impairment", "Healthy Control")
+p <- ggplot(plotDF) +
+  geom_boxplot(aes(x = MCI_name, y = EpiCAIDE1, fill = MCI), 
+               outlier.shape = NA, alpha = 0.7) +
+  geom_jitter(aes(x = MCI_name, y = EpiCAIDE1, color = MCI), 
+              width = 0.1) +
+  xlab(NULL) +
+  ylab("Epi-CAIDE1") +
+  scale_fill_manual(values = colors) +
+  scale_color_manual(values = colors) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+ggsave(p, file = "Boxplot_MCI_CAIDE1_ADNI.png", width = 8, height = 5)
+
+library(pROC)
+
+score <- c("EpiCAIDE1", "EpiLIBRA", "AD1", "AD_noAPOE", "Age")
+scoreName <- c("Epi-CAIDE1", "Epi-LIBRA", "AD", "AD (w/o APOE)", "Age")
+
+plotDF <- as.data.frame(plotDF)
+ROCplot <- NULL
+aucValue <- rep(NA, length(score))
+for (i in 1:length(score)){
+  test <- roc(plotDF$MCI, plotDF[,score[i]])
+  
+  temp <- data.frame(Sensitivity = test$sensitivities,
+                     Specificity = test$specificities,
+                     Class = rep(scoreName[i],length(test$specificities)))
+  
+  ROCplot <- rbind.data.frame(ROCplot, temp)
+  aucValue[i] <- round(as.numeric(auc(test)),2)
+}
+
+plotAUC <- data.frame(AUC = paste0("AUC = ",aucValue),
+                      Score = scoreName,
+                      X = 0.9,
+                      Y = rev(seq(0.05,0.35,length.out = length(aucValue))))
+
+ROCplot$Class <- factor(ROCplot$Class, levels = scoreName)
+
+colors <- rev(c("#E6AB02","#FB6A4A","#CB181D","#6BAED6","#2171B5"))
+p <- ggplot(ROCplot) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
+  geom_path(aes(y = Sensitivity, x = 1- Specificity,
+                                      color = Class), 
+            linewidth = 1.5, linetype = "solid") +
+  geom_text(data = plotAUC, aes(x = X, y = Y, label = AUC, color = Score),
+            fontface = "bold") +
+  scale_color_manual(values = colors) +
+  ggtitle("MCI") +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "right",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic"))
+
+ggsave(p, file = "ROC_MCI_ADNI.png", width = 8, height = 5)
+  
+
+
+#==============================================================================#
+# Prediction of Converter
+#==============================================================================#
+
+table(plotDF$conversion)
+score <- c("EpiCAIDE1", "EpiLIBRA", "AD1", "AD_noAPOE", "Age")
+scoreName <- c("Epi-CAIDE1", "Epi-LIBRA", "AD", "AD (w/o APOE)", "Age")
+
+plotDF <- as.data.frame(plotDF)
+ROCplot <- NULL
+aucValue <- rep(NA, length(score))
+for (i in 1:length(score)){
+  test <- roc(factor(plotDF$conversion, levels = c("non-converter", "converter")), 
+              plotDF[,score[i]])
+  
+  temp <- data.frame(Sensitivity = test$sensitivities,
+                     Specificity = test$specificities,
+                     Class = rep(scoreName[i],length(test$specificities)))
+  
+  ROCplot <- rbind.data.frame(ROCplot, temp)
+  aucValue[i] <- round(as.numeric(auc(test)),2)
+}
+
+plotAUC <- data.frame(AUC = paste0("AUC = ",aucValue),
+                      Score = scoreName,
+                      X = 0.9,
+                      Y = rev(seq(0.05,0.35,length.out = length(aucValue))))
+
+ROCplot$Class <- factor(ROCplot$Class, levels = scoreName)
+
+colors <- rev(c("#E6AB02","#FB6A4A","#CB181D","#6BAED6","#2171B5"))
+p <- ggplot(ROCplot) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
+  geom_path(aes(y = Sensitivity, x = 1- Specificity,
+                color = Class), 
+            linewidth = 1.5, linetype = "solid") +
+  geom_text(data = plotAUC, aes(x = X, y = Y, label = AUC, color = Score),
+            fontface = "bold") +
+  scale_color_manual(values = colors) +
+  ggtitle("Converter") +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "right",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic"))
+
+ggsave(p, file = "ROC_converter_ADNI.png", width = 8, height = 5)
+
+
+#==============================================================================#
+# Prediction of Decliner
+#==============================================================================#
+
+table(plotDF$TwoClass)
+score <- c("EpiCAIDE1", "EpiLIBRA", "AD1", "AD_noAPOE", "Age")
+scoreName <- c("Epi-CAIDE1", "Epi-LIBRA", "AD", "AD (w/o APOE)", "Age")
+
+plotDF$TwoClass_name <- ifelse(plotDF$TwoClass == 1, "Decliner", "Stable")
+plotDF <- as.data.frame(plotDF)
+ROCplot <- NULL
+aucValue <- rep(NA, length(score))
+for (i in 1:length(score)){
+  test <- roc(factor(plotDF$TwoClass_name, levels = c("Stable", "Decliner")), 
+              plotDF[,score[i]])
+  
+  temp <- data.frame(Sensitivity = test$sensitivities,
+                     Specificity = test$specificities,
+                     Class = rep(scoreName[i],length(test$specificities)))
+  
+  ROCplot <- rbind.data.frame(ROCplot, temp)
+  aucValue[i] <- format(round(as.numeric(auc(test)),2),nsmall = 2)
+}
+
+plotAUC <- data.frame(AUC = paste0("AUC = ",aucValue),
+                      Score = scoreName,
+                      X = 0.9,
+                      Y = rev(seq(0.05,0.35,length.out = length(aucValue))))
+
+ROCplot$Class <- factor(ROCplot$Class, levels = scoreName)
+
+colors <- rev(c("#E6AB02","#FB6A4A","#CB181D","#6BAED6","#2171B5"))
+p <- ggplot(ROCplot) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
+  geom_path(aes(y = Sensitivity, x = 1- Specificity,
+                color = Class), 
+            linewidth = 1.5, linetype = "solid") +
+  geom_text(data = plotAUC, aes(x = X, y = Y, label = AUC, color = Score),
+            fontface = "bold") +
+  scale_color_manual(values = colors) +
+  ggtitle("Decliner") +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "right",
+        plot.title = element_text(hjust = 0.5,
+                                  face = "bold",
+                                  size = 16),
+        plot.subtitle = element_text(hjust = 0.5,
+                                     size = 10,
+                                     face = "italic"))
+
+ggsave(p, file = "ROC_decliner_ADNI.png", width = 8, height = 5)
+
+
+
+
+
+
+
+
+
+
+
+
+plotDF$conversion_num <- ifelse(plotDF$conversion == "converter",1,0)
+plotDF$MCI_num <- ifelse(plotDF$Test == "MCI",1,0)
+model <- lm(MCI_num ~ Pred + Age, data = plotDF)
+summary(model)
+
+
+
+
+table(testDF$DX)
+boxplot(testDF$Pred ~ testDF$DX)
+test <- aov(Pred ~DX, testDF)
+summary(test)
+
+testDF_fil <- testDF[(testDF$DX == "EMCI") | (testDF$DX == "CN") | (testDF$DX == "LMCI"),]
+t.test(testDF_fil$Pred ~ ifelse(testDF_fil$DX == "CN", "Control", "Case"), var = TRUE)
+boxplot(testDF_fil$Pred ~ testDF_fil$DX)
+
+ADNI_older_fil <- ADNI_older[ADNI_older$VISCODE == "bl",]
+testDF$RID <- as.character(testDF$RID)
+plotDF <- inner_join(testDF, ADNI_older_fil, by = c("RID" = "RID"))
+
+
+
+
 
 boxplot(plotDF$Pred ~ plotDF$ThreeClass)
-boxplot(plotDF$Pred ~ ifelse(plotDF$diagbl == "CN", "Control", "Case"))
+boxplot(plotDF$Pred ~ ifelse(plotDF$DX == "CN", "Control", "Case"))
 
 plot(plotDF$EN, plotDF$Slope)
 
@@ -63,6 +418,8 @@ plotDF$CognitiveImpairment <- ifelse(plotDF$diagbl == "CN", "Control", "Mild Cog
 MetaData_test <- as.data.frame(MetaData_baseline)
 rownames(MetaData_test) <- MetaData_baseline$Basename
 MetaData_test <- MetaData_test[rownames(X_test),]
+
+pred <- as.data.frame(testPred)
 
 factorNames <- c("APOE4", "FDG", "AV45", "TAU",
                  "PTAU", "CDRSB", "ADAS11", "ADAS13", "ADASQ4", "MMSE", 

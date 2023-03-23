@@ -443,16 +443,20 @@ for (i in 1:length(methods)){
 plotExplVar$PC <- factor(rep(paste0("PC", 1:924), length(methods)),
                              levels = paste0("PC", 1:924))
 
-plotExplVar$FeatureSelection <- factor(plotExplVar$FeatureSelection,
-                                       levels = methods)
+load("FeatureSelection/explVar_None.RData")
+plotExplVar <- rbind.data.frame(plotExplVar, plotDF_PC)
 
+plotExplVar$FeatureSelection <- factor(plotExplVar$FeatureSelection,
+                                       levels = c(methods, "None"))
+
+colors <- c(RColorBrewer::brewer.pal(n = 8, "Dark2"), "red")
 p  <- ggplot(plotExplVar) +
   geom_step(aes(x = PC, y = cumVar, group = FeatureSelection, color = FeatureSelection),
             linewidth = 1.5) +
   geom_hline(yintercept = 100,  linetype = "dashed", linewidth = 1.5) +
   xlab("Principal Components (PC1 - 924)") +
   ylab("Cumulative Explained Variance (%)") +
-  scale_color_brewer(palette = "Dark2") +
+  scale_color_manual(values = colors) +
   ylim(c(0,100)) +
   theme_classic() +
   theme(legend.title  = element_blank(),
@@ -467,7 +471,7 @@ p  <- ggplot(plotExplVar[plotExplVar$PC %in% selected,]) +
             linewidth = 1.5) +
   xlab("Principal Components (PC1 - 10)") +
   ylab("Cumulative Explained Variance (%)") +
-  scale_color_brewer(palette = "Dark2") +
+  scale_color_manual(values = colors) +
   theme_classic() +
   theme(legend.title  = element_blank(),
         axis.text.x = element_blank(),
