@@ -3,9 +3,9 @@ rm(list = ls())
 cat("\014") 
 
 # Load packages
+library(caret)
 library(glmnet)
 library(spls)
-library(caret)
 library(foreach)
 library(doParallel)
 library(ggrepel)
@@ -252,7 +252,7 @@ Age[Y_test$Age < 47] <- 0
 Age[Y_test$Age > 53] <- 4
 
 # Sex
-Sex <- ifelse(bestModel_test$SexMale$ObsPred_test$predClass == 2,0,1)
+Sex <- ifelse(bestModel_test$SexMale$ObsPred_test$predClass == "Yes",1,0)
 
 
 maximum <- R2(pred = Sex + Age, obs = Y_test$CAIDE)
