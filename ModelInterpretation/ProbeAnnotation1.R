@@ -70,7 +70,7 @@ x <- GRanges(
   ranges = IRanges(intergenic$Position, names = intergenic$ID),
   strand = intergenic$Strand)
 
-nearestGenes <- nearest(x,broads)
+nearestGenes <- nearest(x)
 nearestGenes <- broads[nearestGenes,]@ranges@NAMES
 
 # Annotate ENTREZ ID with gene symbol
