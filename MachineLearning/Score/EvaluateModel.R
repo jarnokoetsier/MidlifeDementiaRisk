@@ -17,7 +17,7 @@ library(RColorBrewer)
 setwd("E:/Thesis/EXTEND/Methylation")
 
 # Meta data
-files <- list.files('Y')
+files <- list.files('Y', ".RData")
 for (f in files){
   load(paste0("Y/",f))
 }
@@ -155,12 +155,12 @@ plotDF$Method <- factor(plotDF$Method,
 
 p <- ggplot(plotDF) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
-  geom_point(aes(x = Observed, y = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
+  geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
   facet_grid(rows = vars(Method)) +
   scale_color_gradient2(low = "#000072", mid = "#F49D1A", high = "red", midpoint = 0) +
   ggtitle("CAIDE1") +
-  xlab("Observed Score") +
-  ylab("Predicted Score") +
+  ylab("Observed Score") +
+  xlab("Predicted Score") +
   theme_bw() +
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5,
@@ -304,12 +304,12 @@ plotDF$Method <- factor(plotDF$Method,
 
 p <- ggplot(plotDF) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
-  geom_point(aes(x = Observed, y = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
+  geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
   facet_grid(rows = vars(Method)) +
   scale_color_gradient2(low = "#000072", mid = "#F49D1A", high = "red", midpoint = 0) +
   ggtitle("mCAIDE1") +
-  xlab("Observed Score") +
-  ylab("Predicted Score") +
+  ylab("Observed Score") +
+  xlab("Predicted Score") +
   theme_bw() +
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5,
@@ -453,12 +453,12 @@ plotDF$Method <- factor(plotDF$Method,
 
 p <- ggplot(plotDF) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
-  geom_point(aes(x = Observed, y = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
+  geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
   facet_grid(rows = vars(Method)) +
   scale_color_gradient2(low = "#000072", mid = "#F49D1A", high = "red", midpoint = 0) +
   ggtitle("CAIDE2") +
-  xlab("Observed Score") +
-  ylab("Predicted Score") +
+  ylab("Observed Score") +
+  xlab("Predicted Score") +
   theme_bw() +
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5,
@@ -605,12 +605,12 @@ plotDF$Method <- factor(plotDF$Method,
 
 p <- ggplot(plotDF) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
-  geom_point(aes(x = Observed, y = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
+  geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
   facet_grid(rows = vars(Method)) +
   scale_color_gradient2(low = "#000072", mid = "#F49D1A", high = "red", midpoint = 0) +
   ggtitle("LIBRA") +
-  xlab("Observed Score") +
-  ylab("Predicted Score") +
+  ylab("Observed Score") +
+  xlab("Predicted Score") +
   theme_bw() +
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5,
