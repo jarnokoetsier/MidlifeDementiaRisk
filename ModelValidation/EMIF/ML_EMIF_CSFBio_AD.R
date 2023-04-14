@@ -28,11 +28,12 @@ colnames(CSFbio) <- c("Ptau_ASSAY_Zscore", "Ttau_ASSAY_Zscore", "AB_Zscore", "Ch
 samples <- rownames(CSFbio)[(!is.na(CSFbio$Ptau_ASSAY_Zscore)) & 
                               (!is.na(CSFbio$AB_Zscore)) &
                               (!is.na(CSFbio$Ttau_ASSAY_Zscore))]
+
 # MCI and NL only
-X_train <- X_train[Y_train$Diagnosis != "AD",]
-Y_train <- Y_train[Y_train$Diagnosis != "AD",]
-X_test <- X_test[Y_test$Diagnosis != "AD",]
-Y_test<- Y_test[Y_test$Diagnosis != "AD",]
+X_train <- X_train[Y_train$Diagnosis != "MCI",]
+Y_train <- Y_train[Y_train$Diagnosis != "MCI",]
+X_test <- X_test[Y_test$Diagnosis != "MCI",]
+Y_test<- Y_test[Y_test$Diagnosis != "MCI",]
 
 #X_train <- X_train[Y_train$Diagnosis == "MCI",]
 #Y_train <- Y_train[Y_train$Diagnosis == "MCI",]
@@ -41,11 +42,11 @@ Y_test<- Y_test[Y_test$Diagnosis != "AD",]
 #Y_train$Y <- factor(ifelse(Y_train$MCI_Convert == 0 ,"Control","Convert"), levels = c("Control", "Convert"))
 #Y_test$Y <- factor(ifelse(Y_test$MCI_Convert == 0 ,"Control","Convert"), levels = c("Control", "Convert"))
 
-Y_train$Y <- factor(ifelse(Y_train$Diagnosis == "NL","Control","MCI"),
-                    levels = c("Control", "MCI"))
+Y_train$Y <- factor(ifelse(Y_train$Diagnosis == "NL","Control","AD"),
+                    levels = c("Control", "AD"))
 
-Y_test$Y <- factor(ifelse(Y_test$Diagnosis == "NL","Control","MCI"),
-                   levels = c("Control", "MCI"))
+Y_test$Y <- factor(ifelse(Y_test$Diagnosis == "NL","Control","AD"),
+                   levels = c("Control", "AD"))
 
 
 Y_train <- Y_train[intersect(samples, rownames(Y_train)),]
@@ -112,7 +113,7 @@ fit <- train(x = X_train[,-18],
              maximize = TRUE)
 
 # Save model
-save(fit, file = "EMIF/Fit_EMIF_CI_EN_CSFbio.RData")
+save(fit, file = "EMIF/Fit_EMIF_AD_EN_CSFbio.RData")
 
 # performance in CV
 trainResults <- fit$results
@@ -125,21 +126,21 @@ rocdf <- reportROC(gold = Y_test$Y, predictor = testPred$Convert, important = "s
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
-roc_test <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test <- pROC::roc(Y_test$Y, testPred$AD)
 auc(roc_test)
 
 # Actual training
 set.seed(123)
 fit_wo <- train(x = X_train[,c("Ptau_ASSAY_Zscore", "AB_Zscore", "Ttau_ASSAY_Zscore", "ChrAge")],
-             y = Y_train$Y,
-             metric= performance_metric,
-             method = MLmethod,
-             tuneGrid = parameterGrid,
-             trControl = fitControl,
-             maximize = TRUE)
+                y = Y_train$Y,
+                metric= performance_metric,
+                method = MLmethod,
+                tuneGrid = parameterGrid,
+                trControl = fitControl,
+                maximize = TRUE)
 
 # Save model
-save(fit_wo, file = "EMIF/Fit_EMIF_CI_EN_CSFbioage.RData")
+save(fit_wo, file = "EMIF/Fit_EMIF_AD_EN_CSFbioage.RData")
 
 # Actual training
 set.seed(123)
@@ -152,7 +153,7 @@ fit_wo <- train(x = X_train[,c("Ptau_ASSAY_Zscore", "AB_Zscore", "Ttau_ASSAY_Zsc
                 maximize = TRUE)
 
 # Save model
-save(fit_wo, file = "EMIF/Fit_EMIF_CI_EN_CSFbioonly.RData")
+save(fit_wo, file = "EMIF/Fit_EMIF_AD_EN_CSFbioonly.RData")
 
 
 
@@ -161,7 +162,7 @@ rocdf <- reportROC(gold = Y_test$Y, predictor = testPred$Convert, important = "s
 
 testPred <- predict(fit_wo, X_test, type = "prob")
 
-roc_test_wo <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test_wo <- pROC::roc(Y_test$Y, testPred$AD)
 auc(roc_test_wo)
 
 
@@ -169,19 +170,19 @@ auc(roc_test_wo)
 set.seed(123)
 which(colnames(X_train) == "Age")
 fit_woa <- train(x = X_train[,-c(14,18)],
-                y = Y_train$Y,
-                metric= performance_metric,
-                method = MLmethod,
-                tuneGrid = parameterGrid,
-                trControl = fitControl,
-                maximize = TRUE)
+                 y = Y_train$Y,
+                 metric= performance_metric,
+                 method = MLmethod,
+                 tuneGrid = parameterGrid,
+                 trControl = fitControl,
+                 maximize = TRUE)
 
 # Save model
 save(fit_woa, file = "EMIF/Fit_EMIF_CI_EN_CSFbio_noage.RData")
 
 testPred <- predict(fit_woa, X_test, type = "prob")
 
-roc_test_woa <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test_woa <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test_woa)
 
 
@@ -233,7 +234,7 @@ save(fit, file = "EMIF/Fit_EMIF_CI_sPLS_CSFbio.RData")
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
-roc_test <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test)
 
 # Actual training
@@ -264,25 +265,25 @@ save(fit_wo, file = "EMIF/Fit_EMIF_CI_sPLS_CSFbioonly.RData")
 
 testPred <- predict(fit_wo, X_test, type = "prob")
 
-roc_test_wo <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test_wo <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test_wo)
 
 # Actual training
 set.seed(123)
 fit_woa <- train(x = X_train[,-c(14,18)],
-                y = Y_train$Y,
-                metric= performance_metric,
-                method = MLmethod,
-                tuneGrid = parameterGrid,
-                trControl = fitControl,
-                maximize = TRUE)
+                 y = Y_train$Y,
+                 metric= performance_metric,
+                 method = MLmethod,
+                 tuneGrid = parameterGrid,
+                 trControl = fitControl,
+                 maximize = TRUE)
 
 # Save model
 save(fit_woa, file = "EMIF/Fit_EMIF_CI_sPLS_CSFbio_noage.RData")
 
 testPred <- predict(fit_woa, X_test, type = "prob")
 
-roc_test_woa <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test_woa <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test_woa)
 
 
@@ -342,7 +343,7 @@ save(fit, file = "EMIF/Fit_EMIF_CI_RF_CSFbio.RData")
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
-roc_test <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test)
 
 # Number of randomly selected predictors
@@ -405,7 +406,7 @@ save(fit_wo, file = "EMIF/Fit_EMIF_CI_RF_CSFbioonly.RData")
 
 testPred <- predict(fit_wo, X_test, type = "prob")
 
-roc_test_wo <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test_wo <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test_wo)
 
 
@@ -427,19 +428,19 @@ performance_metric = "ROC"
 MLmethod = "ranger"
 set.seed(123)
 fit_woa <- train(x = X_train[,-c(14,18)],
-                y = Y_train$Y,
-                metric= performance_metric,
-                method = MLmethod,
-                tuneGrid = parameterGrid,
-                trControl = fitControl,
-                maximize = TRUE)
+                 y = Y_train$Y,
+                 metric= performance_metric,
+                 method = MLmethod,
+                 tuneGrid = parameterGrid,
+                 trControl = fitControl,
+                 maximize = TRUE)
 
 # Save model
 save(fit_woa, file = "EMIF/Fit_EMIF_CI_RF_CSFbio_noage.RData")
 
 testPred <- predict(fit_woa, X_test, type = "prob")
 
-roc_test_woa <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test_woa <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test_woa)
 
 
@@ -459,12 +460,12 @@ auc(roc_test)
 load("EMIF/Fit_EMIF_CI_RF_CSFbio.RData")
 testPred <- predict(fit, X_test, type = "prob")
 
-load("EMIF/Fit_EMIF_CI_sPLS_CSFbioonly.RData")
+load("EMIF/Fit_EMIF_CI_RF_CSFbioonly.RData")
 testPred_wo <- predict(fit_wo, X_test, type = "prob")
 
-roc_test <- pROC::roc(Y_test$Y, testPred$MCI)
-roc_test_wo <- pROC::roc(Y_test$Y, testPred_wo$MCI)
-pROC::roc.test(roc_test, roc_test_wo)
+roc_test <- roc(Y_test$Y, testPred$MCI)
+roc_test_wo <- roc(Y_test$Y, testPred_wo$MCI)
+roc.test(roc_test, roc_test_wo)
 
 
 load("EMIF/Fit_EMIF_CI_RF_CSFbio.RData")
@@ -814,36 +815,3 @@ p <- ggplot(ROCplot) +
 
 ggsave(p, file = "EMIF/ROC_MCI_EMIF_combinedPlot1.png", width = 8, height = 5)
 
-
-
-
-load("EMIF/Fit_EMIF_MCI_RF.RData")
-RF1 <- predict(fit, X_test[,1:14], type = "prob")$MCI
-test <- pROC::roc(Y_test$Y, RF1)
-auc(test)
-
-
-
-load("EMIF/X_train_EMIF.RData")
-load("EMIF/Y_train_EMIF.RData")
-load("EMIF/X_test_EMIF.RData")
-load("EMIF/Y_test_EMIF.RData")
-
-# MCI and NL only
-X_train <- X_train[Y_train$Diagnosis != "AD",]
-Y_train <- Y_train[Y_train$Diagnosis != "AD",]
-X_test <- X_test[Y_test$Diagnosis != "AD",]
-Y_test<- Y_test[Y_test$Diagnosis != "AD",]
-
-Y_train$Y <- factor(ifelse(Y_train$Diagnosis == "NL","Control","MCI"),
-                    levels = c("Control", "MCI"))
-
-Y_test$Y <- factor(ifelse(Y_test$Diagnosis == "NL","Control","MCI"),
-                   levels = c("Control", "MCI"))
-
-load("EMIF/Fit_EMIF_MCI_RF.RData")
-RF1 <- predict(fit, X_test[,1:14], type = "prob")$MCI
-test1 <- pROC::roc(Y_test$Y, RF1)
-auc(test1)
-
-roc.test(test, test1)

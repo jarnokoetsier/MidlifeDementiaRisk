@@ -312,12 +312,12 @@ model <- lm(Ynum ~ EpiLIBRA + Age + Sex, data = testDF)
 summary(model)
 
 score <- c("EN", "sPLS", "RF","EpiCAIDE1", "EpiLIBRA", "EpiAge", "Age")
-scoreName <- c("ElasticNet", "sPLS", "Random Forest", "Epi-CAIDE1", "Epi-LIBRA", "Epi-Age", "Age")
+scoreName <- c("ElasticNet", "sPLS-DA", "Random Forest", "Epi-CAIDE1", "Epi-LIBRA", "Epi-Age", "Age")
 plotDF <- as.data.frame(testDF)
 ROCplot <- NULL
 aucValue <- rep(NA, length(score))
 for (i in 1:length(score)){
-  test <- roc(plotDF$Y, plotDF[,score[i]])
+  test <- pROC::roc(plotDF$Y, plotDF[,score[i]])
   
   temp <- data.frame(Sensitivity = test$sensitivities,
                      Specificity = test$specificities,
@@ -619,12 +619,12 @@ model <- lm(Ynum ~ EpiLIBRA + Age + Sex, data = testDF)
 summary(model)
 
 score <- c("EN", "sPLS", "RF","EpiCAIDE1", "EpiLIBRA", "EpiAge", "Age")
-scoreName <- c("ElasticNet", "sPLS", "Random Forest", "Epi-CAIDE1", "Epi-LIBRA", "Epi-Age", "Age")
+scoreName <- c("ElasticNet", "sPLS-DA", "Random Forest", "Epi-CAIDE1", "Epi-LIBRA", "Epi-Age", "Age")
 plotDF <- as.data.frame(testDF)
 ROCplot <- NULL
 aucValue <- rep(NA, length(score))
 for (i in 1:length(score)){
-  test <- roc(plotDF$Y, plotDF[,score[i]])
+  test <- pROC::roc(plotDF$Y, plotDF[,score[i]])
   
   temp <- data.frame(Sensitivity = test$sensitivities,
                      Specificity = test$specificities,
