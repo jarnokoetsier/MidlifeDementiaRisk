@@ -2,7 +2,7 @@
 *.xlsx
 
 # Ignore png images
-*.png
+#*.png
 
 # Ignore html files
 *.html

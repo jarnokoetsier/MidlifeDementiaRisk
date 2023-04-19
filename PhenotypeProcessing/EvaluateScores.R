@@ -177,10 +177,10 @@ Score <- c(names(table(CAIDE$age_c)/nrow(CAIDE)),
 ScoreFactor <-  c(rep("Age",3), 
                   rep("Sex",2), 
                   rep("Education",2), 
-                  rep("Systolic Blood Pressure",2),
+                  rep("Syst. Blood\nPressure",2),
                   rep("BMI",2), 
-                  rep("Total Cholesterol",2), 
-                  rep("Physical Inactivity",2)
+                  rep("Total\nCholesterol",2), 
+                  rep("Physical\nInactivity",2)
 )
 
 
@@ -199,12 +199,13 @@ p <- ggplot(plotDF) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90,
                                    hjust = 1,
-                                   vjust = 0.5),
+                                   vjust = 0.5,
+                                   size = 12),
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
 
-ggsave(p, file = "BarChart_Factors_CAIDE1.png", width = 8, height = 6)
+ggsave(p, file = "BarChart_Factors_CAIDE1.png", width = 6, height = 5)
 
 #*****************************************************************************#
 # CAIDE2
@@ -233,13 +234,12 @@ Score <- c(names(table(CAIDE2$age_c)/nrow(CAIDE2)),
 ScoreFactor <-  c(rep("Age",3), 
                   rep("Sex",2), 
                   rep("Education",2), 
-                  rep("Systolic Blood Pressure",2),
+                  rep("Syst. Blood\nPressure",2),
                   rep("BMI",2), 
-                  rep("Total Cholesterol",2), 
-                  rep("Physical Inactivity",2),
-                  rep("APOE \u03b54 status",2)
+                  rep("Total\nCholesterol",2), 
+                  rep("Physical\nInactivity",2),
+                  rep("APOE \u03b54\nstatus",2)
 )
-
 
 
 plotDF <- data.frame(Value, Score, ScoreFactor)
@@ -256,12 +256,13 @@ p <- ggplot(plotDF) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90,
                                    hjust = 1,
-                                   vjust = 0.5),
+                                   vjust = 0.5,
+                                   size = 12),
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
 
-ggsave(p, file = "BarChart_Factors_CAIDE2.png", width = 8, height = 6)
+ggsave(p, file = "BarChart_Factors_CAIDE2.png", width = 6, height = 5)
 
 
 
@@ -296,9 +297,9 @@ Score <-  c(names(table(EPILIBRA$MEDITERANIAN)/nrow(EPILIBRA)),
 )
 
 ScoreFactor <-  c(rep("Healthy Diet",2), 
-                  rep("Physical Inactivity",2), 
+                  rep("Physical\nInactivity",2), 
                   rep("Smoking",2), 
-                  rep("L-M Alcohol Intake",2),
+                  rep("L-M Alcohol\nIntake",2),
                   rep("Obesity",2), 
                   rep("Depression",2), 
                   rep("Type 2 Diabetes",2),
@@ -325,12 +326,13 @@ p <- ggplot(plotDF) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90,
                                    hjust = 1,
-                                   vjust = 0.5),
+                                   vjust = 0.5, 
+                                   size = 12),
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
 
-ggsave(p, file = "BarChart_Factors_LIBRA.png", width = 8, height = 6)
+ggsave(p, file = "BarChart_Factors_LIBRA.png", width = 6, height = 5)
 
 ###############################################################################
 
@@ -532,11 +534,11 @@ p <- ggplot(CAIDE) +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
-ggsave(p, file = "Distribution_CAIDE1.png", width = 8, height = 6)
+ggsave(p, file = "Distribution_CAIDE1.png", width = 6, height = 4.5)
 
 p <- ggplot(CAIDE2) +
   geom_bar(aes(x = CAIDE2, y = after_stat(count)/789), 
-           fill = "#F49D1A", color = "black", linewidth = 0.8) +
+           fill = "#F49D1A", color = "black", linewidth = 0.8, width = 0.87) +
   xlab("CAIDE2 Score") +
   ylab("Sample Proportion") +
   ggtitle("CAIDE2 Score") +
@@ -544,7 +546,7 @@ p <- ggplot(CAIDE2) +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
-ggsave(p, file = "Distribution_CAIDE2.png", width = 8, height = 6)
+ggsave(p, file = "Distribution_CAIDE2.png", width = 6, height = 4.5)
 
 
 p <- ggplot(EPILIBRA) +
@@ -557,7 +559,7 @@ p <- ggplot(EPILIBRA) +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
-ggsave(p, file = "Distribution_LIBRA.png", width = 8, height = 6)
+ggsave(p, file = "Distribution_LIBRA.png", width = 6, height = 4.5)
 
 
 ###############################################################################

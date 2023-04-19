@@ -310,7 +310,33 @@ plot_caide <- ggplot() +
 #ks.test(CAIDE$CAIDE[CAIDE$ID %in% Y_CAIDE1$ID], CAIDE$CAIDE[CAIDE$ID %in% Y_test$ID])
 
 # Save plot
-ggsave(plot_caide, file = "CAIDE1_TrainingAndTest.png", width = 8, height = 6)
+ggsave(plot_caide, file = "CAIDE1_TrainingAndTest.png", width = 6, height = 4.5)
+
+#=============================================================================#
+# CAIDE2 score
+#=============================================================================#
+
+
+plotData <- CAIDE2
+plotData$Set <- rep("Training", nrow(plotData))
+plotData$Set[plotData$ID %in% Y_test$ID] <- "Test"
+
+plot_caide <- ggplot() + 
+  geom_bar(data = plotData[plotData$Set == "Training",], aes(x = CAIDE2, fill = Set), 
+           position = "identity", width = 0.8, alpha = 0.9, color = "black") +
+  geom_bar(data = plotData[plotData$Set == "Test",], aes(x = CAIDE2, fill = Set), 
+           position = "identity", width = 0.6, alpha = 0.9, color = "black") +
+  ylab("Count") +
+  xlab("CAIDE2 score") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
+#ks.test(CAIDE$CAIDE[CAIDE$ID %in% Y_CAIDE1$ID], CAIDE$CAIDE[CAIDE$ID %in% Y_test$ID])
+
+# Save plot
+ggsave(plot_caide, file = "CAIDE2_TrainingAndTest.png", width = 6, height = 4.5)
 
 #=============================================================================#
 # LIBRA score
@@ -337,7 +363,7 @@ plot_libra <- ggplot() +
 
 
 # Save plot
-ggsave(plot_libra, file = "LIBRA_TrainingAndTest.png", width = 8, height = 6)
+ggsave(plot_libra, file = "LIBRA_TrainingAndTest.png", width = 6, height = 4.5)
 
 #=============================================================================#
 # PCA

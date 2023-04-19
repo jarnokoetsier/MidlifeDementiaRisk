@@ -266,7 +266,7 @@ p <- ggplot(plotDF_all)+
                                   size = 16))
 
 
-ggsave(p, file = "WhichFactors_CAIDE1.png", width = 8, height = 6)
+ggsave(p, file = "WhichFactors_CAIDE1.png", width = 6, height = 4.5)
 
 
 ###############################################################################
@@ -564,7 +564,7 @@ p <- ggplot(plotDF_all)+
                                   size = 16))
 
 
-ggsave(p, file = "WhichFactors_CAIDE2.png", width = 8, height = 6)
+ggsave(p, file = "WhichFactors_CAIDE2.png", width = 6, height = 4.5)
 
 
 
@@ -722,5 +722,5 @@ p <- ggplot(plotDF_all)+
                                   size = 16))
 
 
-ggsave(p, file = "WhichFactors_LIBRA.png", width = 8, height = 6)
+ggsave(p, file = "WhichFactors_LIBRA.png", width = 6, height = 4.5)
 

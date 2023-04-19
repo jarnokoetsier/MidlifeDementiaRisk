@@ -21,7 +21,7 @@ source("C:/Users/Gebruiker/Documents/GitHub/Epi-LIBRA/MachineLearning/FUN_Machin
 setwd("E:/Thesis/EXTEND/Methylation")
 
 # Load phenotype data
-files <- list.files('Y')
+files <- list.files('Y', pattern = ".RData")
 for (f in files){
   load(paste0("Y/",f))
 }
@@ -193,7 +193,7 @@ p <- ggplot() +
                                      face = "italic"))
 
 
-ggsave(p, file = "CAIDE2_Cat_Cor_AUC_CV.png", height = 6, width = 9)
+ggsave(p, file = "CAIDE2_Cat_Cor_AUC_CV.png", height = 5, width = 7.5)
 
 
 p <- ggplot() +
@@ -217,7 +217,7 @@ p <- ggplot() +
                                      face = "italic"))
 
 
-ggsave(p, file = "CAIDE2_Cat_Cor_AUC_test.png", height = 6, width = 9)
+ggsave(p, file = "CAIDE2_Cat_Cor_AUC_test.png", height = 5, width = 7.5)
 
 
 ################################################################################
@@ -292,7 +292,7 @@ p <- ggplot(ObsPred_CV_all) +
                                      size = 10,
                                      face = "italic")) 
 
-ggsave(p, file = "CAIDE2_Cat_Cor_boxPlot_CV.png", height = 6, width = 9)
+ggsave(p, file = "CAIDE2_Cat_Cor_boxPlot_CV.png", height = 5, width = 7.5)
 
 
 
@@ -329,7 +329,7 @@ p <- ggplot(ObsPred_test_all) +
                                      size = 10,
                                      face = "italic")) 
 
-ggsave(p, file = "CAIDE2_Cat_Cor_boxPlot_test.png", height = 6, width = 9)
+ggsave(p, file = "CAIDE2_Cat_Cor_boxPlot_test.png", height = 5, width = 7.5)
 
 model <- "ElasticNet"
 test <- ObsPred_test_all[ObsPred_test_all$Method == model,]
