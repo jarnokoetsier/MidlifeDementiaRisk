@@ -41,4 +41,4 @@ p <- ggplot(CAIDE) +
                                      size = 10,
                                      face = "italic")) 
 
-ggsave(p, file = "CAIDE1_Boxplot_Age.png", height = 5, width = 9)
+ggsave(p, file = "CAIDE1_Boxplot_Age.png", height = 3.9, width = 7)

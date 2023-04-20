@@ -163,11 +163,11 @@ auc_CV_smoking <- c(auc_CV_smoking,finalOutput$Smoking$AUC)
 
 
 plotDF_smoking <- data.frame(AUC = c(auc_test_smoking,auc_CV_smoking),
-                             Model = factor(rep(c("Literature", "ElasticNet*", "Random Forest*"),2),
-                                            levels = c("Literature", "ElasticNet*", "Random Forest*")),
+                             Model = factor(rep(c("Smoking Score", "ElasticNet*", "Random Forest*"),2),
+                                            levels = c("ElasticNet*", "Random Forest*","Smoking Score")),
                              Set = c(rep("Training",3), rep("Test",3))
 )
-
+color <- c("#1B9E77", "#D95F02", "#E7B10A")
 p <- ggplot(plotDF_smoking) +
   geom_bar(aes(x = Model, y = AUC, fill = Model),
            stat = "identity", position = position_dodge(), color = "grey") +
@@ -188,7 +188,7 @@ p <- ggplot(plotDF_smoking) +
                                      size = 10,
                                      face = "italic"))
 
-ggsave(p, file = "SmokingModels_AUC.png", width = 8, height = 6)
+ggsave(p, file = "SmokingModels_AUC.png", width = 8, height = 3)
 
 ###############################################################################
 
@@ -208,6 +208,9 @@ predAge_test <- agep(X_test, method='all')
 predAge_test <- predAge_test[,c(1,3,5,7,9)]
 save(predAge_test, file = "PerFactor/predAge_test.RData")
 
+
+load("PerFactor/predAge_test.RData")
+load("PerFactor/predAge_nonTest.RData")
 modelName <- c("Horvath", "Hannum", "Pheno-Age", "Skin-Blood", "Lin")
 
 
@@ -253,9 +256,6 @@ for (i in 1:ncol(predAge_nonTest)){
   AUCplot <- data.frame(Sensitivity = roc_list$sensitivities,
                         Specificity = roc_list$specificities,
                         Model = modelName[i])
-  
-  Gmean <- sqrt(roc_list$sensitivities*roc_list$specificities)
-  threshold <- roc_list$thresholds[which.max(Gmean)]
   
   ObsPred_test <- data.frame(predictedClass = ifelse(predAge_test[,i] < threshold, "Yes", "No"),
                            predictedAge = predAge_test[,i],

@@ -302,7 +302,7 @@ ggsave(p, file = "PRS_Score_Cor.png", width = 8, height = 10)
 main <- ggplot(plotCor_all[plotCor_all$Method == "bayesr-shrink",]) +
   geom_tile(aes(x = key1, y = key, fill = value, color = Sig), 
             linewidth = 0.7, width = 0.8, height = 0.9) +
-  scale_fill_gradient2(low = "#000072", mid = "#FFFBF5", high = "red", midpoint = 0,
+  scale_fill_gradient2(low = "#000072", mid = "white", high = "red", midpoint = 0,
                        limits = c(-0.5,0.5)) +
   xlab(NULL) +
   ylab(NULL) +

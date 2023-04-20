@@ -34,7 +34,7 @@ for (i in 1:length(methods)){
   load(paste0("X/X_", methods[i], "/", "X_test_", methods[i], ".RData"))
 }
 # Load phenotype data
-files <- list.files('Y')
+files <- list.files('Y', pattern = ".RData")
 for (f in files){
   load(paste0("Y/",f))
 }
@@ -149,9 +149,11 @@ p <- ggplot(performanceDF) +
   scale_color_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2")[c(1:5,8,6,7)], "red")) +
   #scale_color_brewer(palette = "Dark2") +
   #scale_fill_brewer(palette = "Dark2") +
-  theme_classic() +
+  theme_bw() +
   theme(legend.title = element_blank(),
-        axis.text.x = element_text(),
+        axis.text.x = element_text(angle = 45,
+                                   vjust = 1,
+                                   hjust = 1),
         legend.position = "none",
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",
@@ -160,6 +162,6 @@ p <- ggplot(performanceDF) +
                                      size = 10,
                                      face = "italic"))
 
-ggsave(p, file = paste0(Score, "_RMSE_boxplot.png"), width = 10, height = 6)
+ggsave(p, file = paste0(Score, "_RMSE_boxplot.png"), width = 7, height = 5)
 
 
