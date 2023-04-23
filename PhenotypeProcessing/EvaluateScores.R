@@ -530,11 +530,39 @@ p <- ggplot(CAIDE) +
   xlab("CAIDE1 Score") +
   ylab("Sample Proportion")  +
   ggtitle("CAIDE1 Score") +
+  theme_void() +
+  theme(plot.title = element_blank())
+ggsave(p, file = "Distribution_CAIDE1_blank.png", width = 6, height = 4.5)
+
+CAIDE_test <- CAIDE
+CAIDE_test$Cat <- "b"
+CAIDE_test$Cat[CAIDE$CAIDE < 4] <- "a"
+CAIDE_test$Cat[CAIDE$CAIDE > 7] <- "c"
+p <- ggplot(CAIDE_test) +
+  geom_bar(aes(x = CAIDE, y = after_stat(count)/919, fill = Cat), 
+           color = "black", linewidth = 0.8) +
+  xlab("CAIDE1 Score") +
+  ylab("Sample Proportion")  +
+  ggtitle("CAIDE1 Score") +
+  scale_fill_manual(values = c("#FCBBA1","#FB6A4A","#CB181D")) +
+  theme_void() +
+  theme(plot.title = element_blank(),
+        legend.position = "none")
+
+ggsave(p, file = "Distribution_CAIDE1_blank_cat.png", width = 6, height = 4.5)
+
+p <- ggplot(CAIDE) +
+  geom_bar(aes(x = CAIDE, y = after_stat(count)/919), 
+           fill = "#DC3535", color = "black", linewidth = 0.8) +
+  xlab("CAIDE1 Score") +
+  ylab("Sample Proportion")  +
+  ggtitle("CAIDE1 Score") +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
 ggsave(p, file = "Distribution_CAIDE1.png", width = 6, height = 4.5)
+
 
 p <- ggplot(CAIDE2) +
   geom_bar(aes(x = CAIDE2, y = after_stat(count)/789), 

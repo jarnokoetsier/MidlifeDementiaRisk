@@ -496,3 +496,19 @@ p <- ggplot(plotDF) +
   theme(legend.position = "none")
 
 ggsave(p, file = "CombinationMethods.png", width = 8, height = 6)
+
+
+p <- ggplot(plotDF[(plotDF$Method == "Random Forest") |
+                   (plotDF$Method == "sPLS") |
+                   (plotDF$Method == "ElasticNet"), ]) +
+  geom_bar(aes(x = Method, y = R2, fill = Score, alpha = Method), stat = "identity", color = "black") +
+  facet_grid(rows = vars(Score), scale = "free", space = "free") +
+  coord_flip() +
+  theme_bw() +
+  xlab(NULL) +
+  ylab(expression(R^2)) +
+  scale_alpha_manual(values = rev(c(0.6,0.8,1))) +
+  scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
+  theme(legend.position = "none")
+
+ggsave(p, file = "CombinationMethods_supervised.png", width = 8, height = 6)
