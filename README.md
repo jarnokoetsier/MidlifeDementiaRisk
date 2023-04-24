@@ -1,15 +1,17 @@
 # DNA Methylation-based Prediction of Midlife Dementia Risk
 ![licence](https://badgen.net/badge/Licence/MIT/purple)
 ![status](https://badgen.net/badge/Status/Complete/green)
+This repository contain the scripts that were used for the master thesis project *DNA Methylation-based Prediction of Midlife Dementia risk* performed at the School for Mental Health and Neuroscience at Maastricht University.
 
 ## Content
-1. [Background](#Data)
-2. [Research Questions](#Research-aim)
-3. [Workflow](#Analysing-the-data)
+1. [Background](#Background)
+2. [Research Questions](#Research-Questions)
+3. [Workflow](#Workflow)
 4. [Contact](#Contact)
 
 ## Background
-For the early identification of people with increased dementia risk, [LIBRA](https://onlinelibrary.wiley.com/doi/full/10.1002/gps.4245) and [CAIDE](https://www.sciencedirect.com/science/article/pii/S1474442206705373) midlife dementia risk scores have been developed. As DNA methylation may act as the molecular link between lifestyle/environment and the biological processes governing health and disease, DNA methylation data might be utilized to predict a midlife dementia risk. However, the large dimensionality of DNA methylation data makes parameter optimization and model training often computationally infeasible without prior feature selection.
+For the early identification of people with increased dementia risk, [LIBRA](https://onlinelibrary.wiley.com/doi/full/10.1002/gps.4245) and [CAIDE](https://www.sciencedirect.com/science/article/pii/S1474442206705373) midlife dementia risk scores have been developed. As DNA methylation may act as the molecular link between lifestyle/environment and the biological processes governing health and disease, DNA methylation data might be utilized instead to predict a midlife dementia risk. However, the large dimensionality of DNA methylation data makes parameter optimization and model training often computationally infeasible without prior feature selection.
+
 ## Research Questions
 1.	Can a robust and computationally feasible feature selection method be established to reduce the dimensionality of the data?
 2.	Can reliable DNA methylation-based models for the prediction of a person’s LIBRA, CAIDE1, and CAIDE2 scores and risk factors be constructed in a general population cohort?
