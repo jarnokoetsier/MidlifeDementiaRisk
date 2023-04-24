@@ -28,23 +28,22 @@ An overview of the applied methodological workflow is shown in figure below and 
 ### II. Evaluation of Feature Selection Methods
 Evaluation of different feature selection methods ([FeatureSelection](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/FeatureSelection)):
 1. Variance-based feature selection
-1.1. Beta-values
-1.2. M-values
-1.3. Beta-values + cell type composition correction
-1.4. M-values + cell type composition correction
+  - &beta-values
+  - M-values
+  - &beta-values + cell type composition correction
+  - M-values + cell type composition correction
 2. S-score-based feature selection
 3. PCA-based feature selection
 4. Kennard-Stone-like feature selection
 5. Correlation-based feature selection
 
 ### III. Prediction of Dementia Risk
-Prediction of the dementia risk scores,categories, and factors ([MachineLearning](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/MachineLearning)). 
+Prediction of the dementia risk scores, categories, and factors ([MachineLearning](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/MachineLearning)). 
 
 ### IV. Model Validation & Interpretation
 1. Biological interpretation ([ModelInterpretation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/ModelInterpretation))
 2. Validation of the established models in independent dementia-associated cohorts ([ModelValidation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/ModelValidation)). 
 
-The analyses were performed in the data science research environment (DSRI) hosted at Maastricht University.
 
 ![Workflow](/Images/Workflow.png?raw=true "Workflow")
 
