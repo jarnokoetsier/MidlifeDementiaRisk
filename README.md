@@ -13,7 +13,7 @@ This repository contains the scripts that were used for the thesis project *DNA 
 ## Background
 For the early identification of people with increased dementia risk, [LIBRA](https://onlinelibrary.wiley.com/doi/full/10.1002/gps.4245) and [CAIDE](https://www.sciencedirect.com/science/article/pii/S1474442206705373) midlife dementia risk scores have been developed. As DNA methylation may act as the molecular link between lifestyle/environment and the biological processes governing health and disease, DNA methylation data might be utilized instead to predict a midlife dementia risk. However, the large dimensionality of DNA methylation data makes parameter optimization and model training often computationally infeasible without prior feature selection.
 
-![Methylation](/Images/Methylation.png?raw=true "Methylation")
+![Methylation](/Images/Methylation.PNG?raw=true "Methylation")
 
 ## Research Questions
 1.	Can a robust and computationally feasible **feature selection** method be established to reduce the dimensionality of the data?
