@@ -18,7 +18,33 @@
 5.	What biological processes are captured by the most important features of the risk factor models? 
 
 ## Workflow
-An overview of the applied methodological workflow is shown in figure below and includes the pre-processing of genomics data ([GenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/GenotypeProcessing)), DNA methylation data ([MethylationProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/MethylationProcessing)), and phenotype data ([PhenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/PhenotypeProcessing)), the evaluation of feature selection methods ([FeatureSelection](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/FeatureSelection)), the prediction of the dementia risk scores and factors ([MachineLearning](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/MachineLearning)), as well as the biological interpretation ([ModelInterpretation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/ModelInterpretation)) and validation of the established models in independent dementia-associated cohorts ([ModelValidation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/ModelValidation)). The analyses were performed in the data science research environment (DSRI) hosted at Maastricht University.
+An overview of the applied methodological workflow is shown in figure below and encompasses of the following steps:
+
+### I. Pre-processing
+1. Pre-processing of genomics data ([GenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/GenotypeProcessing))
+2. Pre-processing of DNA methylation data ([MethylationProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/MethylationProcessing))
+3. Pre-processing of phenotype data ([PhenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/PhenotypeProcessing)), 
+
+### II. Evaluation of Feature Selection Methods
+Evaluation of different feature selection methods ([FeatureSelection](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/FeatureSelection)):
+1. Variance-based feature selection
+1.1. Beta-values
+1.2. M-values
+1.3. Beta-values + cell type composition correction
+1.4. M-values + cell type composition correction
+2. S-score-based feature selection
+3. PCA-based feature selection
+4. Kennard-Stone-like feature selection
+5. Correlation-based feature selection
+
+### III. Prediction of Dementia Risk
+Prediction of the dementia risk scores,categories, and factors ([MachineLearning](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/MachineLearning)). 
+
+### IV. Model Validation & Interpretation
+1. Biological interpretation ([ModelInterpretation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/ModelInterpretation))
+2. Validation of the established models in independent dementia-associated cohorts ([ModelValidation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/ModelValidation)). 
+
+The analyses were performed in the data science research environment (DSRI) hosted at Maastricht University.
 
 ![Workflow](/Images/Workflow.png?raw=true "Workflow")
 
