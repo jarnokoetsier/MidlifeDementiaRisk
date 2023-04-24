@@ -1,7 +1,8 @@
 # DNA Methylation-based Prediction of Midlife Dementia Risk
 ![licence](https://badgen.net/badge/Licence/MIT/purple)
 ![status](https://badgen.net/badge/Status/Complete/green)
-This repository contain the scripts that were used for the master thesis project *DNA Methylation-based Prediction of Midlife Dementia risk* performed at the School for Mental Health and Neuroscience at Maastricht University.
+
+This repository contain the scripts that were used for the master thesis project *DNA Methylation-based Prediction of Midlife Dementia risk* performed at the School for Mental Health and Neuroscience, Maastricht University.
 
 ## Content
 1. [Background](#Background)
