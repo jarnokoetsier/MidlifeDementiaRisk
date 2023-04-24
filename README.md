@@ -26,12 +26,12 @@ An overview of the applied methodological workflow is shown in figure below and 
 3. Pre-processing of phenotype data ([PhenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/PhenotypeProcessing)), 
 
 ### II. Evaluation of Feature Selection Methods
-Evaluation of different feature selection methods ([FeatureSelection](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/FeatureSelection)):
+Evaluation of eight different feature selection methods ([FeatureSelection](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/FeatureSelection)):
 1. Variance-based feature selection
-   1. &beta;-values
-   2. M-values
-   3. &beta;-values + cell type composition correction
-   4. M-values + cell type composition correction
+   a. &beta;-values
+   b. M-values
+   c. &beta;-values + cell type composition correction
+   d. M-values + cell type composition correction
 2. S-score-based feature selection
 3. PCA-based feature selection
 4. Kennard-Stone-like feature selection
