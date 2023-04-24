@@ -9,8 +9,7 @@
 4. [Contact](#Contact)
 
 ## Background
-For the early identification of people with increased dementia risk, LIBRA and CAIDE midlife dementia risk scores have been developed. As DNA methylation may act as the molecular link between lifestyle/environment and the biological processes governing health and disease, DNA methylation data might be utilized to predict a midlife dementia risk. However, the large dimensionality of DNA methylation data makes parameter optimization and model training often computationally infeasible without prior feature selection.
-
+For the early identification of people with increased dementia risk, [LIBRA](https://onlinelibrary.wiley.com/doi/full/10.1002/gps.4245) and [CAIDE](https://www.sciencedirect.com/science/article/pii/S1474442206705373) midlife dementia risk scores have been developed. As DNA methylation may act as the molecular link between lifestyle/environment and the biological processes governing health and disease, DNA methylation data might be utilized to predict a midlife dementia risk. However, the large dimensionality of DNA methylation data makes parameter optimization and model training often computationally infeasible without prior feature selection.
 ## Research Questions
 1.	Can a robust and computationally feasible feature selection method be established to reduce the dimensionality of the data?
 2.	Can reliable DNA methylation-based models for the prediction of a person’s LIBRA, CAIDE1, and CAIDE2 scores and risk factors be constructed in a general population cohort?
