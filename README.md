@@ -28,10 +28,10 @@ An overview of the applied methodological workflow is shown in figure below and 
 ### II. Evaluation of Feature Selection Methods
 Evaluation of different feature selection methods ([FeatureSelection](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/FeatureSelection)):
 1. Variance-based feature selection
-  - &beta-values
-  - M-values
-  - &beta-values + cell type composition correction
-  - M-values + cell type composition correction
+  1. &beta;-values
+  2. M-values
+  3. &beta;-values + cell type composition correction
+  4. M-values + cell type composition correction
 2. S-score-based feature selection
 3. PCA-based feature selection
 4. Kennard-Stone-like feature selection
