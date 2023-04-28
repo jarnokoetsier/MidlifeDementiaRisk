@@ -4,8 +4,6 @@
 
 This repository contains the scripts that were used for the thesis project *DNA Methylation-based Prediction of Midlife Dementia risk* as part of the Master Systems Biology at Maastricht University.
 
----
-
 ## Content
 1. [Background](#Background)
 2. [Research Questions](#Research-Questions)
@@ -55,7 +53,7 @@ Prediction of the **dementia risk** scores, categories, and factors ([MachineLea
 ![Workflow](/Images/Workflow.png?raw=true "Workflow")
 
 ## Contributors
-Jarno Koetsier<sup>1,+</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>
+Jarno Koetsier<sup>1,*</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>
 
 *<sup>1</sup> Faculty of Science and Engineering (FSE), Maastricht University*
 
@@ -63,5 +61,5 @@ Jarno Koetsier<sup>1,+</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3<
 
 *<sup>3</sup> Department of Psychiatry and Neuropsychology, School for Mental Health and Neuroscience (MHeNS), Faculty of Health, Medicine and Life Sciences (FHML), Maastricht University*
 
-<sup>+</sup>Feel free to contact me via email: j.koetsier@student.maastrichtuniversity.nl
+<sup>*</sup>Feel free to contact me via email: j.koetsier@student.maastrichtuniversity.nl
 
