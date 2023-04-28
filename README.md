@@ -1,17 +1,10 @@
 # DNA Methylation-based Prediction of Midlife Dementia Risk
-Jarno Koetsier<sup>1</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>
-
-*<sup>1</sup> Faculty of Science and Engineering (FSE), Maastricht University*
-
-*<sup>2</sup> Department of Advanced Computing Sciences (DACS), Faculty of Science and Engineering (FSE), Maastricht University*
-
-*<sup>3</sup> Department of Psychiatry and Neuropsychology, School for Mental Health and Neuroscience (MHeNS), Faculty of Health, Medicine and Life Sciences (FHML), Maastricht University*
-
----
 ![licence](https://badgen.net/badge/Licence/MIT/purple)
 ![status](https://badgen.net/badge/Status/Complete/green)
 
 This repository contains the scripts that were used for the thesis project *DNA Methylation-based Prediction of Midlife Dementia risk* as part of the Master Systems Biology at Maastricht University.
+
+---
 
 ## Content
 1. [Background](#Background)
@@ -61,6 +54,14 @@ Prediction of the **dementia risk** scores, categories, and factors ([MachineLea
 
 ![Workflow](/Images/Workflow.png?raw=true "Workflow")
 
-## Contact
-Feel free to contact me via email: j.koetsier@student.maastrichtuniversity.nl
+## Contributors
+Jarno Koetsier<sup>1,+</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>
+
+*<sup>1</sup> Faculty of Science and Engineering (FSE), Maastricht University*
+
+*<sup>2</sup> Department of Advanced Computing Sciences (DACS), Faculty of Science and Engineering (FSE), Maastricht University*
+
+*<sup>3</sup> Department of Psychiatry and Neuropsychology, School for Mental Health and Neuroscience (MHeNS), Faculty of Health, Medicine and Life Sciences (FHML), Maastricht University*
+
+<sup>+</sup>Feel free to contact me via email: j.koetsier@student.maastrichtuniversity.nl
 
