@@ -1,6 +1,7 @@
 # DNA Methylation-based Prediction of Midlife Dementia Risk
-*Jarno Koetsier<sup>1</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>
-<sup>1</sup> Faculty of Science and Engineering (FSE), Maastricht University
+*Jarno Koetsier<sup>1</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>*
+
+*<sup>1</sup> Faculty of Science and Engineering (FSE), Maastricht University
 <sup>2</sup> Department of Advanced Computing Sciences (DACS), Faculty of Science and Engineering (FSE), Maastricht University
 <sup>3</sup> Department of Psychiatry and Neuropsychology, School for Mental Health and Neuroscience (MHeNS), Faculty of Health, Medicine and Life Sciences (FHML), Maastricht University*
 
