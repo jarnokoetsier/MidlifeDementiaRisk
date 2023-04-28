@@ -1,5 +1,5 @@
 # DNA Methylation-based Prediction of Midlife Dementia Risk
-Jarno Koetsier, Rachel Cavill, and Ehsan Pishva
+Jarno Koetsier<sup>1</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>
 
 ---
 ![licence](https://badgen.net/badge/Licence/MIT/purple)
