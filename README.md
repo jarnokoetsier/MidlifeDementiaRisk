@@ -8,7 +8,7 @@ This repository contains the scripts that were used for the thesis project *DNA 
 1. [Background](#Background)
 2. [Research Questions](#Research-Questions)
 3. [Workflow](#Workflow)
-4. [Contact](#Contact)
+4. [Contributors](#Contributors)
 
 ## Background
 For the early identification of people with increased dementia risk, [LIBRA](https://onlinelibrary.wiley.com/doi/full/10.1002/gps.4245) and [CAIDE](https://www.sciencedirect.com/science/article/pii/S1474442206705373) midlife dementia risk scores have been developed. As DNA methylation may act as the molecular link between lifestyle/environment and the biological processes governing health and disease, DNA methylation data might be utilized instead to predict a midlife dementia risk. However, the large dimensionality of DNA methylation data makes parameter optimization and model training often computationally infeasible without prior feature selection.
@@ -53,13 +53,15 @@ Prediction of the **dementia risk** scores, categories, and factors ([MachineLea
 ![Workflow](/Images/Workflow.png?raw=true "Workflow")
 
 ## Contributors
-Jarno Koetsier<sup>1,*</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>
+Jarno Koetsier<sup>1*</sup>, Rachel Cavill<sup>2</sup>, and Ehsan Pishva<sup>3</sup>
 
 *<sup>1</sup> Faculty of Science and Engineering (FSE), Maastricht University*
 
 *<sup>2</sup> Department of Advanced Computing Sciences (DACS), Faculty of Science and Engineering (FSE), Maastricht University*
 
 *<sup>3</sup> Department of Psychiatry and Neuropsychology, School for Mental Health and Neuroscience (MHeNS), Faculty of Health, Medicine and Life Sciences (FHML), Maastricht University*
+
+---
 
 <sup>*</sup>Feel free to contact me via email: j.koetsier@student.maastrichtuniversity.nl
 
