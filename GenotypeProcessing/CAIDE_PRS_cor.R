@@ -73,6 +73,8 @@ ggsave(p, file = "PGS_correlations.png", width = 11, height = 10)
 
 
 
+
+
 # samples
 famFile <- fread("E:/Thesis/EXTEND/Genotypes/ChrBPData/Output_all/FINAL/EXTEND_PostImpute_FINAL_bp_dup.fam")
 
