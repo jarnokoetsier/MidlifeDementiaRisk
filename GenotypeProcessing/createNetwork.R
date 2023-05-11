@@ -16,7 +16,7 @@ load("E:/Thesis/EXTEND/df_list.RData")
 PGSresult <- df_list$bayesr
 
 PGS_names <- c("AD (w/o APOE)", "AD (stage I)", "AD (stage I-II)", "Adiponectin", "Alchol consumption",
-               "ASD", "BD", "BL", "BMI", "BW", "BW (fetal genetics)", "BW (maternal genetcis)",
+               "ASD", "BD", "BL", "BMI", "BW", "BW (fetal genetics)", "BW (maternal genetics)",
                "CAD", "Childhood obsesity", "Chronotype", "CKD (European)", "CKD (trans-ethnic)",
                "DC2", "EA (Lee, 2014)", "EA (Okbay, 2022)","Extreme BMI", "Extreme height",
                "Extreme HWR", "AD (family history)", "HbA1c", "HC", "HDL", "Infant Head Circumference",
