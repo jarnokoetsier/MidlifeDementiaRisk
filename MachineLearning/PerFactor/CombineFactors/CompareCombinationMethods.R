@@ -507,6 +507,7 @@ p <- ggplot(plotDF[(plotDF$Method == "Random Forest") |
   theme_bw() +
   xlab(NULL) +
   ylab(expression(R^2)) +
+  ylim(c(0,0.5)) +
   scale_alpha_manual(values = rev(c(0.6,0.8,1))) +
   scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
   theme(legend.position = "none")
