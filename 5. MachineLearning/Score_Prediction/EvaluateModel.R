@@ -29,6 +29,7 @@ for (f in files){
 
 ###############################################################################
 
+# Calculate R2 of all models
 methods <- c("EN", "sPLS", "RF")
 methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 scores <- c("CAIDE1", "CAIDE2", "LIBRA")
@@ -85,12 +86,13 @@ for (s in 1:length(scores)){
  
 }
 
-
+# Prepare data for plottinh
 plotDF$Method <- factor(plotDF$Method,
                         levels = methodNames)
 plotDF_test$Method <- factor(plotDF_test$Method,
                         levels = methodNames)
 
+# Make plot
 p <- ggplot(plotDF) +
   geom_boxplot(aes(x = Score, y = R2, fill = Method), 
                alpha = 1, outlier.shape = NA) +
@@ -115,6 +117,7 @@ p <- ggplot(plotDF) +
                                      size = 10,
                                      face = "italic"))
 
+# Save plot
 ggsave(p,file = "RiskScores_test.png", width = 8, height = 5)
 
 ###############################################################################
@@ -153,6 +156,7 @@ for (i in 1:length(methods)){
 plotDF$Method <- factor(plotDF$Method,
                         levels = methodNames)
 
+# Plot observed versus predicted
 p <- ggplot(plotDF) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
   geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
@@ -186,6 +190,7 @@ for (i in seq_along(strips)) {
 
 plot(g)
 
+# Save plot
 ggsave(g, file = "ObsVsPred_test_EN_CAIDE1.png", width = 8, height = 8)
 
 #*****************************************************************************#
@@ -243,6 +248,7 @@ plotDF_all$Method <- factor(plotDF_all$Method,
 
 
 plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
+
 # Make plot
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
@@ -265,13 +271,13 @@ p <- ggplot(plotDF_all)+
                                   face = "bold",
                                   size = 16))
 
-
+# Save plot
 ggsave(p, file = "WhichFactors_CAIDE1.png", width = 6, height = 4.5)
 
 
 ###############################################################################
 
-# mCAIDE1
+# mCAIDE1 (CAIDE1 w/o age and sex)
 
 ###############################################################################
 
@@ -302,6 +308,7 @@ for (i in 1:length(methods)){
 plotDF$Method <- factor(plotDF$Method,
                         levels = methodNames)
 
+# Plot observed versus predicted
 p <- ggplot(plotDF) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
   geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
@@ -335,6 +342,7 @@ for (i in seq_along(strips)) {
 
 plot(g)
 
+# Save plot
 ggsave(g, file = "ObsVsPred_test_mCAIDE1.png", width = 8, height = 8)
 
 #*****************************************************************************#
@@ -392,6 +400,7 @@ plotDF_all$Method <- factor(plotDF_all$Method,
 
 
 plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
+
 # Make plot
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
@@ -414,7 +423,7 @@ p <- ggplot(plotDF_all)+
                                   face = "bold",
                                   size = 16))
 
-
+# Save plot
 ggsave(p, file = "WhichFactors_mCAIDE1.png", width = 8, height = 6)
 
 
@@ -451,6 +460,7 @@ for (i in 1:length(methods)){
 plotDF$Method <- factor(plotDF$Method,
                         levels = methodNames)
 
+# Plot observed versus predicted
 p <- ggplot(plotDF) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
   geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
@@ -484,6 +494,7 @@ for (i in seq_along(strips)) {
 
 plot(g)
 
+# Save plot
 ggsave(g, file = "ObsVsPred_test_EN_CAIDE2.png", width = 8, height = 8)
 
 #*****************************************************************************#
@@ -541,6 +552,7 @@ plotDF_all$Method <- factor(plotDF_all$Method,
 
 
 plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
+
 # Make plot
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
@@ -563,7 +575,7 @@ p <- ggplot(plotDF_all)+
                                   face = "bold",
                                   size = 16))
 
-
+# Save plot
 ggsave(p, file = "WhichFactors_CAIDE2.png", width = 6, height = 4.5)
 
 
@@ -603,6 +615,7 @@ for (i in 1:length(methods)){
 plotDF$Method <- factor(plotDF$Method,
                         levels = methodNames)
 
+# Plot observed versus predicted
 p <- ggplot(plotDF) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
   geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
@@ -636,11 +649,8 @@ for (i in seq_along(strips)) {
 
 plot(g)
 
+# Save plot
 ggsave(g, file = "ObsVsPred_test_LIBRA.png", width = 8, height = 8)
-
-
-test <- plotDF[plotDF$Method == "Random Forest",]
-cor.test(test$Predicted, test$Observed)
 
 
 #*****************************************************************************#
@@ -699,6 +709,7 @@ plotDF_all$Method <- factor(plotDF_all$Method,
 
 
 plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
+
 # Make plot
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
@@ -720,7 +731,6 @@ p <- ggplot(plotDF_all)+
         plot.title = element_text(hjust = 0.5,
                                   face = "bold",
                                   size = 16))
-
-
+# Save plot
 ggsave(p, file = "WhichFactors_LIBRA.png", width = 6, height = 4.5)
 
