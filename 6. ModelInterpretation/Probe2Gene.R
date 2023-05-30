@@ -17,13 +17,12 @@ load("Probe2Gene_final_ann.RData")
 
 ###############################################################################
 
-# Make probe annotation
+# Annotate probe to gene
 
 ###############################################################################
 
 # Filter for probes
 probe_annotation <- probe_annotation[(probe_annotation$Chr != "chrY") & (probe_annotation$Chr != "ChrX"),]
-
 
 # Get associated gene(s)
 n <- nrow(probe_annotation)
@@ -53,7 +52,7 @@ save(Probe2Gene_final, file = "Probe2Gene_final.RData")
 
 ###############################################################################
 
-# Analyse probe annotation
+# Add nearest genes for intergenic probes
 
 ###############################################################################
 
@@ -103,25 +102,6 @@ Probe2Gene_final <- rbind.data.frame(Probe2Gene_nonIntergenic, Probe2Gene_interg
 save(Probe2Gene_final, file = "Probe2Gene_final_ann.RData")
 #==============================================================================#
 
-# Get ENTREZ IDs
-library(org.Hs.eg.db)
-EntrezID <- AnnotationDbi::select(org.Hs.eg.db, 
-                                    keys = unique(Probe2Gene_final$Gene),
-                                    columns = c("ENTREZID", "SYMBOL"),
-                                    keytype = "SYMBOL")
-
-
-
-id <- rep(NA, length(Probe2Gene_final$Gene))
-for (gene in 1:length(Probe2Gene_final$Gene)){
-  temp <- EntrezID$ENTREZID[EntrezID$SYMBOL == Probe2Gene_final$Gene[gene]]
-  id[gene] <- temp[1]
-}
-
-Probe2Gene_final$EntrezID <- id
-Probe2Gene_final$EntrezID[is.na(Probe2Gene_final$EntrezID)] <- Probe2Gene_final$Gene[is.na(Probe2Gene_final$EntrezID)]
-
-
 
 ###############################################################################
 
@@ -129,6 +109,7 @@ Probe2Gene_final$EntrezID[is.na(Probe2Gene_final$EntrezID)] <- Probe2Gene_final$
 
 ###############################################################################
 
+# Histogram of CpGs per gene
 
 Probe2Gene_all <- unique(Probe2Gene_final[,1:2])
 
@@ -145,7 +126,7 @@ Probe2Gene_Intergenic <- unique(Probe2Gene_final[(Probe2Gene_final$Association =
 
 tail(sort(table(Probe2Gene_all$Gene)))
 
-
+# Make histogram
 p <- ggplot()+
   geom_histogram(data = as.data.frame(table(Probe2Gene_all$Gene)),
                  aes(x = Freq, fill = "Total"), 
@@ -167,19 +148,9 @@ p <- ggplot()+
   theme(legend.title = element_blank(),
         legend.position = "bottom")
 
+# Save plot
 ggsave(p, file = "nCpGsPerGene.png", width = 8, height = 6)
   
-ggplot()+
-  geom_histogram(data = as.data.frame(table(Probe2Gene_all$Gene)),
-                 aes(x = Freq), 
-                 bins = 50, alpha = 0.5, color = "white") +
-  xlim(0,100)+
-  xlab("# CpGs per gene") +
-  ylab("Count") +
-  scale_fill_brewer(palette = "Set1") +
-  theme_classic() +
-  theme(legend.title = element_blank())
-
 
 
 
