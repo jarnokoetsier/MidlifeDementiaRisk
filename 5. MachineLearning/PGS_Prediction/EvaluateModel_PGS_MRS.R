@@ -24,13 +24,9 @@ for (f in files){
 # Combine with PGS
 load("E:/Thesis/EXTEND/Methylation/PerFactor/CombineFactors/predictedScore_factors_EXTEND.RData")
 load("E:/Thesis/EXTEND/df_list.RData")
-
-
 PGS <- df_list$bayesr
 colnames(PGS) <- paste0(colnames(PGS), "_PGS")
 samples_test <- Y_test[Y_test$ID %in% rownames(PGS),]
-
-
 
 
 ###############################################################################
@@ -39,12 +35,13 @@ samples_test <- Y_test[Y_test$ID %in% rownames(PGS),]
 
 ###############################################################################
 
-
+# Prepare test data
 X_test <- cbind.data.frame(predictedScore_factors[samples_test$Basename,],
                            PGS[samples_test$ID,])
 Y_test <- samples_test
 all(rownames(X_test) == Y_test$Basename)
 
+# Make predictions: MRSs + PGSs
 methods <- c("EN", "sPLS", "RF")
 methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 scores <- c("CAIDE1", "CAIDE2", "LIBRA")
@@ -81,19 +78,16 @@ for (s in 1:length(scores)){
 plotDF_test$Method <- factor(plotDF_test$Method,
                              levels = methodNames)
 
-
 plotDF_test$Feature <- rep("MRS + PGS", nrow(plotDF_test))
 
 
 
-
-
-
+# Prepare test data
 X_test <- predictedScore_factors[samples_test$Basename,]
 Y_test <- samples_test
 all(rownames(X_test) == Y_test$Basename)
 
-
+# Make predictions: MRSs only
 methods <- c("EN", "sPLS", "RF")
 methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 scores <- c("CAIDE1", "CAIDE2", "LIBRA")
@@ -137,9 +131,8 @@ plotDF_test1$Method <- factor(plotDF_test1$Method,
 plotDF_test1$Feature <- rep("MRS", nrow(plotDF_test1))
 
 
+# Prepare data for plotting
 plotDF_test_all <- rbind.data.frame(plotDF_test, plotDF_test1)
-
-
 plotDF_test_all$Group <- paste0(plotDF_test_all$Score, "_", plotDF_test_all$Method)
 
 testDF <- plotDF_test_all %>%
@@ -153,11 +146,12 @@ testDF <- plotDF_test_all %>%
 testDF$Color <- as.character(testDF$Color)
 testDF$Color1 <- paste0(testDF$Color,"_",testDF$Feature)
 
-
+# Set colors
 colors <- c(RColorBrewer::brewer.pal(n = 8, name = "Reds")[6],
             RColorBrewer::brewer.pal(n = 8, name = "Oranges")[6],
             RColorBrewer::brewer.pal(n = 8, name = "PuRd")[6])
 
+# Make plot
 p <- ggplot(testDF) +
   geom_bar(aes(y = R2, x = Method, fill = Score, alpha = Feature), linewidth = 0.7, 
            position = position_dodge(), stat = "identity", color = "black") +
@@ -173,9 +167,11 @@ p <- ggplot(testDF) +
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank())
 
+# Save plot
 ggsave(p,file = "Evaluate_MRSPGS_test1.png", width = 8, height = 5)
 
 
+# Make alternative plot
 p <- ggplot(testDF) +
   #geom_segment(aes(y = 0, yend = R2, x = Method, xend = Method), linewidth = 1, color = "black") +
   geom_line(aes(y = R2, x = Method, group = Group, color = Color), linewidth = 1.5) +
@@ -193,6 +189,7 @@ p <- ggplot(testDF) +
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank())
 
+# Save alternative plot
 ggsave(p,file = "Evaluate_MRSPGS_test.png", width = 8, height = 5)
 
 

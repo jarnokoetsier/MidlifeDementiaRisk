@@ -20,14 +20,14 @@ load("~/Data/metaData_ageFil.RData")
 load("PerFactor/Y_test_factors.RData")
 load("PerFactor/Y_nonTest_factors.RData")
 
+# Prepare data
 Y_all <- rbind.data.frame(Y_test, Y_nonTest)
 Y_all$Basename <- rownames(Y_all)
 Y_all <- inner_join(dat[,c("ID", "Basename")], Y_all, by = c("Basename" = "Basename"))
 rownames(Y_all) <- Y_all$ID
-
 samples <- intersect(rownames(df_list$lasso), rownames(Y_all))
 
-
+# Find matching PGSs and risk factors
 PGS_factors <- list(
   BMI = c("BMI", "ExtremeBMI", "ObesityClass1", "ObesityClass2", 
           "ObesityClass3", "Overweight"),
@@ -68,6 +68,7 @@ models <- names(df_list)
 modelNames <- c("Lasso", "Lasso-sparse", "Ridge", 
                  "Bolt", "BayesR", "BayesR-shrink")
 
+# Calculate AUC
 AUC_df <- NULL
 for (i in 1:length(factors)){
   for (m in 1:length(models)){
@@ -88,8 +89,11 @@ for (i in 1:length(factors)){
 
 AUC_df$PGS <- factor(AUC_df$PGS, levels = unique(AUC_df$PGS))
 
+# Set colors
 colors <- c(RColorBrewer::brewer.pal(n = 8,"Dark2"),
             RColorBrewer::brewer.pal(n = 6,"Set2"))
+
+# Make plot
 p <- ggplot(AUC_df) +
   geom_bar(aes(x = PGS, y = AUC, fill = Factor, alpha = Model),
            stat = "identity", position = position_dodge()) +
@@ -104,4 +108,5 @@ p <- ggplot(AUC_df) +
         legend.title = element_blank(),
         legend.position = "bottom")
 
+# Save plot
 ggsave(p, file = "PGS/PGS_prediction.png", width = 10, height = 6)

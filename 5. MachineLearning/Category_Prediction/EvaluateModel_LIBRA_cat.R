@@ -162,6 +162,7 @@ aucDF_all_test$Method <- factor(aucDF_all_test$Method,
                                            "sPLS-DA (High Risk)",
                                            "Random Forest (High Risk)"))
 
+# Set colors
 colors <- c(brewer.pal(n = 5, name = "Reds")[c(3)],
             brewer.pal(n = 5, name = "Reds")[c(4)],
             brewer.pal(n = 5, name = "Reds")[c(5)],
@@ -170,7 +171,7 @@ colors <- c(brewer.pal(n = 5, name = "Reds")[c(3)],
             brewer.pal(n = 5, name = "Blues")[c(5)]
             )
 
-
+# Plot performance in cross-validation
 p <- ggplot() +
   geom_path(data = plotDF_all_CV, aes(y = Sensitivity, x = 1- Specificity,
                                       color = Method), 
@@ -191,10 +192,10 @@ p <- ggplot() +
                                      size = 10,
                                      face = "italic"))
 
-
+# Save plot
 ggsave(p, file = "LIBRA_Cat_Cor_AUC_CV.png", height = 5, width = 7.5)
 
-
+# Plot performance in test set
 p <- ggplot() +
   geom_path(data = plotDF_all_test, aes(y = Sensitivity, x = 1- Specificity,
                                         color = Method), 
@@ -215,7 +216,7 @@ p <- ggplot() +
                                      size = 10,
                                      face = "italic"))
 
-
+# Save plot
 ggsave(p, file = "LIBRA_Cat_Cor_AUC_test.png", height = 5, width = 7.5)
 
 
@@ -265,6 +266,7 @@ ObsPred_CV_all$Class <- factor(ObsPred_CV_all$Class,
 ObsPred_CV_all$Method <- factor(ObsPred_CV_all$Method,
                                 levels = methodNames)
 
+# Observed vs predicted in cross-validation
 p <- ggplot(ObsPred_CV_all) +
   geom_rect(ymin = -Inf, ymax = 0, xmin = -Inf, xmax = Inf,fill = "#FFF5F0", alpha = 0.5) +
   geom_rect(ymin = 0, ymax = 2, xmin = -Inf, xmax = Inf,fill = "#FEE0D2", alpha = 0.5) +
@@ -291,6 +293,7 @@ p <- ggplot(ObsPred_CV_all) +
                                      size = 10,
                                      face = "italic")) 
 
+# Save plot
 ggsave(p, file = "LIBRA_Cat_Cor_boxPlot_CV.png", height = 5, width = 7.5)
 
 
@@ -300,6 +303,7 @@ ObsPred_test_all$Class <- factor(ObsPred_test_all$Class,
 ObsPred_test_all$Method <- factor(ObsPred_test_all$Method,
                                   levels = methodNames)
 
+# Observed vs predicted in test set
 p <- ggplot(ObsPred_test_all) +
   geom_rect(ymin = -Inf, ymax = 0, xmin = -Inf, xmax = Inf,fill = "#FFF5F0", alpha = 0.5) +
   geom_rect(ymin = 0, ymax = 2, xmin = -Inf, xmax = Inf,fill = "#FEE0D2", alpha = 0.5) +
@@ -328,9 +332,10 @@ p <- ggplot(ObsPred_test_all) +
                                      size = 10,
                                      face = "italic")) 
 
+# Save plot
 ggsave(p, file = "LIBRA_Cat_Cor_boxPlot_test.png", height = 5, width = 7.5)
 
-
+# Make confusion matrix
 model <- "sPLS-DA"
 test <- ObsPred_test_all[ObsPred_test_all$Method == model,]
 test$obs <- rep("Intermediate Risk (0-2)", nrow(test))
@@ -423,6 +428,7 @@ plotDF_all$Method <- factor(plotDF_all$Method,
                             levels = methodNames)
 plotDF_all$X <- plotDF_all$R2 + ifelse(plotDF_all$Sig < 0.05, 0.01,NA)
 
+# Make plot
 p <- ggplot(plotDF_all)+
   geom_bar(aes(x = Name, y = R2, fill = Method),
            stat = "identity", position=position_dodge(), color = "black") +
@@ -445,5 +451,5 @@ p <- ggplot(plotDF_all)+
                                   face = "bold",
                                   size = 16))
 
-
+# Save plot
 ggsave(p, file = "LIBRA_Cat_Cor_whichFactors_test.png", height = 6, width = 10)

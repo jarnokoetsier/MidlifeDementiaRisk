@@ -35,6 +35,7 @@ colnames(PGS_test) <- samples_test$Basename
 
 ###############################################################################
 
+# Make predictions: CpGs + PGSs
 methods <- c("EN", "sPLS", "RF")
 methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 scores <- c("CAIDE1", "CAIDE2", "LIBRA")
@@ -93,7 +94,6 @@ for (s in 1:length(scores)){
   
 }
 
-
 plotDF$Method <- factor(plotDF$Method,
                         levels = methodNames)
 plotDF_test$Method <- factor(plotDF_test$Method,
@@ -105,6 +105,7 @@ plotDF$Feature <- rep("CpG + PGS", nrow(plotDF))
 
 
 
+# Make predictions: CpGs only
 methods <- c("EN", "sPLS", "RF")
 methodNames <- c("ElasticNet", "sPLS", "Random Forest")
 scores <- c("CAIDE1", "CAIDE2", "LIBRA")
@@ -161,7 +162,6 @@ for (s in 1:length(scores)){
   
 }
 
-
 plotDF1$Method <- factor(plotDF1$Method,
                         levels = methodNames)
 plotDF_test1$Method <- factor(plotDF_test1$Method,
@@ -171,9 +171,11 @@ plotDF_test1$Feature <- rep("CpG", nrow(plotDF_test1))
 plotDF1$Feature <- rep("CpG", nrow(plotDF1))
 
 
+# Prepare data for plotting
 plotDF_all <- rbind.data.frame(plotDF, plotDF1)
 plotDF_test_all <- rbind.data.frame(plotDF_test, plotDF_test1)
 
+# make plot
 p <- ggplot(plotDF_all) +
   geom_boxplot(aes(x = Method, y = R2, fill = Score, alpha = Feature), 
                outlier.shape = NA) +
@@ -202,11 +204,12 @@ p <- ggplot(plotDF_all) +
                                      face = "italic"))
 
 
+# Save plot
 ggsave(p,file = "Evaluate_CorPGS1.png", width = 8, height = 5)
 
 
 
-
+# Prepare data for alternative plot
 plotDF_test_all$Group <- paste0(plotDF_test_all$Score, "_", plotDF_test_all$Method)
 
 testDF <- plotDF_test_all %>%
@@ -220,6 +223,7 @@ testDF <- plotDF_test_all %>%
 testDF$Color <- as.character(testDF$Color)
 testDF$Color1 <- paste0(testDF$Color,"_",testDF$Feature)
 
+# Make plot
 p <- ggplot(testDF) +
   geom_line(aes(x = R2, y = Method, group = Group, color = Color), linewidth = 1.5) +
   geom_point(aes(x = R2,y = Method, shape = Feature, size = Feature, color = Color1)) +
@@ -234,6 +238,7 @@ p <- ggplot(testDF) +
   theme(legend.title = element_blank(),
         legend.position = "bottom")
 
+# Save plot
 ggsave(p,file = "Evaluate_CorPGS_test.png", width = 6, height = 6)
 
 
