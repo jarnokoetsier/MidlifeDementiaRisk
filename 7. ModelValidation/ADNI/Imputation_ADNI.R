@@ -1,3 +1,5 @@
+
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -9,7 +11,6 @@ library(missMDA)
 # Clear workspace and console
 rm(list = ls())
 cat("\014") 
-
 
 # Load data
 load("~/ADNI/ADNI_metadata_classes_640.Rdata")
@@ -56,11 +57,14 @@ for (p in 1:nPCs_CV){
     pred[j,p] <- X_ADNI_imp_CV[removeProbes[j,2], removeProbes[j,1]]
   }
 }
+# Save predicted value
 save(pred, file = "ADNI/pred_imp.RData")
 
-
+# Evaluate which number of PCs is the best
 test <- apply(pred,2,function(x) RMSE(obs = values,pred = x))
 optPC <- which.min(test) # 5 PCs
+
+# Perform imputation using optimal number of PCs
 X_ADNI_imp <- imputePCA(t(X_ADNI_mis),ncp = optPC)$completeObs
 save(X_ADNI_imp, file = "ADNI/X_ADNI_imp.RData")
 

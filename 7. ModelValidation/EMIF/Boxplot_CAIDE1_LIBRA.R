@@ -1,3 +1,5 @@
+
+# Load packages
 library(prospectr)
 library(tidyverse)
 library(caret)
@@ -10,7 +12,6 @@ cat("\014")
 # Load data
 load("EMIF/metaData_EMIF.RData")
 load("EMIF/predictedScore_factors_EMIF.RData")
-
 metaData_EMIF <- as.data.frame(metaData_EMIF)
 rownames(metaData_EMIF) <- metaData_EMIF$X
 
@@ -30,6 +31,7 @@ metaData_EMIF <- metaData_EMIF[setdiff(rownames(metaData_EMIF), converters_all),
 table(metaData_EMIF$CTR_Convert)
 table(metaData_EMIF$Diagnosis)
 
+# Filter meta data
 samples <- intersect(rownames(predictedScore_factors), rownames(metaData_EMIF))
 predictedScore_factors_fil <- predictedScore_factors[samples,]
 metaData_fil <- metaData_EMIF[samples,]
@@ -44,7 +46,7 @@ EpiCAIDE1 <- predict(fit, predictedScore_factors_fil)
 load("EMIF/Fit_CombineFactors_LIBRA_RF.RData")
 EpiLIBRA <- predict(fit, predictedScore_factors_fil)
 
-
+# Prepare data for plotting
 plot_LIBRA <- data.frame(Diagnosis = metaData_fil$Diagnosis,
                          Value = EpiLIBRA,
                          Score = rep("Epi-LIBRA", length(EpiLIBRA)))
@@ -57,6 +59,7 @@ plot_all <- rbind.data.frame(plot_LIBRA, plot_CAIDE)
 plot_all$Diagnosis[plot_all$Diagnosis == "NL"] <- "Control"
 plot_all$Diagnosis <- factor(plot_all$Diagnosis, levels = c("Control", "SCI", "MCI", "AD"))
 
+# Make plot
 p <- ggplot(plot_all) +
   geom_boxplot(aes(x = Diagnosis, y = Value, fill = Score), alpha = 0.5) +
   geom_jitter(aes(x = Diagnosis, y = Value, color = Score), width = 0.15) +
@@ -67,15 +70,18 @@ p <- ggplot(plot_all) +
   theme_bw() +
   theme(legend.position = "none")
 
+# Save plot
 ggsave(p, file = "Boxplot_LIBRA_CAIDE1.png", width = 6, height = 4)
 
+# Test for signficance:
 
+# Epi-CAIDE1
 test <- kruskal.test(Value ~ Diagnosis, data = plot_LIBRA)
 test
 pairwise.wilcox.test(plot_LIBRA$Value, plot_LIBRA$Diagnosis,
                      p.adjust.method = "BH")
 
-
+# Epi-LIBRA
 test <- kruskal.test(Value ~ Diagnosis, data = plot_CAIDE)
 test
 pairwise.wilcox.test(plot_CAIDE$Value, plot_CAIDE$Diagnosis,

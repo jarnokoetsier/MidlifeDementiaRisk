@@ -10,7 +10,6 @@ library(missMDA)
 rm(list = ls())
 cat("\014") 
 
-
 # Load data
 load("~/EMIF/lumi_dpval_EMIF.RData")
 load("~/EMIF/X_EMIF.RData")
@@ -53,13 +52,18 @@ for (p in 15:nPCs_CV){
   for (j in 1:100){
     pred[j,p] <- X_EMIF_imp_CV[removeProbes[j,2], removeProbes[j,1]]
   }
+  # Save predicted value
   save(pred, file = "EMIF/pred_imp2.RData")
 }
 
 
 load("EMIF/pred_imp.RData")
+
+# Evaluate which number of PCs is the best
 test <- apply(pred,2,function(x) RMSE(obs = values,pred = x))
 optPC <- which.min(test) # 15 PCs
+
+# Perform imputation using optimal number of PCs
 X_EMIF_imp <- imputePCA(t(X_EMIF_mis),ncp = optPC)$completeObs
 save(X_EMIF_imp, file = "EMIF/X_EMIF_imp.RData")
 

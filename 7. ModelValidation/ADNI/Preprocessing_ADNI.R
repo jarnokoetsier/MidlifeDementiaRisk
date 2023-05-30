@@ -184,7 +184,6 @@ X_ADNI <- methSet_allNorm[rownames(X_test),]
 sum(is.na(X_ADNI))
 save(X_ADNI, file = paste0(DataDir,"X_ADNI.RData"))
 
-
 # Get detection p-value
 lumi_dpval <- detectionP(RGset_all, type = "m+u")
 save(lumi_dpval, file = "lumi_dpval_ADNI.RData")

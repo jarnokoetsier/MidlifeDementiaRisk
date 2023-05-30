@@ -4,6 +4,7 @@
 
 ###############################################################################
 
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -16,11 +17,13 @@ library(pROC)
 rm(list = ls())
 cat("\014") 
 
+# Load data
 load("EMIF/X_train_EMIF.RData")
 load("EMIF/Y_train_EMIF.RData")
 load("EMIF/X_test_EMIF.RData")
 load("EMIF/Y_test_EMIF.RData")
 
+# Prepare data
 load("EMIF/metaData_fil.RData")
 rownames(metaData_fil) <- metaData_fil$X
 CSFbio <- metaData_fil[,c("Ptau_ASSAY_Zscore", "Ttau_ASSAY_Zscore", "AB_Zscore", "Age")]
@@ -28,25 +31,17 @@ colnames(CSFbio) <- c("Ptau_ASSAY_Zscore", "Ttau_ASSAY_Zscore", "AB_Zscore", "Ch
 samples <- rownames(CSFbio)[(!is.na(CSFbio$Ptau_ASSAY_Zscore)) & 
                               (!is.na(CSFbio$AB_Zscore)) &
                               (!is.na(CSFbio$Ttau_ASSAY_Zscore))]
-
 # MCI and NL only
-X_train <- X_train[Y_train$Diagnosis != "MCI",]
-Y_train <- Y_train[Y_train$Diagnosis != "MCI",]
-X_test <- X_test[Y_test$Diagnosis != "MCI",]
-Y_test<- Y_test[Y_test$Diagnosis != "MCI",]
+X_train <- X_train[Y_train$Diagnosis != "AD",]
+Y_train <- Y_train[Y_train$Diagnosis != "AD",]
+X_test <- X_test[Y_test$Diagnosis != "AD",]
+Y_test<- Y_test[Y_test$Diagnosis != "AD",]
 
-#X_train <- X_train[Y_train$Diagnosis == "MCI",]
-#Y_train <- Y_train[Y_train$Diagnosis == "MCI",]
-#X_test <- X_test[Y_test$Diagnosis == "MCI",]
-#Y_test<- Y_test[Y_test$Diagnosis == "MCI",]
-#Y_train$Y <- factor(ifelse(Y_train$MCI_Convert == 0 ,"Control","Convert"), levels = c("Control", "Convert"))
-#Y_test$Y <- factor(ifelse(Y_test$MCI_Convert == 0 ,"Control","Convert"), levels = c("Control", "Convert"))
+Y_train$Y <- factor(ifelse(Y_train$Diagnosis == "NL","Control","MCI"),
+                    levels = c("Control", "MCI"))
 
-Y_train$Y <- factor(ifelse(Y_train$Diagnosis == "NL","Control","AD"),
-                    levels = c("Control", "AD"))
-
-Y_test$Y <- factor(ifelse(Y_test$Diagnosis == "NL","Control","AD"),
-                   levels = c("Control", "AD"))
+Y_test$Y <- factor(ifelse(Y_test$Diagnosis == "NL","Control","MCI"),
+                   levels = c("Control", "MCI"))
 
 
 Y_train <- Y_train[intersect(samples, rownames(Y_train)),]
@@ -54,10 +49,6 @@ Y_test <- Y_test[intersect(samples, rownames(Y_test)),]
 
 X_train <- cbind.data.frame(X_train[rownames(Y_train),], CSFbio[rownames(Y_train),])
 X_test <- cbind.data.frame(X_test[rownames(Y_test),], CSFbio[rownames(Y_test),])
-
-
-
-
 
 table(Y_test$Y)
 table(Y_train$Y)
@@ -100,7 +91,6 @@ colnames(parameterGrid) <- c(".alpha", ".lambda")
 performance_metric = "ROC"
 MLmethod = "glmnet"
 
-
 # Actual training
 which(colnames(X_train) == "ChrAge")
 set.seed(123)
@@ -113,7 +103,7 @@ fit <- train(x = X_train[,-18],
              maximize = TRUE)
 
 # Save model
-save(fit, file = "EMIF/Fit_EMIF_AD_EN_CSFbio.RData")
+save(fit, file = "EMIF/Fit_EMIF_CI_EN_CSFbio.RData")
 
 # performance in CV
 trainResults <- fit$results
@@ -126,21 +116,21 @@ rocdf <- reportROC(gold = Y_test$Y, predictor = testPred$Convert, important = "s
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
-roc_test <- pROC::roc(Y_test$Y, testPred$AD)
+roc_test <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test)
 
 # Actual training
 set.seed(123)
 fit_wo <- train(x = X_train[,c("Ptau_ASSAY_Zscore", "AB_Zscore", "Ttau_ASSAY_Zscore", "ChrAge")],
-                y = Y_train$Y,
-                metric= performance_metric,
-                method = MLmethod,
-                tuneGrid = parameterGrid,
-                trControl = fitControl,
-                maximize = TRUE)
+             y = Y_train$Y,
+             metric= performance_metric,
+             method = MLmethod,
+             tuneGrid = parameterGrid,
+             trControl = fitControl,
+             maximize = TRUE)
 
 # Save model
-save(fit_wo, file = "EMIF/Fit_EMIF_AD_EN_CSFbioage.RData")
+save(fit_wo, file = "EMIF/Fit_EMIF_CI_EN_CSFbioage.RData")
 
 # Actual training
 set.seed(123)
@@ -153,16 +143,11 @@ fit_wo <- train(x = X_train[,c("Ptau_ASSAY_Zscore", "AB_Zscore", "Ttau_ASSAY_Zsc
                 maximize = TRUE)
 
 # Save model
-save(fit_wo, file = "EMIF/Fit_EMIF_AD_EN_CSFbioonly.RData")
+save(fit_wo, file = "EMIF/Fit_EMIF_CI_EN_CSFbioonly.RData")
 
-
-
-library(reportROC)
-rocdf <- reportROC(gold = Y_test$Y, predictor = testPred$Convert, important = "se")
-
+# Performance
 testPred <- predict(fit_wo, X_test, type = "prob")
-
-roc_test_wo <- pROC::roc(Y_test$Y, testPred$AD)
+roc_test_wo <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test_wo)
 
 
@@ -170,30 +155,20 @@ auc(roc_test_wo)
 set.seed(123)
 which(colnames(X_train) == "Age")
 fit_woa <- train(x = X_train[,-c(14,18)],
-                 y = Y_train$Y,
-                 metric= performance_metric,
-                 method = MLmethod,
-                 tuneGrid = parameterGrid,
-                 trControl = fitControl,
-                 maximize = TRUE)
+                y = Y_train$Y,
+                metric= performance_metric,
+                method = MLmethod,
+                tuneGrid = parameterGrid,
+                trControl = fitControl,
+                maximize = TRUE)
 
 # Save model
 save(fit_woa, file = "EMIF/Fit_EMIF_CI_EN_CSFbio_noage.RData")
 
+# Performance
 testPred <- predict(fit_woa, X_test, type = "prob")
-
-roc_test_woa <- roc(Y_test$Y, testPred$MCI)
+roc_test_woa <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test_woa)
-
-
-
-roc.test(roc_test, roc_test_wo)
-
-roc_test <- roc(Y_test$Y, X_test$Age)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, Y_test$Age)
-auc(roc_test)
 
 #*****************************************************************************#
 # sPLS
@@ -230,11 +205,9 @@ fit <- train(x = X_train[,-18],
 # Save model
 save(fit, file = "EMIF/Fit_EMIF_CI_sPLS_CSFbio.RData")
 
-
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
-
-roc_test <- roc(Y_test$Y, testPred$MCI)
+roc_test <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test)
 
 # Actual training
@@ -263,47 +236,35 @@ fit_wo <- train(x = X_train[,c("Ptau_ASSAY_Zscore", "AB_Zscore", "Ttau_ASSAY_Zsc
 # Save model
 save(fit_wo, file = "EMIF/Fit_EMIF_CI_sPLS_CSFbioonly.RData")
 
+# performance
 testPred <- predict(fit_wo, X_test, type = "prob")
-
-roc_test_wo <- roc(Y_test$Y, testPred$MCI)
+roc_test_wo <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test_wo)
 
 # Actual training
 set.seed(123)
 fit_woa <- train(x = X_train[,-c(14,18)],
-                 y = Y_train$Y,
-                 metric= performance_metric,
-                 method = MLmethod,
-                 tuneGrid = parameterGrid,
-                 trControl = fitControl,
-                 maximize = TRUE)
+                y = Y_train$Y,
+                metric= performance_metric,
+                method = MLmethod,
+                tuneGrid = parameterGrid,
+                trControl = fitControl,
+                maximize = TRUE)
 
 # Save model
 save(fit_woa, file = "EMIF/Fit_EMIF_CI_sPLS_CSFbio_noage.RData")
 
+# performance
 testPred <- predict(fit_woa, X_test, type = "prob")
-
-roc_test_woa <- roc(Y_test$Y, testPred$MCI)
+roc_test_woa <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test_woa)
 
-
-
-library(reportROC)
-rocdf <- reportROC(gold = Y_test$Y, predictor = testPred$MCI, important = "se")
-
-
-
-roc.test(roc_test, roc_test_wo)
-
-roc_test <- roc(Y_test$Y, X_test$Age)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, Y_test$Age)
-auc(roc_test)
 
 #*****************************************************************************#
 # RandomForest
 #*****************************************************************************#
+
+# Load packages
 library(e1071)
 library(ranger)
 library(dplyr)
@@ -342,8 +303,7 @@ save(fit, file = "EMIF/Fit_EMIF_CI_RF_CSFbio.RData")
 
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
-
-roc_test <- roc(Y_test$Y, testPred$MCI)
+roc_test <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test)
 
 # Number of randomly selected predictors
@@ -362,6 +322,7 @@ colnames(parameterGrid) <- c(".mtry", ".splitrule", ".min.node.size")
 # Use MSE as performance metric
 performance_metric = "ROC"
 MLmethod = "ranger"
+
 # Actual training
 set.seed(123)
 fit_wo <- train(x = X_train[,c("Ptau_ASSAY_Zscore", "AB_Zscore", "Ttau_ASSAY_Zscore", "ChrAge")],
@@ -391,6 +352,7 @@ colnames(parameterGrid) <- c(".mtry", ".splitrule", ".min.node.size")
 # Use MSE as performance metric
 performance_metric = "ROC"
 MLmethod = "ranger"
+
 # Actual training
 set.seed(123)
 fit_wo <- train(x = X_train[,c("Ptau_ASSAY_Zscore", "AB_Zscore", "Ttau_ASSAY_Zscore")],
@@ -404,9 +366,9 @@ fit_wo <- train(x = X_train[,c("Ptau_ASSAY_Zscore", "AB_Zscore", "Ttau_ASSAY_Zsc
 # Save model
 save(fit_wo, file = "EMIF/Fit_EMIF_CI_RF_CSFbioonly.RData")
 
+# Performance
 testPred <- predict(fit_wo, X_test, type = "prob")
-
-roc_test_wo <- roc(Y_test$Y, testPred$MCI)
+roc_test_wo <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test_wo)
 
 
@@ -428,46 +390,38 @@ performance_metric = "ROC"
 MLmethod = "ranger"
 set.seed(123)
 fit_woa <- train(x = X_train[,-c(14,18)],
-                 y = Y_train$Y,
-                 metric= performance_metric,
-                 method = MLmethod,
-                 tuneGrid = parameterGrid,
-                 trControl = fitControl,
-                 maximize = TRUE)
+                y = Y_train$Y,
+                metric= performance_metric,
+                method = MLmethod,
+                tuneGrid = parameterGrid,
+                trControl = fitControl,
+                maximize = TRUE)
 
 # Save model
 save(fit_woa, file = "EMIF/Fit_EMIF_CI_RF_CSFbio_noage.RData")
 
+# Performance
 testPred <- predict(fit_woa, X_test, type = "prob")
-
-roc_test_woa <- roc(Y_test$Y, testPred$MCI)
+roc_test_woa <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test_woa)
-
-
-
-roc.test(roc_test_woa, roc_test_wo)
-
-roc_test <- roc(Y_test$Y, X_test$Age)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, Y_test$Age)
-auc(roc_test)
 
 
 #*****************************************************************************#
 # Plotting
 #*****************************************************************************#
+
+# Test for difference in AUC
 load("EMIF/Fit_EMIF_CI_RF_CSFbio.RData")
 testPred <- predict(fit, X_test, type = "prob")
 
-load("EMIF/Fit_EMIF_CI_RF_CSFbioonly.RData")
+load("EMIF/Fit_EMIF_CI_sPLS_CSFbioonly.RData")
 testPred_wo <- predict(fit_wo, X_test, type = "prob")
 
-roc_test <- roc(Y_test$Y, testPred$MCI)
-roc_test_wo <- roc(Y_test$Y, testPred_wo$MCI)
-roc.test(roc_test, roc_test_wo)
+roc_test <- pROC::roc(Y_test$Y, testPred$MCI)
+roc_test_wo <- pROC::roc(Y_test$Y, testPred_wo$MCI)
+pROC::roc.test(roc_test, roc_test_wo)
 
-
+# Load all models
 load("EMIF/Fit_EMIF_CI_RF_CSFbio.RData")
 RF <- predict(fit, X_test, type = "prob")
 load("EMIF/Fit_EMIF_CI_RF_CSFbioonly.RData")
@@ -495,7 +449,7 @@ sPLS_woa <- predict(fit_woa, X_test, type = "prob")
 load("EMIF/Fit_EMIF_CI_sPLS_CSFbioage.RData")
 sPLS_wa <- predict(fit_wo, X_test, type = "prob")
 
-
+# Combine into data frame
 testDF <- data.frame(EN = EN$MCI,
                      sPLS = sPLS$MCI,
                      RF = RF$MCI,
@@ -516,10 +470,11 @@ testDF <- data.frame(EN = EN$MCI,
                      Ynum = ifelse(Y_test$Y == "MCI",1,0))
 
 
-
+# test for statistical significance
 model <- lm(Ynum ~ EN + Age + Sex, data = testDF)
 summary(model)
 
+# MRS + CSF
 score <- c("EN", "sPLS", "RF")
 scoreName <- c("ElasticNet", "sPLS-DA", "Random Forest")
 plotDF <- as.data.frame(testDF)
@@ -566,8 +521,7 @@ p <- ggplot(ROCplot) +
 ggsave(p, file = "EMIF/ROC_MCI_EMIF_all.png", width = 8, height = 5)
 
 
-
-
+# CSF w/o MRS
 score <- c("EN_wo", "sPLS_wo", "RF_wo")
 scoreName <- c("ElasticNet", "sPLS-DA", "Random Forest")
 plotDF <- as.data.frame(testDF)
@@ -614,8 +568,7 @@ p <- ggplot(ROCplot) +
 ggsave(p, file = "EMIF/ROC_MCI_EMIF_CSFonly.png", width = 8, height = 5)
 
 
-
-
+# MRS + CSF and CSF only
 score <- c("EN_wo", "sPLS_wo", "RF_wo", "EN", "sPLS", "RF")
 scoreName <- c("CSF (EN)", "CSF (sPLS-DA)", "CSF (RF)",
                "CSF + MRS (EN)", "CSF + MRS (sPLS-DA)", "CSF + MRS (RF)")
@@ -664,7 +617,7 @@ p <- ggplot(ROCplot) +
 ggsave(p, file = "EMIF/ROC_MCI_EMIF_combinedPlot.png", width = 8, height = 5)
 
 
-
+#CSF biomarkers + MRSs (w/o epi-age)
 score <- c("EN_woa", "sPLS_woa", "RF_woa")
 scoreName <- c("ElasticNet", "sPLS-DA", "Random Forest")
 plotDF <- as.data.frame(testDF)
@@ -711,7 +664,7 @@ p <- ggplot(ROCplot) +
 ggsave(p, file = "EMIF/ROC_MCI_EMIF_noage.png", width = 8, height = 5)
 
 
-
+# CSF biomarkers + age
 score <- c("EN_wa", "sPLS_wa", "RF_wa")
 scoreName <- c("ElasticNet", "sPLS-DA", "Random Forest")
 plotDF <- as.data.frame(testDF)
@@ -758,7 +711,7 @@ p <- ggplot(ROCplot) +
 ggsave(p, file = "EMIF/ROC_MCI_EMIF_age.png", width = 8, height = 5)
 
 
-
+# MRS only, CSF only, and MRS + CSF
 load("EMIF/Fit_EMIF_MCI_RF.RData")
 testDF$RF1 <- predict(fit, X_test[,1:14], type = "prob")$MCI
 load("EMIF/Fit_EMIF_MCI_EN.RData")
@@ -814,4 +767,5 @@ p <- ggplot(ROCplot) +
                                      face = "italic"))
 
 ggsave(p, file = "EMIF/ROC_MCI_EMIF_combinedPlot1.png", width = 8, height = 5)
+
 

@@ -77,6 +77,7 @@ library(missMDA)
 rm(list = ls())
 cat("\014") 
 
+# Load data
 load("EMIF/X_train_EMIF.RData")
 load("EMIF/Y_train_EMIF.RData")
 load("EMIF/X_test_EMIF.RData")
@@ -158,13 +159,8 @@ optAlpha <- fit$bestTune$alpha
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
+# AUC
 roc_test <- roc(Y_test$Y, testPred$AD)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, X_test$Age)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, Y_test$AB_Zscore)
 auc(roc_test)
 
 
@@ -202,7 +198,6 @@ fit <- train(x = X_train,
 # Save model
 save(fit, file = "EMIF/Fit_EMIF_AD_sPLS.RData")
 
-
 # performance in CV
 trainResults <- fit$results
 optK <- fit$bestTune$K
@@ -212,20 +207,15 @@ optKappa <- fit$bestTune$kappa
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
+# AUC
 roc_test <- roc(Y_test$Y, testPred$AD)
 auc(roc_test)
-
-roc_test <- roc(Y_test$Y, X_test$Age)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, Y_test$Age)
-auc(roc_test)
-
 
 #*****************************************************************************#
 # RandomForest
 #*****************************************************************************#
 
+# Load packages
 library(e1071)
 library(ranger)
 library(dplyr)
@@ -246,7 +236,6 @@ colnames(parameterGrid) <- c(".mtry", ".splitrule", ".min.node.size")
 # Use MSE as performance metric
 performance_metric = "ROC"
 MLmethod = "ranger"
-
 
 # Actual training
 set.seed(123)
@@ -269,20 +258,19 @@ opt_mtry <- fit$bestTune$mtry
 opt_splitrule <- fit$bestTune$splitrule
 opt_min.node.size = fit$bestTune$min.node.size
 
-
-
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
+# AUC
 roc_test <- roc(Y_test$Y, testPred$AD)
 auc(roc_test)
 
-roc_epiage <- roc(Y_test$Y, X_test$Age)
-auc(roc_epiage)
 
-roc_age <- roc(Y_test$Y, Y_test$Age)
-auc(roc_age)
+#*****************************************************************************#
+# Evaluate models
+#*****************************************************************************#
 
+# Load models
 load("EMIF/Fit_EMIF_AD_RF.RData")
 RF <- predict(fit, X_test, type = "prob")
 load("EMIF/Fit_EMIF_AD_EN.RData")
@@ -294,6 +282,7 @@ EpiCAIDE1 <- predict(fit, X_test)
 load("EMIF/Fit_CombineFactors_LIBRA_RF.RData")
 EpiLIBRA <- predict(fit, X_test)
 
+# Combine into data frame
 testDF <- data.frame(EN = EN$AD,
                      sPLS = sPLS$AD,
                      RF = RF$AD,
@@ -307,10 +296,11 @@ testDF <- data.frame(EN = EN$AD,
                      Ynum = ifelse(Y_test$Y == "AD",1,0))
 
 
-
+# Evaluate significance
 model <- lm(Ynum ~ EpiLIBRA + Age + Sex, data = testDF)
 summary(model)
 
+# Calculate sensitivities and specificities
 score <- c("EN", "sPLS", "RF","EpiCAIDE1", "EpiLIBRA", "EpiAge", "Age")
 scoreName <- c("ElasticNet", "sPLS-DA", "Random Forest", "Epi-CAIDE1", "Epi-LIBRA", "Epi-Age", "Age")
 plotDF <- as.data.frame(testDF)
@@ -327,6 +317,7 @@ for (i in 1:length(score)){
   aucValue[i] <- format(round(as.numeric(auc(test)),2),nsmall = 2)
 }
 
+# Format data for plotting
 plotAUC <- data.frame(AUC = paste0("AUC: ",aucValue),
                       Score = scoreName,
                       X = 0.9,
@@ -334,8 +325,10 @@ plotAUC <- data.frame(AUC = paste0("AUC: ",aucValue),
 
 ROCplot$Class <- factor(ROCplot$Class, levels = scoreName)
 
+# Set colors
 colors <- rev(c("#E6AB02","#6BAED6","#2171B5","#084594","#EF3B2C","#CB181D", "#99000D"))
-#colors <- rev(c("#E6AB02","#6BAED6","#2171B5","#084594"))
+
+# Make ROC curves
 p <- ggplot(ROCplot) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
   geom_path(aes(y = Sensitivity, x = 1- Specificity,
@@ -355,6 +348,7 @@ p <- ggplot(ROCplot) +
                                      size = 10,
                                      face = "italic"))
 
+# Save plot
 ggsave(p, file = "EMIF/ROC_AD_EMIF.png", width = 8, height = 5)
 
 ###############################################################################
@@ -363,6 +357,7 @@ ggsave(p, file = "EMIF/ROC_AD_EMIF.png", width = 8, height = 5)
 
 ###############################################################################
 
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -375,6 +370,7 @@ library(missMDA)
 rm(list = ls())
 cat("\014") 
 
+# Load data
 load("EMIF/X_train_EMIF.RData")
 load("EMIF/Y_train_EMIF.RData")
 load("EMIF/X_test_EMIF.RData")
@@ -457,20 +453,10 @@ optAlpha <- fit$bestTune$alpha
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
+# AUC
 roc_test <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test)
 
-roc_test <- roc(Y_test$Y, X_test$Age)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, Y_test$Age)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, Y_test$AB_Zscore)
-auc(roc_test)
-
-
-Y_test$AB_Zscore
 #*****************************************************************************#
 # sPLS
 #*****************************************************************************#
@@ -515,13 +501,8 @@ optKappa <- fit$bestTune$kappa
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
+# AUC
 roc_test <- roc(Y_test$Y, testPred$MCI)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, X_test$Age)
-auc(roc_test)
-
-roc_test <- roc(Y_test$Y, Y_test$Age)
 auc(roc_test)
 
 
@@ -529,6 +510,7 @@ auc(roc_test)
 # RandomForest
 #*****************************************************************************#
 
+# Load packages
 library(e1071)
 library(ranger)
 library(dplyr)
@@ -577,19 +559,16 @@ opt_min.node.size = fit$bestTune$min.node.size
 # Prediction in test set
 testPred <- predict(fit, X_test, type = "prob")
 
+# AUC
 roc_test <- roc(Y_test$Y, testPred$MCI)
 auc(roc_test)
 
-roc_epiage <- roc(Y_test$Y, X_test$Age)
-auc(roc_epiage)
 
-roc_age <- roc(Y_test$Y, Y_test$Age)
-auc(roc_age)
+#*****************************************************************************#
+# Evaluate models
+#*****************************************************************************#
 
-test123 <- roc.test(roc_test, roc_epiage)
-
-
-
+# Load models
 load("EMIF/Fit_EMIF_MCI_RF.RData")
 RF <- predict(fit, X_test, type = "prob")
 load("EMIF/Fit_EMIF_MCI_EN.RData")
@@ -601,6 +580,7 @@ EpiCAIDE1 <- predict(fit, X_test)
 load("EMIF/Fit_CombineFactors_LIBRA_RF.RData")
 EpiLIBRA <- predict(fit, X_test)
 
+# Combine into data frame
 testDF <- data.frame(EN = EN$MCI,
                      sPLS = sPLS$MCI,
                      RF = RF$MCI,
@@ -613,11 +593,11 @@ testDF <- data.frame(EN = EN$MCI,
                      Y = Y_test$Y,
                      Ynum = ifelse(Y_test$Y == "MCI",1,0))
 
-
-
+# Evaluate statistical significance
 model <- lm(Ynum ~ EpiLIBRA + Age + Sex, data = testDF)
 summary(model)
 
+# Calculate sensitivities and specificities
 score <- c("EN", "sPLS", "RF","EpiCAIDE1", "EpiLIBRA", "EpiAge", "Age")
 scoreName <- c("ElasticNet", "sPLS-DA", "Random Forest", "Epi-CAIDE1", "Epi-LIBRA", "Epi-Age", "Age")
 plotDF <- as.data.frame(testDF)
@@ -634,6 +614,7 @@ for (i in 1:length(score)){
   aucValue[i] <- format(round(as.numeric(auc(test)),2),nsmall = 2)
 }
 
+# Format data for plotting
 plotAUC <- data.frame(AUC = paste0("AUC: ",aucValue),
                       Score = scoreName,
                       X = 0.9,
@@ -641,8 +622,10 @@ plotAUC <- data.frame(AUC = paste0("AUC: ",aucValue),
 
 ROCplot$Class <- factor(ROCplot$Class, levels = scoreName)
 
+# Set colors
 colors <- rev(c("#E6AB02","#6BAED6","#2171B5","#084594","#EF3B2C","#CB181D", "#99000D"))
-#colors <- rev(c("#E6AB02","#6BAED6","#2171B5","#084594"))
+
+# Make ROC curves
 p <- ggplot(ROCplot) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
   geom_path(aes(y = Sensitivity, x = 1- Specificity,
@@ -662,6 +645,7 @@ p <- ggplot(ROCplot) +
                                      size = 10,
                                      face = "italic"))
 
+# save plot
 ggsave(p, file = "EMIF/ROC_MCI_EMIF1.png", width = 8, height = 5)
 
 

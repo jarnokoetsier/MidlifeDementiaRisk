@@ -4,7 +4,7 @@
 
 ################################################################################
 
-
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -43,26 +43,28 @@ load("EMIF/Fit_EMIF_MCI_sPLS.RData")
 # Get predictions
 predictions <- fit$pred
 
-# Get threshold
+# Get threshold: maximum geometric mean of sensitivities and specificities
 test <- pROC::roc(predictions$obs,predictions$MCI)
 threshold <- test$thresholds[which.max(sqrt(test$sensitivities*test$specificities))]
 pred <- factor(ifelse(predictions$MCI > threshold, "MCI", "Control"), levels = c("Control", "MCI"))
 
+# Confusion Matrix in cross-validation
 confusionMatrix(pred,predictions$obs, positive = "MCI")
 
 # Get observed and predicted value
 RF <- predict(fit, X_test, type = "prob")
 pred <- factor(ifelse(RF$MCI > threshold, "MCI", "Control"), levels = c("Control", "MCI"))
 obs <- Y_test$Y
+
+# Confusion Matrix in test set
 confusionMatrix(obs,pred, positive = "MCI")
 
-library(reportROC)
-reportROC(gold = Y_test$Y, predictor = RF$MCI, important = "se")
 
 #==============================================================================#
 # AD vs control
 #==============================================================================#
 
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -80,7 +82,7 @@ load("EMIF/Y_train_EMIF.RData")
 load("EMIF/X_test_EMIF.RData")
 load("EMIF/Y_test_EMIF.RData")
 
-# MCI and NL only
+# AD and NL only
 X_train <- X_train[Y_train$Diagnosis != "MCI",]
 Y_train <- Y_train[Y_train$Diagnosis != "MCI",]
 X_test <- X_test[Y_test$Diagnosis != "MCI",]
@@ -101,22 +103,22 @@ load("EMIF/Fit_EMIF_AD_sPLS.RData")
 # Get predictions
 predictions <- fit$pred
 
-# Get threshold
+# Get threshold: maximum geometric mean of sensitivities and specificities
 test <- pROC::roc(predictions$obs,predictions$AD)
 threshold <- test$thresholds[which.max(sqrt(test$sensitivities*test$specificities))]
 pred <- factor(ifelse(predictions$AD > threshold, "AD", "Control"), levels = c("Control", "AD"))
 
+# Confusion matrix in cross-validation
 confusionMatrix(pred,predictions$obs, positive = "AD")
 
 # Get observed and predicted value
 RF <- predict(fit, X_test, type = "prob")
 pred <- factor(ifelse(RF$AD > threshold, "AD", "Control"), levels = c("Control", "AD"))
 obs <- Y_test$Y
+
+# Confusion matrix in test set
 confusionMatrix(obs,pred, positive = "AD")
 
-
-library(reportROC)
-reportROC(gold = Y_test$Y, predictor = RF$AD, important = "se")
 
 #==============================================================================#
 # SCI vs control
@@ -133,6 +135,7 @@ library(missMDA)
 rm(list = ls())
 cat("\014") 
 
+# Load dtata
 load("EMIF/X_train_EMIF.RData")
 load("EMIF/Y_train_EMIF.RData")
 load("EMIF/X_test_EMIF.RData")
@@ -142,7 +145,7 @@ load("EMIF/Y_train_SCI_EMIF.RData")
 load("EMIF/X_test_SCI_EMIF.RData")
 load("EMIF/Y_test_SCI_EMIF.RData")
 
-# AD and NL only
+# Prepare data
 X_train1 <- rbind.data.frame(X_train[Y_train$Diagnosis == "NL",], X_train_SCI)
 Y_train1 <-  rbind.data.frame(Y_train[Y_train$Diagnosis == "NL",], Y_train_SCI)
 X_test1 <-  rbind.data.frame(X_test[Y_test$Diagnosis == "NL",], X_test_SCI)
@@ -164,30 +167,30 @@ load("EMIF/SCI_prediction/Fit_EMIF_SCIvsControl_sPLS.RData")
 # Get predictions
 predictions <- fit$pred
 
-# Get threshold
+# Get threshold: maximum geometric mean of sensitivities and specificities
 test <- pROC::roc(predictions$obs,predictions$SCI)
 threshold <- test$thresholds[which.max(sqrt(test$sensitivities*test$specificities))]
 pred <- factor(ifelse(predictions$SCI > threshold, "SCI", "Control"), levels = c("NL", "SCI"))
 
+# Confusion matrix in cross-validation
 confusionMatrix(pred,predictions$obs, positive = "SCI")
 
 # Get observed and predicted value
 RF <- predict(fit, X_test1, type = "prob")
 pred <- factor(ifelse(RF$SCI > threshold, "SCI", "NL"), levels = c("NL", "SCI"))
 obs <- Y_test1$Y
+
+# Confusion matrix in test set
 confusionMatrix(obs,pred, positive = "SCI")
 
-library(reportROC)
-reportROC(gold = Y_test1$Y, predictor = 1-RF$SCI, important = "se")
-
-auc(pROC::roc(Y_test1$Y, RF$SCI))
 
 ################################################################################
 
-# CSF only
+# MCI vs Control: CSF only
 
 ################################################################################
 
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -200,11 +203,13 @@ library(pROC)
 rm(list = ls())
 cat("\014") 
 
+# Load data
 load("EMIF/X_train_EMIF.RData")
 load("EMIF/Y_train_EMIF.RData")
 load("EMIF/X_test_EMIF.RData")
 load("EMIF/Y_test_EMIF.RData")
 
+# Prepare data
 load("EMIF/metaData_fil.RData")
 rownames(metaData_fil) <- metaData_fil$X
 CSFbio <- metaData_fil[,c("Ptau_ASSAY_Zscore", "Ttau_ASSAY_Zscore", "AB_Zscore", "Age")]
@@ -242,28 +247,29 @@ load("EMIF/Fit_EMIF_CI_RF_CSFbioonly.RData")
 # Get predictions
 predictions <- fit_wo$pred
 
-# Get threshold
+# Get threshold: maximum geometric mean of sensitivities and specificities
 test <- pROC::roc(predictions$obs,predictions$MCI)
 threshold <- test$thresholds[which.max(sqrt(test$sensitivities*test$specificities))]
 pred <- factor(ifelse(predictions$MCI > threshold, "MCI", "Control"), levels = c("Control", "MCI"))
 
+# Confusion matrix in cross-validation
 confusionMatrix(pred,predictions$obs, positive = "MCI")
 
 # Get observed and predicted value
 RF <- predict(fit_wo, X_test, type = "prob")
 pred <- factor(ifelse(RF$MCI > threshold, "MCI", "Control"), levels = c("Control", "MCI"))
 obs <- Y_test$Y
+
+# Confusion matrix in test set
 confusionMatrix(obs,pred, positive = "MCI")
 
-library(reportROC)
-reportROC(gold = Y_test$Y, predictor = RF$MCI, important = "se")
+################################################################################
+
+# MCI vs Control: CSF + MRS
 
 ################################################################################
 
-# CSF + MRS
-
-################################################################################
-
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -276,11 +282,13 @@ library(pROC)
 rm(list = ls())
 cat("\014") 
 
+# Load data
 load("EMIF/X_train_EMIF.RData")
 load("EMIF/Y_train_EMIF.RData")
 load("EMIF/X_test_EMIF.RData")
 load("EMIF/Y_test_EMIF.RData")
 
+# Prepare data
 load("EMIF/metaData_fil.RData")
 rownames(metaData_fil) <- metaData_fil$X
 CSFbio <- metaData_fil[,c("Ptau_ASSAY_Zscore", "Ttau_ASSAY_Zscore", "AB_Zscore", "Age")]
@@ -318,18 +326,18 @@ load("EMIF/Fit_EMIF_CI_RF_CSFbio.RData")
 # Get predictions
 predictions <- fit$pred
 
-# Get threshold
+# Get threshold: maximum geometric mean of sensitivities and specificities
 test <- pROC::roc(predictions$obs,predictions$MCI)
 threshold <- test$thresholds[which.max(sqrt(test$sensitivities*test$specificities))]
 pred <- factor(ifelse(predictions$MCI > threshold, "MCI", "Control"), levels = c("Control", "MCI"))
 
+# Confusion matrix in cross-validation
 confusionMatrix(pred,predictions$obs, positive = "MCI")
 
 # Get observed and predicted value
 RF <- predict(fit, X_test, type = "prob")
 pred <- factor(ifelse(RF$MCI > threshold, "MCI", "Control"), levels = c("Control", "MCI"))
 obs <- Y_test$Y
-confusionMatrix(obs,pred, positive = "MCI")
 
-library(reportROC)
-reportROC(gold = Y_test$Y, predictor = RF$MCI, important = "se")
+# Confusion matrix in test set
+confusionMatrix(obs,pred, positive = "MCI")
