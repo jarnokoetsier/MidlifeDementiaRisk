@@ -1,3 +1,8 @@
+# Clear workspace and console
+rm(list = ls())
+cat("\014") 
+gc()
+
 # Load packages
 library(readxl)
 library(tidyverse)
@@ -7,9 +12,10 @@ library(patchwork)
 # Set working directory
 setwd("E:/Thesis/EXTEND/Phenotypes")
 
-# Load data
+# Load CAIDE data
 load("CAIDE.Rdata")
 
+# Divide CAIDE into three categories
 CAIDE$Cat <- rep("Intermediate Risk", nrow(CAIDE))
 CAIDE$Cat[CAIDE$CAIDE < 4] <- "Low Risk"
 CAIDE$Cat[CAIDE$CAIDE > 7] <- "High Risk"
@@ -17,6 +23,7 @@ CAIDE$Cat <- factor(CAIDE$Cat, levels = c("Low Risk",
                                           "Intermediate Risk",
                                           "High Risk"))
 
+# Plot the age per CAIDE category
 p <- ggplot(CAIDE) +
   geom_rect(ymin = -Inf, ymax = 47, xmin = -Inf, xmax = Inf,fill = "#FFFFFF", alpha = 0.5) +
   geom_rect(ymin = 47, ymax = 53, xmin = -Inf, xmax = Inf,fill = "#F0F0F0", alpha = 0.5) +
@@ -41,4 +48,5 @@ p <- ggplot(CAIDE) +
                                      size = 10,
                                      face = "italic")) 
 
+# Save plot
 ggsave(p, file = "CAIDE1_Boxplot_Age.png", height = 3.9, width = 7)

@@ -1,3 +1,7 @@
+# Clear workspace and console
+rm(list = ls())
+cat("\014") 
+gc()
 
 # Load packages
 library(readxl)
@@ -7,8 +11,8 @@ library(tidyverse)
 setwd("E:/Thesis/EXTEND/Phenotypes")
 
 # Load data
-metadata<-read.csv("extend_pheno_all.csv")
-meth_ID<-read.csv("methylation_phenotype_oct2020.csv")
+metadata <-read.csv("extend_pheno_all.csv")
+meth_ID <-read.csv("methylation_phenotype_oct2020.csv")
 
 # Select subset
 meth_ID <- meth_ID[,c("Basename","IID","Chip","Position","Plate")]   
