@@ -9,12 +9,11 @@ library(data.table)
 library(corrr)
 library(ggdendroplot)
 
-# Load PGS
+# Load PGSs
 load("E:/Thesis/EXTEND/df_list.RData")
-
-
 PGSresult <- df_list$bayesr
 
+# Change names of PGSs
 PGS_names <- c("AD (w/o APOE)", "AD (stage I)", "AD (stage I-II)", "Adiponectin", "Alchol consumption",
                "ASD", "BD", "BL", "BMI", "BW", "BW (fetal genetics)", "BW (maternal genetics)",
                "CAD", "Childhood obsesity", "Chronotype", "CKD (European)", "CKD (trans-ethnic)",
@@ -26,6 +25,10 @@ PGS_names <- c("AD (w/o APOE)", "AD (stage I)", "AD (stage I-II)", "Adiponectin"
                "TG", "WC", "WHR")
 
 colnames(PGSresult) <- PGS_names
+
+#*****************************************************************************#
+#   PGS-PGS correlations
+#*****************************************************************************#
 
 # Calculate correlations
 corrDF <- as.data.frame(correlate(PGSresult, diagonal = 1, method = "spearman"))
@@ -67,21 +70,22 @@ p <- dendroPlot + main +
   plot_layout(nrow = 2, ncol = 1,
               heights = c(1,6))
 
-
+# Save plots
 setwd("E:/Thesis/EXTEND/Phenotypes")
 ggsave(p, file = "PGS_correlations.png", width = 11, height = 10)
 
 
 
-
+#*****************************************************************************#
+#   PGS-Phenotype correlations
+#*****************************************************************************#
 
 # samples
 famFile <- fread("E:/Thesis/EXTEND/Genotypes/ChrBPData/Output_all/FINAL/EXTEND_PostImpute_FINAL_bp_dup.fam")
 
-
+# Load meta data
 setwd("E:/Thesis/EXTEND/Phenotypes")
 load("metaData_ageFil.Rdata")
-
 
 # High Education
 Education <- ifelse(dat$None.of.the.above == 1,1,0)
@@ -148,7 +152,6 @@ HeartDisease <- ifelse(dat$Heart.Disease==1,1,0)
 # Kidney Disease
 KidneyDisease <- ifelse(dat$Kidney..Disease==1,1,0)
 
-
 # Age
 Age<- rep(NA,nrow(dat))
 Age[dat$Age < 47] <- 0
@@ -164,8 +167,7 @@ rownames(APOEstatus) <- APOEstatus$sampleID
 APOEstatus <- APOEstatus[dat$ID,]
 APOE <- ifelse(APOEstatus$e4 == 0,0,1)
 
-
-
+# Combine factors
 Y_all <- data.frame(Education,
                     SysBP,
                     BMI,
@@ -186,9 +188,10 @@ Y_all <- data.frame(Education,
 
 rownames(Y_all) <- dat$ID
 
-
+# Select samples
 Y_PGS <- Y_all[famFile$V2,]
 
+# Change names of PGSs for plotting
 PGS_names <- c("AD (w/o APOE)", "AD (stage I)", "AD (stage I-II)", "Adiponectin", "Alchol consumption",
                "ASD", "BD", "BL", "BMI", "BW", "BW (fetal genetics)", "BW (maternal genetics)",
                "CAD", "Childhood obsesity", "Chronotype", "CKD (European)", "CKD (trans-ethnic)",
@@ -199,13 +202,13 @@ PGS_names <- c("AD (w/o APOE)", "AD (stage I)", "AD (stage I-II)", "Adiponectin"
                "SHR", "Sleep duration", "T2D", "TC",
                "TG", "WC", "WHR")
 
-
+# Calculate correlations
 plotCor_all <- NULL
 plotSig_all <- NULL
 for (m in 1:length(df_list)){
 
-  corMatrix <- matrix(NA, nrow = ncol(df_list[[m]]), ncol = ncol(Y_PGS))
-  sigMatrix <- matrix(NA, nrow = ncol(df_list[[m]]), ncol = ncol(Y_PGS))
+  corMatrix <- matrix(NA, nrow = ncol(df_list[[m]]), ncol = ncol(Y_PGS)) # correlation coefficient
+  sigMatrix <- matrix(NA, nrow = ncol(df_list[[m]]), ncol = ncol(Y_PGS)) # correlation significance
   for (i in 1:ncol(Y_PGS)){
     sigMatrix[,i] <- apply(df_list[[m]],2,function(x){cor.test(x,Y_PGS[,i], method = "spearman",
                                                                use = "pairwise.complete.obs")$p.value})
@@ -222,11 +225,9 @@ for (m in 1:length(df_list)){
   plotCor <- gather(as.data.frame(corMatrix))
   plotCor$key1 <- rep(rownames(corMatrix), ncol(corMatrix))
   plotCor$Method <- rep(names(df_list)[m], nrow(plotCor))
-  
   plotCor_all <- rbind.data.frame(plotCor_all, plotCor)
   
-  
-
+  # Change column names
   colnames(sigMatrix) <- colnames(Y_PGS)
   colnames(sigMatrix) <- c("Education", "Syst. BP", "BMI", "Total Chol." , "Physical Inact.", "Healthy Diet", "Smoking",
                            "L-M Alcohol", "Depression", "Type II Diabetes", "HDL Chol.", "Heart Disease", "Kidney Disease",
@@ -240,7 +241,6 @@ for (m in 1:length(df_list)){
   
   plotSig_all <- rbind.data.frame(plotSig_all, plotSig)
 }
-
 
 plotCor_all$pvalue <- plotSig_all$value
 plotCor_all$FDR <- p.adjust(plotCor_all$pvalue, method = "fdr")
@@ -265,7 +265,7 @@ main <- ggplot(plotCor_all[plotCor_all$Method == "bayesr-shrink",]) +
   #theme(axis.text.x = element_text(angle = 90, vjust = 0, hjust = 1))
 
 
-
+# Side plot: to which score belongs the factor
 whichScore <- data.frame(
   Factor <- c(c("Age", "Sex", "BMI", "Education", "Total Chol.", 
               "Physical Inact.", "Syst. BP"),
@@ -290,15 +290,16 @@ bottom <- ggplot(whichScore) +
         panel.background = element_rect(fill = "#DCDCDC"),
         legend.position = "none")
 
+# Combine plots
 p <- main + bottom + 
 plot_layout(nrow = 2, ncol = 1,
             heights = c(10,1))
-
+# Save plot
 setwd("E:/Thesis/EXTEND/Phenotypes")
 ggsave(p, file = "PRS_Score_Cor.png", width = 8, height = 10)
 
 
-# Horizontal
+# Horizontal Version
 
 # Main correlation plot
 main <- ggplot(plotCor_all[plotCor_all$Method == "bayesr-shrink",]) +
@@ -317,7 +318,7 @@ main <- ggplot(plotCor_all[plotCor_all$Method == "bayesr-shrink",]) +
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
 
-
+# Side plot: to which score belongs the factor
 whichScore <- data.frame(
   Factor <- c(c("Age", "Sex", "BMI", "Education", "Total Chol.", 
                 "Physical Inact.", "Syst. BP"),
@@ -342,9 +343,11 @@ bottom <- ggplot(whichScore) +
         panel.background = element_rect(fill = "#DCDCDC"),
         legend.position = "none")
 
+# Combine plots
 p <- bottom + main+
   plot_layout(nrow = 1, ncol = 2,
               widths = c(1,8))
 
+# Save plots
 setwd("E:/Thesis/EXTEND/Phenotypes")
 ggsave(p, file = "PRS_Score_Cor_horizontal.png", width = 10, height = 6)

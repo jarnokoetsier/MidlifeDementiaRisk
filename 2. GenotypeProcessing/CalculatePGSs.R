@@ -3,19 +3,19 @@
 rm(list = ls())
 cat("\014") 
 
-
-# Install PRSMultiTrait package
-#devtools::install_github("Rrtk2/PRS-multi-trait/Package/PRSMultiTrait")
-library("PRSMultiTrait")
-#PRSMultiTrait::installDependenciesAndData()
-
+# load packages
 library(data.table)
 library(tidyverse)
+
+# Install and Load PRSMultiTrait package
+devtools::install_github("Rrtk2/PRS-multi-trait/Package/PRSMultiTrait")
+library("PRSMultiTrait")
+PRSMultiTrait::installDependenciesAndData()
+
+# Load .fam file
 famFile <- fread("E:/Thesis/EXTEND/Genotypes/ChrBPData/Output_all/FINAL/EXTEND_PostImpute_FINAL_bp_dup.fam")
 
-
-
-#C:\Users\Gebruiker\AppData\Local\R\win-library\4.2\PRSMultiTrait\Core\Internal_files\Predict
+# Calculate PGSs
 getManifest()
 Manifest_env$Traits <- Manifest_env$Ref_gwas_manifest$short
 Traits <- Manifest_env$Traits[Manifest_env$Ref_gwas_manifest$processed == 2]
@@ -28,19 +28,19 @@ for (m in 1:length(Models)){
   
   if ((Models[m] != "bayesr-shrink") & (Models[m] != "lasso-sparse")){
     colnames(traitDF) <- str_remove(colnames(traitDF), paste0("_",Models[m]))
-  } else{
+  } 
+  if (Models[m] != "bayesr-shrink"){
     colnames(traitDF) <- str_remove(colnames(traitDF), "_bayesr.shrink")
+  }
+  if (Models[m] != "lasso-sparse"){
     colnames(traitDF) <- str_remove(colnames(traitDF), "_lasso.sparse")
   }
-  
-  #colnames(traitDF) <- Traits
   rownames(traitDF) <- famFile$V2
   df_list[[m]] <- traitDF
 }
 names(df_list) <- Models
 
-
-
+# Save output
 save(df_list, file = "E:/Thesis/EXTEND/df_list.RData")
 
 
