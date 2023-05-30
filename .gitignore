@@ -8,7 +8,7 @@
 *.html
 
 # Ignore RData files
-*.RData
+#*.RData
 
 # Ignore .Rhistory files
 .Rhistory
