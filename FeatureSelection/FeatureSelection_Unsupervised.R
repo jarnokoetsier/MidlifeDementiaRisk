@@ -1,4 +1,8 @@
 
+# Clear workspace and console
+rm(list = ls())
+cat("\014") 
+
 # Load packages
 library(glmnet)
 library(spls)
@@ -13,32 +17,25 @@ library(pROC)
 # Set direcotries
 DataDir <- "Data/"
 
-# Load data
-load(paste0(DataDir,"CVindex_CAIDE1.RData"))
+# Load data:
 
+# Data matrices:
 load(paste0(DataDir,"X_CAIDE1.RData"))
 load(paste0(DataDir,"X_CAIDE2.RData"))
 load(paste0(DataDir,"X_LIBRA.RData"))
 load(paste0(DataDir,"X_nonTest.RData"))
 load(paste0(DataDir,"X_test_Cor.RData"))
 
+# Target variables:
 load(paste0(DataDir,"Y_CAIDE1.RData"))
 load(paste0(DataDir,"Y_CAIDE2.RData"))
 load(paste0(DataDir,"Y_LIBRA.RData"))
 load(paste0(DataDir,"Y_nonTest.RData"))
 load(paste0(DataDir,"Y_test.RData"))
 
-load(paste0(DataDir,"cellType.RData"))
-
-# Load machine learning functions
-source("FUN_MachineLearning.R")
-
-# Prepare data
-X_train = log2(X_CAIDE1_CorCV/(1-X_CAIDE1_CorCV))
-Y_train = Y_CAIDE1
-
 # Test if samples are in correct order
 all(colnames(X_train) == Y_CAIDE1$Basename)
+
 
 ###############################################################################
 
@@ -69,6 +66,7 @@ save(X_CAIDE2_var, file = "X_CAIDE2_var.RData")
 save(X_LIBRA_var, file = "X_LIBRA_var.RData")
 save(X_test_var, file = "X_test_var.RData")
 
+# Clear workspace
 rm(X_nonTest_var)
 rm(X_CAIDE1_var)
 rm(X_CAIDE2_var)
@@ -78,6 +76,7 @@ rm(X_test_var)
 #*****************************************************************************#
 # M-values
 #*****************************************************************************#
+
 # Convert Beta to M-values
 X_nonTest_M <- log2(X_nonTest/(1-X_nonTest))
 
@@ -100,6 +99,7 @@ save(X_CAIDE2_varM, file = "X_CAIDE2_varM.RData")
 save(X_LIBRA_varM, file = "X_LIBRA_varM.RData")
 save(X_test_varM, file = "X_test_varM.RData")
 
+# Clear workspace
 rm(X_nonTest_varM)
 rm(X_CAIDE1_varM)
 rm(X_CAIDE2_varM)
@@ -137,6 +137,7 @@ for (i in 1:8){
   res <- cbind(res, residualValues)
 }
 
+# Save residual values
 save(res, file = "res_all.RData")
 
 # Select features
@@ -158,7 +159,7 @@ save(X_CAIDE2_varMCor, file = "X_CAIDE2_varMCor.RData")
 save(X_LIBRA_varMCor, file = "X_LIBRA_varMCor.RData")
 save(X_test_varMCor, file = "X_test_varMCor.RData")
 
-
+# Clear workspace
 rm(X_nonTest_varMCor)
 rm(X_CAIDE1_varMCor)
 rm(X_CAIDE2_varMCor)
@@ -191,6 +192,7 @@ save(X_CAIDE2_varCor, file = "X_CAIDE2_varCor.RData")
 save(X_LIBRA_varCor, file = "X_LIBRA_varCor.RData")
 save(X_test_varCor, file = "X_test_varCor.RData")
 
+# Clear workspace
 rm(X_nonTest_varCor)
 rm(X_CAIDE1_varCor)
 rm(X_CAIDE2_varCor)
@@ -229,12 +231,12 @@ save(X_CAIDE2_S, file = "X_CAIDE2_S.RData")
 save(X_LIBRA_S, file = "X_LIBRA_S.RData")
 save(X_test_S, file = "X_test_S.RData")
 
+# Clear workspace
 rm(X_nonTest_S)
 rm(X_CAIDE1_S)
 rm(X_CAIDE2_S)
 rm(X_LIBRA_S)
 rm(X_test_S)
-
 
 
 ###############################################################################
@@ -272,4 +274,177 @@ save(X_CAIDE1_PC, file = "X_CAIDE1_PC.RData")
 save(X_CAIDE2_PC, file = "X_CAIDE2_PC.RData")
 save(X_LIBRA_PC, file = "X_LIBRA_PC.RData")
 save(X_test_PC, file = "X_test_PC.RData")
+
+# Clear workspace
+rm(X_nonTest_PC)
+rm(X_CAIDE1_PC)
+rm(X_CAIDE2_PC)
+rm(X_LIBRA_PC)
+rm(X_test_PC)
+
+###############################################################################
+
+# KS-like feature selection
+
+###############################################################################
+
+# Convert to M-values
+X_nonTest_M <- log2(X_nonTest/(1-X_nonTest))
+
+
+# Get groups: 
+# for each of these groups were are going the select the most representative features:
+
+# Get three bins based on the standard deviation
+t1 <- quantile(plot_all$sdM,0.33)
+t2 <- quantile(plot_all$sdM,0.67)
+
+# Island vs open sea vs shelf or shore
+probe_annotation$Relation_to_Island[(probe_annotation$Relation_to_Island != "Island") &
+                                      (probe_annotation$Relation_to_Island != "OpenSea")] <- "ShelforShore"
+# Make groups
+Group <- data.frame(CpG = probe_annotation$ID,
+                    Group = paste(probe_annotation$Class,
+                                  probe_annotation$Relation_to_Island, 
+                                  probe_annotation$Type, sep = "_"))
+
+Group <- inner_join(Group, plot_all, by = c("CpG" = "ID"))
+Group$Bins <- rep("Intermediate", nrow(Group))
+Group$Bins[Group$sdM < t1] <- "Low"
+Group$Bins[Group$sdM > t2] <- "High"
+Group$Group1 <- paste0(Group$Group, "_", Group$Bins)
+
+# Save probe groups
+save(Group, file = "Group.RData")
+
+# Calculate the number of features to select from each group
+n <- 20000 # Total number of selected features
+uniqueGroups <- unique(Group$Group1)
+nFeatures <- rep(NA, length(uniqueGroups))
+for (i in 1:length(uniqueGroups)){
+  nFeatures[i] <- round(n*(table(Group$Group1)[uniqueGroups[i]]/sum(table(Group$Group1))))
+}
+nFeatures[which.max(nFeatures)] <- nFeatures[which.max(nFeatures)]-(n - sum(nFeatures))
+names(nFeatures) <- uniqueGroups
+nFeatures
+
+# Make copy of data
+dataMatrix_copy <- X_nonTest_M
+
+# remove object
+rm(all_X)
+rm(all_Y)
+rm(cellType)
+rm(dat)
+rm(methSet_allNorm_fil)
+rm(plot_all)
+rm(probe_ann_fil)
+rm(probe_annotation)
+rm(X_nonTest)
+rm(X_nonTest_M)
+rm(Y_nonTest)
+rm(i)
+rm(n)
+rm(t1)
+rm(t2)
+gc()
+
+nFeatures1 <- nFeatures
+
+
+output <- NULL
+for (i in 1:length(uniqueGroups)){
+  
+  # Filter data for CpG in group
+  dataMatrix_copy_fil <- dataMatrix_copy[rownames(dataMatrix_copy) %in% Group$CpG[Group$Group1 == uniqueGroups[i]],]   
+  
+  # Seed probe (most variable probe)
+  cpg_var <- apply(dataMatrix_copy_fil, 1, var)
+  seedProbe <- names(cpg_var)[which.max(cpg_var)]
+  
+  # Make copy of data
+  dataMatrix = dataMatrix_copy_fil
+  nFeatures = nFeatures1[i]
+  
+  # Make matrix to save correlations
+  cor_matrix <- matrix(NA, nrow(dataMatrix), nFeatures-1)
+  rownames(cor_matrix) <- rownames(dataMatrix)
+  
+  # Make vector to save feature set
+  newProbe <- rep(NA, nFeatures)
+  newProbe[1] <- seedProbe
+  
+  # Start selecting features
+  for (j in 1:nFeatures){
+    
+    # Calculate correlations between seed probe and all other probes
+    cor_matrix[,j] <- apply(dataMatrix,1,function(x){cor(x,dataMatrix[newProbe[j],],
+                                                         method = "spearman")})
+    
+    # Add most uncorrelated probe to feature set
+    temp <- apply(as.data.frame(abs(cor_matrix[,1:j])), 1, max)
+    newProbe[j+1] <- rownames(cor_matrix)[which.min(temp)]
+    
+    # Remove all highly correlated probes: keep probes with cor < 0.5
+    cor_matrix <- cor_matrix[abs(cor_matrix[,j]) < 0.8,]
+    dataMatrix <- dataMatrix[rownames(cor_matrix),]
+  }
+  
+  output <- c(output,newProbe)
+  save(output, file = "probesOutput.RData")
+}
+
+# Perform again on the 20,000 selected probes
+dataMatrix_copy <- X_nonTest_M[output, ]
+
+# Seed probe (most variable probe)
+cpg_var <- apply(dataMatrix_copy_fil, 1, var)
+seedProbe <- names(cpg_var)[which.max(cpg_var)]
+
+# Make copy of data
+dataMatrix = dataMatrix_copy_fil
+nFeatures = nFeatures1[i]
+
+# Make matrix to save correlations
+cor_matrix <- matrix(NA, nrow(dataMatrix), nFeatures-1)
+rownames(cor_matrix) <- rownames(dataMatrix)
+
+# Make vector to save feature set
+newProbe <- rep(NA, nFeatures)
+newProbe[1] <- seedProbe
+
+# Start selecting features
+for (j in 1:10000){
+  
+  # Calculate correlations between seed probe and all other probes
+  cor_matrix[,j] <- apply(dataMatrix,1,function(x){cor(x,dataMatrix[newProbe[j],],
+                                                       method = "spearman")})
+  
+  # Add most uncorrelated probe to feature set
+  temp <- apply(as.data.frame(abs(cor_matrix[,1:j])), 1, max)
+  newProbe[j+1] <- rownames(cor_matrix)[which.min(temp)]
+  
+  # Remove all highly correlated probes: keep probes with cor < 0.5
+  cor_matrix <- cor_matrix[abs(cor_matrix[,j]) < 0.8,]
+  dataMatrix <- dataMatrix[rownames(cor_matrix),]
+}
+
+probes<- newProbe
+save(probes, file = "probesOutput_final.RData")
+
+
+# Select features from data
+X_nonTest_KS <- X_nonTest_KS[probes, ]
+X_CAIDE1_KS <- X_CAIDE1[probes, ]
+X_CAIDE2_KS <- X_CAIDE2[probes, ]
+X_LIBRA_KS <- X_LIBRA[probes, ]
+X_test_KS <- X_test[probes, ]
+
+# Save data
+save(X_nonTest_KS, file = "X_nonTest_KS.RData")
+save(X_CAIDE1_KS, file = "X_CAIDE1_KS.RData")
+save(X_CAIDE2_KS, file = "X_CAIDE2_KS.RData")
+save(X_LIBRA_KS, file = "X_LIBRA_KS.RData")
+save(X_test_KS, file = "X_test_KS.RData")
+
 

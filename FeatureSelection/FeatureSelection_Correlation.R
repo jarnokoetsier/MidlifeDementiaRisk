@@ -79,10 +79,12 @@ while (length(finalProbes) > 10000){
   }
 }
 
+# Select features from data
 X_nonTest_Cor <- X_nonTest[finalProbes, ]
 X_CAIDE1_Cor <- X_CAIDE1[finalProbes, ]
 X_test_Cor <- X_test[finalProbes, ]
 
+# Save data matrix
 save(X_nonTest_Cor, file = "CAIDE1_Cor/X_nonTest_Cor.RData")
 save(X_CAIDE1_Cor, file = "CAIDE1_Cor/X_CAIDE1_Cor.RData")
 save(X_test_Cor, file = "CAIDE1_Cor/X_test_Cor.RData")
@@ -130,7 +132,7 @@ save(correlations, file = "LIBRA_Cor/correlations_LIBRAfactors.RData")
 
 # Select top correlated features for each factor
 probes <- list()
-for (p in 1:7){
+for (p in 1:ncol(correlations)){
   probes[[p]] <- names(tail(sort(abs(correlations[,p])),1050))
 }
 
@@ -141,19 +143,19 @@ while (length(finalProbes) > 10000){
   probes[[n]] <- probes[[n]][-1]
   finalProbes <- unique(unlist(probes))
   
-  if (n < 7){
+  if (n < ncol(correlations)){
     n = n + 1
   } else {
     n = 1
   }
 }
 
-# Extract data
+# Select features from data
 X_nonTest_CorL <- X_nonTest[finalProbes, ]
-X_LIBRA_CorL <- X_CAIDE1[finalProbes, ]
+X_LIBRA_CorL <- X_LIBRA[finalProbes, ]
 X_test_CorL <- X_test[finalProbes, ]
 
-# Save data
+# Save data matrix
 save(X_nonTest_CorL, file = "LIBRA_Cor/X_nonTest_CorL.RData")
 save(X_LIBRA_CorL, file = "LIBRA_Cor/X_LIBRA_CorL.RData")
 save(X_test_CorL, file = "LIBRA_Cor/X_test_CorL.RData")
@@ -166,15 +168,15 @@ for (j in colnames(correlations)){
 CVProbes <- unique(unlist(CVProbes))
 
 X_LIBRA_CorLCV <- X_LIBRA[CVProbes, ]
-save(X_LIBRA_CorCV, file = "LIBRA_Cor/X_LIBRA_CorLCV.RData")
+save(X_LIBRA_CorLCV, file = "LIBRA_Cor/X_LIBRA_CorLCV.RData")
 
 
 #*****************************************************************************#
-# CAIDE1
+# CAIDE2
 #*****************************************************************************#
 
 # Load data
-load(paste0(DataDir,"X_CAIDE2.Rdata"))
+load(paste0(DataDir,"X_CAIDE2.RData"))
 load(paste0(DataDir,"Y_CAIDE2.RData"))
 load(paste0(DataDir,"X_nonTest.RData"))
 load(paste0(DataDir,"Y_nonTest.RData"))
@@ -197,11 +199,11 @@ for (i in 1:ncol(factors)) {
 }
 rownames(correlations) <- rownames(X_CAIDE2)
 colnames(correlations) <- colnames(factors)
-save(correlations, file = paste0(DataDir,"correlations_CAIDE2factors.RData"))
+save(correlations, file = "CAIDE2_Cor/correlations_CAIDE2factors.RData")
 
 # Select top correlated features for each factor
 probes <- list()
-for (p in 1:7){
+for (p in 1:ncol(correlations)){
   probes[[p]] <- names(tail(sort(abs(correlations[,p])),1600))
 }
 
@@ -212,19 +214,21 @@ while (length(finalProbes) > 10000){
   probes[[n]] <- probes[[n]][-1]
   finalProbes <- unique(unlist(probes))
   
-  if (n < 7){
+  if (n < ncol(correlations)){
     n = n + 1
   } else {
     n = 1
   }
 }
 
+# Select features from data
 X_nonTest_Cor2 <- X_nonTest[finalProbes, ]
 X_CAIDE2_Cor2 <- X_CAIDE2[finalProbes, ]
 X_test_Cor2 <- X_test[finalProbes, ]
 
+# Save data matrix
 save(X_nonTest_Cor2, file = "CAIDE2_Cor/X_nonTest_Cor2.RData")
-save(X_CAIDE1_Cor2, file = "CAIDE2_Cor/X_CAIDE2_Cor2.RData")
+save(X_CAIDE2_Cor2, file = "CAIDE2_Cor/X_CAIDE2_Cor2.RData")
 save(X_test_Cor2, file = "CAIDE2_Cor/X_test_Cor2.RData")
 
 # Probes for CV
@@ -235,6 +239,5 @@ for (j in colnames(correlations)){
 CVProbes <- unique(unlist(CVProbes))
 
 X_CAIDE2_Cor2CV <- X_CAIDE2[CVProbes, ]
-save(X_CAIDE2_Cor2CV, file = "CAIDE1_Cor/X_CAIDE2_Cor2CV.RData")
-
+save(X_CAIDE2_Cor2CV, file = "CAIDE2_Cor/X_CAIDE2_Cor2CV.RData")
 

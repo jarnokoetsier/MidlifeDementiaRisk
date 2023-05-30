@@ -2,9 +2,9 @@
 rm(list = ls())
 cat("\014") 
 
+# Load data
 load("CAIDE1_Cor/X_CAIDE1_CorCV.RData")
 load("Data/Y_CAIDE1.RData")
-load("~/selectedFeatures_v3.RData")
 
 # Convert to M values
 X_CAIDE1_M <- log2(X_CAIDE1_CorCV/(1-X_CAIDE1_CorCV))
@@ -21,7 +21,8 @@ dataMatrix <- cbind.data.frame(X_train,Y_train)
 # number of features
 nFeatures <- 500
 
-#selectedFeatures <- NULL
+# Perform Greedy selection:
+selectedFeatures <- NULL
 nonSelectedFeatures <- setdiff(colnames(X_train), selectedFeatures)
 for (i in 1:nFeatures){
   coefficients <- rep(NA,length(nonSelectedFeatures))
@@ -44,7 +45,7 @@ for (i in 1:nFeatures){
   
   # Remove selected feature from nonSelectedFeatures object
   nonSelectedFeatures <- nonSelectedFeatures[-which.max(coefficients)]
-  save(selectedFeatures, file = "selectedFeatures_v3.RData")
+  save(selectedFeatures, file = "selectedFeatures.RData")
 }
 
 

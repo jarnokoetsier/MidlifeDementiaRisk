@@ -373,8 +373,6 @@ ggsave(p, file = "upsetDiagram.png", width = 10, height = 6)
 
 
 
-
-
 ###############################################################################
 
 # 4. PCA explained variances
