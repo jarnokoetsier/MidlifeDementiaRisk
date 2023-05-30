@@ -13,6 +13,7 @@ library(tidyverse)
 library(ggpubr)
 library(pROC)
 
+# Set working directory
 setwd("E:/Thesis/EXTEND/Methylation")
 
 ################################################################################
@@ -96,7 +97,7 @@ names(bestModel_CV) <- c(factors, "SexMale","Age47", "Age53", "Smoking")
 ################################################################################
 
 #******************************************************************************#
-# Continuous
+# Continuous combination
 #******************************************************************************#
 load("Y/Y_test.RData")
 perf_all <- rep(NA, 5)
@@ -150,7 +151,7 @@ perf_no_agesex[1] <- R2(pred = predCAIDE1, obs = Y_test$CAIDE)
 
 
 #******************************************************************************#
-# Categorical
+# Discrete combination
 #******************************************************************************#
 
 # Age
@@ -190,7 +191,7 @@ predCAIDE1 <- mean(Age) + BMI + Education + Physical + mean(Sex) + SysBP + Total
 perf_no_agesex[2] <- R2(pred = predCAIDE1, obs = Y_test$CAIDE)
 
 #******************************************************************************#
-# Data-driven
+# Supervised combination
 #******************************************************************************#
 
 methods <- c("EN", "sPLS", "RF")
@@ -225,7 +226,7 @@ for (i in 1:length(methods)){
 }
 
 
-
+# Prepare data for plotting
 plotDF <- data.frame(R2 = c(perf_all, perf_agesex, perf_no_agesex),
                      Features = c(rep("All",5),rep("Sex and Age Only",5),rep("No Sex and Age",5)),
                      Method = rep(c("CAIDE1 weights\n(Continuous)", "CAIDE1 weights\n(Discrete)", 
@@ -241,7 +242,7 @@ plotDF$Features <- factor(plotDF$Features,
                           levels = rev(c("All", "Sex and Age Only", "No Sex and Age")))
 
 
-
+# Set colors
 colors <- c(RColorBrewer::brewer.pal(n = 8, name = "Reds")[4:8],
             RColorBrewer::brewer.pal(n = 8, name = "Oranges")[4:8],
             RColorBrewer::brewer.pal(n = 8, name = "PuRd")[4:8])
@@ -254,11 +255,10 @@ Age[Y_test$Age > 53] <- 4
 # Sex
 Sex <- ifelse(bestModel_test$SexMale$ObsPred_test$predClass == "Yes",1,0)
 
-
+# Maximum performance (if age and sex were predicted perfectly)
 maximum <- R2(pred = Sex + Age, obs = Y_test$CAIDE)
 
-
-
+# Make plot
 p <- ggplot(plotDF) +
   geom_hline(aes(yintercept = maximum), linetype = "dashed", linewidth = 1.5) +
   geom_bar(aes(x = Method, y = R2, fill = Features), 
@@ -271,5 +271,5 @@ p <- ggplot(plotDF) +
   theme(legend.title = element_blank(),
         legend.position = "bottom")
 
-
+# Save plot
 ggsave(p, file = "InfluenceOfSexAge.png", width = 8, height = 5)

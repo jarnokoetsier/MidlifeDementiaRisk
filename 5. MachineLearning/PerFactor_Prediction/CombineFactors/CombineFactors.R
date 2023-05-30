@@ -1,3 +1,5 @@
+
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -10,16 +12,17 @@ library(missMDA)
 rm(list = ls())
 cat("\014") 
 
-
 # Load data
 load("~/Data/X_test.RData")
 load("~/Data/X_nonTest.RData")
 load("~/Data/Y_CAIDE1.RData")
 load("~/allModels.RData")
 
-X_all <- cbind(X_test, X_nonTest)
-X_all_M <- t(log2(X_all/(1-X_all)))
+# Prepare data
+X_all <- cbind(X_test, X_nonTest)     # Combine test and training set
+X_all_M <- t(log2(X_all/(1-X_all)))   # Convert to M-values
 
+# Calculate MRSs
 factors <- names(allModels)
 predictedScore_factors <- matrix(NA, nrow = nrow(X_all_M), ncol = length(factors))
 colnames(predictedScore_factors) <- factors
@@ -42,6 +45,7 @@ predictedAge <- agep(X_all,
 
 predictedScore_factors$Age <- predictedAge$skinblood.skinblood.age
 
+# Save MRSs
 save(predictedScore_factors, file = "predictedScore_factors_EXTEND.RData")
 
 ###############################################################################
@@ -50,6 +54,7 @@ save(predictedScore_factors, file = "predictedScore_factors_EXTEND.RData")
 
 ###############################################################################
 
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -62,18 +67,19 @@ library(missMDA)
 rm(list = ls())
 cat("\014") 
 
+# Load data
 source("FUN_MachineLearning.R")
 load("~/Data/CVindex_CAIDE1.RData")
 load("predictedScore_factors_EXTEND.RData")
 load("~/Data/Y_CAIDE1.RData")
 load("~/Data/Y_test.RData")
 
+# Prepare training data
 X_train <- predictedScore_factors[Y_CAIDE1$Basename,]
 Y_train <- Y_CAIDE1
 all(rownames(X_train) == Y_train$Basename)
 
-
-# Settings for repeated cross-valBasename
+# Settings for repeated cross-validation
 fitControl <- trainControl(method = "repeatedcv", 
                            search = "grid", 
                            savePredictions = TRUE,
@@ -617,6 +623,12 @@ plot(testPred, Y_test$CAIDE)
 RMSE(pred = testPred, obs = Y_test$LIBRA)
 R2(pred = testPred, obs = Y_test$LIBRA)
 
+
+###############################################################################
+
+# Plot variable importance of Random Forest models
+
+###############################################################################
 
 factorNames <- c("BMI", "Type II Diabetes", "L-M Alcohol Intake", "HDL Cholesterol",
                  "Total Cholesterol", "Physical Inactivity", "Heart Disease", "Education",

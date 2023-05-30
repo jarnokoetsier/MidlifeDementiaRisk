@@ -12,6 +12,7 @@ library(ggrepel)
 library(tidyverse)
 library(ggpubr)
 library(pROC)
+
 ################################################################################
 
 # Get best model for each factor
@@ -87,6 +88,7 @@ names(bestModel_test) <- c(factors, "SexMale","Age47", "Age53", "Smoking")
 names(bestModel_CV) <- c(factors, "SexMale","Age47", "Age53", "Smoking")
 
 perf <- rep(NA,10)
+
 ################################################################################
 
 # CAIDE1
@@ -97,7 +99,7 @@ load("~/Data/Y_test.RData")
 
 
 #******************************************************************************#
-# Continuous
+# Continuous combination
 #******************************************************************************#
 
 
@@ -145,7 +147,7 @@ plotDF_con <- data.frame(Predicted = predCAIDE1,
 
 
 #******************************************************************************#
-# Categorical
+# Categorical combination
 #******************************************************************************#
 load("~/Data/Y_test.RData")
 
@@ -180,9 +182,8 @@ plotDF_cat <- data.frame(Predicted = predCAIDE1,
                      Observed = Y_test$CAIDE)
 
 
-
 #******************************************************************************#
-# Random forest model
+# Random forest model (supervised combination)
 #******************************************************************************#
 load("~/Data/Y_test.RData")
 load("~/PerFactor/Fit_CombineFactors_CAIDE1_RF.RData")
@@ -190,17 +191,16 @@ load("~/PerFactor/predictedScore_factors_EXTEND.RData")
 
 # Observed
 Observed <- Y_test$CAIDE
-
 predCAIDE1 <- predict(fit, predictedScore_factors[Y_test$Basename,])
-
 plotDF_rf <- data.frame(Predicted = predCAIDE1,
                      Observed = Y_test$CAIDE)
 
-
+# prepare data for plotting
 plotDF_all <- rbind.data.frame(plotDF_cat, plotDF_con, plotDF_rf)
 plotDF_all$Group <- c(rep("Discrete",152), rep("Continuous", 152), 
                       rep("Random Forest",152))
 
+# Make plot
 p <- ggplot(plotDF_all) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
   geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
@@ -218,6 +218,7 @@ p <- ggplot(plotDF_all) +
                                      size = 10,
                                      face = "italic"))
 
+# Save plot
 ggsave(p, file = "ObsVsPred_test_factorCom_CAIDE1.png", width = 8, height = 8)
 
 ################################################################################
@@ -228,10 +229,8 @@ ggsave(p, file = "ObsVsPred_test_factorCom_CAIDE1.png", width = 8, height = 8)
 
 load("~/Data/Y_test.RData")
 
-
-
 #******************************************************************************#
-# Continuous
+# Continuous combination
 #******************************************************************************#
 
 # Age
@@ -278,7 +277,7 @@ plotDF_con <- data.frame(Predicted = predCAIDE2,
 
 
 #******************************************************************************#
-# Categorical
+# Discrete combination
 #******************************************************************************#
 
 # Age
@@ -311,8 +310,9 @@ predCAIDE2 <- Age + BMI + Education + Physical + Sex + SysBP + TotalChol
 
 plotDF_cat <- data.frame(Predicted = predCAIDE2,
                          Observed = Y_test$CAIDE2)
+
 #******************************************************************************#
-# Random forest model
+# Random forest model (supervised combination)
 #******************************************************************************#
 load("~/Data/Y_test.RData")
 load("~/PerFactor/Fit_CombineFactors_CAIDE2_RF.RData")
@@ -320,22 +320,19 @@ load("~/PerFactor/predictedScore_factors_EXTEND.RData")
 
 # Observed
 Observed <- Y_test$CAIDE2
-
 predCAIDE2 <- predict(fit, predictedScore_factors[Y_test$Basename,])
-
 plotDF_rf <- data.frame(Predicted = predCAIDE2,
                         Observed = Y_test$CAIDE2)
-
 
 RMSE(pred = predCAIDE1, obs = Y_test$CAIDE)
 R2(pred = predCAIDE1, obs = Y_test$CAIDE)
 
-
-
+# Prepare data for plotting
 plotDF_all <- rbind.data.frame(plotDF_cat, plotDF_con, plotDF_rf)
 plotDF_all$Group <- c(rep("Discrete",152), rep("Continuous", 152), 
                       rep("Random Forest",152))
 
+# Make plot
 p <- ggplot(plotDF_all) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
   geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
@@ -353,7 +350,10 @@ p <- ggplot(plotDF_all) +
                                      size = 10,
                                      face = "italic"))
 
+# Save plot
 ggsave(p, file = "ObsVsPred_test_factorCom_CAIDE2.png", width = 8, height = 8)
+
+
 ################################################################################
 
 # LIBRA
@@ -361,7 +361,7 @@ ggsave(p, file = "ObsVsPred_test_factorCom_CAIDE2.png", width = 8, height = 8)
 ################################################################################
 
 #******************************************************************************#
-# Continuous
+# Continuous combination
 #******************************************************************************#
 load("~/Data/Y_test.RData")
 
@@ -425,7 +425,7 @@ plotDF_con <- data.frame(Predicted = predLIBRA,
 
 
 #******************************************************************************#
-# Categorical
+# Discrete combination
 #******************************************************************************#
 load("~/Data/Y_test.RData")
 
@@ -472,7 +472,7 @@ plotDF_cat <- data.frame(Predicted = predLIBRA,
                      Observed = Y_test$LIBRA)
 
 #******************************************************************************#
-# Random forest model
+# Random forest model (Supervised combination)
 #******************************************************************************#
 load("~/Data/Y_test.RData")
 load("~/PerFactor/Fit_CombineFactors_LIBRA_RF.RData")
@@ -480,20 +480,16 @@ load("~/PerFactor/predictedScore_factors_EXTEND.RData")
 
 # Observed
 Observed <- Y_test$LIBRA
-
 predLIBRA <- predict(fit, predictedScore_factors[Y_test$Basename,])
-
 plotDF_rf <- data.frame(Predicted = predLIBRA,
                         Observed = Y_test$LIBRA)
 
-
-
-
-
+# Prepare data for plotting
 plotDF_all <- rbind.data.frame(plotDF_cat, plotDF_con, plotDF_rf)
 plotDF_all$Group <- c(rep("Discrete",152), rep("Continuous", 152), 
                       rep("Random Forest",152))
 
+# Make plot
 p <- ggplot(plotDF_all) +
   geom_abline(aes(intercept = 0, slope = 1), color = "black", linetype = "dashed", linewidth = 1.5) +
   geom_point(aes(y = Observed, x = Predicted, color = Observed-Predicted), size = 2, alpha = 0.8) +
@@ -511,4 +507,5 @@ p <- ggplot(plotDF_all) +
                                      size = 10,
                                      face = "italic"))
 
+# Save plot
 ggsave(p, file = "ObsVsPred_test_factorCom_LIBRA.png", width = 8, height = 8)

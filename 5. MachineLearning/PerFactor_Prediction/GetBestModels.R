@@ -1,6 +1,6 @@
 ################################################################################
 
-# Get best model for each factor
+# Find best model for each factor
 
 ################################################################################
 
@@ -39,9 +39,10 @@ for (i in 1:length(factors)){
 }
 
 bestModel
+
 ################################################################################
 
-# Obs vs pred in CV
+# Save best models into single object
 
 ################################################################################
 
@@ -60,8 +61,6 @@ X_train <- log2(X_nonTest/(1-X_nonTest))
 X_test <- log2(X_test/(1-X_test))
 all(colnames(X_train) == rownames(Y_train))
 all(colnames(X_test) == rownames(Y_test))
-
-
 
 allModels <- list()
 for (f in 1:length(factors)){
@@ -120,4 +119,6 @@ for (f in 1:length(factors)){
 factors <- c("BMI", "Diabetes", "Alcohol", "HDL", "TotalChol", "Physical", "HeartDisease",
              "Education", "Depression", "SysBP", "Diet", "SexMale", "Smoking")
 names(allModels) <- factors
+
+# Save best models
 save(allModels, file = "PerFactor/allModels.RData")

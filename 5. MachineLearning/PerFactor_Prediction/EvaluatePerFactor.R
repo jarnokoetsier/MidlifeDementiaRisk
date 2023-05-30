@@ -12,61 +12,81 @@ library(tidyverse)
 library(ggpubr)
 library(pROC)
 
+#*****************************************************************************#
+#   AUC of the risk factors
+#*****************************************************************************#
 
-factorNames <- c("Education", "Systolic BP", "BMI", "Total Chol.", "Physical Act.",
-                 "Diet", "Smoking", "L-M Alcohol", "Depression", "Diabetes",
-                 "HDL Chol.", "Heart Disease", "APOE", "Sex", "Age < 47", "Age > 53")
+# Name of the risk factors
+factors <- c("BMI", "Diabetes", "Alcohol", "HDL", "TotalChol", "Physical", "HeartDisease",
+             "Education", "Depression", "SysBP", "Diet")
+factorNames <- c("BMI", "Type II Diabetes", "L-M Alchol Intake", "HDL Chol.",
+                 "Total Chol.", "Physical Inact.", "Heart Disease", "Education",
+                 "Depression", "Systolic BP", "Dietary Intake")
 
-plotDF <- NULL
-methodNames <- c("ElasticNet", "Random Forest")
-for (m in 1:length(methodNames)){
+# Get AUC for each model in test set and cross-validation
+plotDF_all <- NULL
+for (i in 1:length(factors)){
+  # Literature-based feature selection + EN
+  load("~/PerFactor/Literature/finalOutput_lit_test.RData")
+  auc_test_lit <- finalOutput_test[[factors[i]]]$AUC
   
-  load(paste0("PerFactor/",methodNames[m],"/finalOutput_test.RData"))
-  load(paste0("PerFactor/",methodNames[m],"/finalOutput_CV.RData"))
+  load("~/PerFactor/Literature/finalOutput_lit_CV.RData")
+  auc_CV_lit <- finalOutput[[factors[i]]]$AUC
   
-  AUC_all <- rep(NA,length(finalOutput_test))
-  for (f in 1:length(finalOutput_test)){
-    AUC_all[f] <- finalOutput_test[[f]]$AUC
-  }
-  temp_test <- data.frame(AUC = AUC_all,
-                          Factor = factorNames,
-                          Method = rep(methodNames[m], length(AUC_all)),
-                          Set = rep("Test", length(AUC_all)))
+  # Correlation-based feature selection + EN
+  load("~/PerFactor/ElasticNet/finalOutput_test.RData")
+  auc_test_EN <- finalOutput_test[[factors[i]]]$AUC
+  
+  load("~/PerFactor/ElasticNet/finalOutput_CV.RData")
+  auc_CV_EN <- finalOutput[[factors[i]]]$AUC
+  
+  # Correlation-based feature selection + RF
+  load("~/PerFactor/Random Forest/finalOutput_test.RData")
+  auc_test_RF <- finalOutput_test[[factors[i]]]$AUC
+  
+  load("~/PerFactor/Random Forest/finalOutput_CV.RData")
+  auc_CV_RF <- finalOutput[[factors[i]]]$AUC 
   
   
-  AUC_all <- rep(NA,length(finalOutput))
-  for (f in 1:length(finalOutput)){
-    AUC_all[f] <- finalOutput[[f]]$AUC
-  }
-  temp_CV <- data.frame(AUC = AUC_all,
-                        Factor = factorNames,
-                        Method = rep(methodNames[m], length(AUC_all)),
-                        Set = rep("Cross-validation", length(AUC_all)))
+  temp <- data.frame(AUC = c(auc_test_lit, auc_test_EN, auc_test_RF,
+                             auc_CV_lit, auc_CV_EN, auc_CV_RF),
+                     Factor = rep(factorNames[i],6),
+                     Set = c(rep("Test",3),rep("Cross-validation",3)),
+                     Method = rep(c("Literature, ElasticNet",
+                                    "Correlation, ElasticNet",
+                                    "Correlation, Random Forest")))
   
-  temp_all <- rbind.data.frame(temp_test, temp_CV)
-  plotDF <- rbind.data.frame(plotDF, temp_all)
+  plotDF_all <- rbind.data.frame(plotDF_all, temp)
 }
 
+# Set colors
+colors <- c(RColorBrewer::brewer.pal(n = 6,"Dark2"),
+            RColorBrewer::brewer.pal(n = 6,"Set2"))
 
-p <- ggplot(plotDF) +
-  geom_bar(aes(x = Factor, y = AUC, fill = Factor, alpha = Set), 
-           stat = "identity", position=position_dodge()) +
-  facet_grid(rows = vars(Method)) +
+# Make plots
+p <- ggplot(plotDF_all) +
+  geom_bar(aes(x = Factor, y = AUC, fill = Factor, alpha = Method),
+           stat = "identity", position = position_dodge()) +
+  facet_grid(rows = vars(Set)) +
   coord_cartesian(ylim = c(0.5,1)) +
-  theme_bw()+
+  scale_alpha_manual(values = c(0.5,0.75,1)) +
+  scale_fill_manual(values = colors) +
   guides(fill = "none") +
-  scale_fill_manual(values = c(RColorBrewer::brewer.pal(n = 8, name = "Set2"),
-                                RColorBrewer::brewer.pal(n = 8, name = "Dark2"))) +
-  scale_alpha_manual(values = c(0.5,1)) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         axis.title.x = element_blank(),
-        legend.position = "right",
-        legend.title = element_blank())
+        legend.title = element_blank(),
+        legend.position = "bottom")
 
-ggsave(p, file = "PerFactor/AUC_factors.png", width = 10, height = 6)
+# Save plots
+ggsave(p, file = "AUC_all_Methylation.png", width = 8, height = 6)
 
 
+#*****************************************************************************#
+#   Case-control distribution
+#*****************************************************************************#
 
+# Test set distribution
 n_cases <- rep(NA, length(finalOutput_test))
 n_control <- rep(NA, length(finalOutput_test))
 for (i in 1:length(finalOutput_test)){
@@ -76,9 +96,10 @@ for (i in 1:length(finalOutput_test)){
 
 plotDF_n <- data.frame(Number = c(n_cases,n_control),
                        CaseControl = c(rep("Case", length(n_cases)),
-                                    rep("Control", length(n_control))),
+                                       rep("Control", length(n_control))),
                        Factor = factorNames)
 
+# Make plot
 p <- ggplot(plotDF_n)+
   geom_bar(aes(x = Factor, y = Number, fill = CaseControl), 
            stat = "identity", color = "black") +
@@ -90,4 +111,38 @@ p <- ggplot(plotDF_n)+
   theme(legend.title = element_blank(),
         legend.position = "bottom")
 
+# Save plot
 ggsave(p, file = "PerFactor/CaseControlDistribution.png", width = 8, height = 6)
+
+# Cross-validatio distribution
+load("~/PerFactor/ElasticNet/finalOutput_CV.RData")
+n_cases <- rep(NA, length(finalOutput))
+n_control <- rep(NA, length(finalOutput))
+for (i in 1:length(finalOutput)){
+  n_cases[i] <- sum(finalOutput[[i]]$ObsPred_CV$obs == "Yes")/5
+  n_control[i] <- sum(finalOutput[[i]]$ObsPred_CV$obs == "No")/5
+}
+
+plotDF_n <- data.frame(Number = c(n_cases,n_control,924-n_cases-n_control),
+                       CaseControl = c(rep("Case", length(n_cases)),
+                                       rep("Control", length(n_control)),
+                                       rep("NA", length(n_control))),
+                       Factor = factorNames)
+
+# Set colors
+colors <- c(RColorBrewer::brewer.pal(n = 3, "Set1")[1:2], "#595959")
+
+# Make plot
+p <- ggplot(plotDF_n)+
+  geom_bar(aes(x = Factor, y = Number, fill = CaseControl), 
+           stat = "identity", color = "black") +
+  coord_flip() +
+  ylab("Number of samples") +
+  xlab(NULL) +
+  theme_minimal() +
+  scale_fill_manual(values = colors) +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
+
+# Save plot
+ggsave(p, file = "PerFactor/CaseControlDistribution_training.png", width = 8, height = 6)

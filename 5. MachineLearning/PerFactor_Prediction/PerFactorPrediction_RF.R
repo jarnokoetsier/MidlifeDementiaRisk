@@ -3,8 +3,7 @@ rm(list = ls())
 cat("\014") 
 
 # Load packages
-library(glmnet)
-library(spls)
+library(ranger)
 library(caret)
 library(foreach)
 library(doParallel)
@@ -19,165 +18,6 @@ load("Data/X_nonTest.RData")
 load("Data/X_test.RData")
 
 
-#################################################################################
-
-# Prepare phenotype data (Y)
-
-################################################################################
-
-# High Education
-Education <- ifelse(dat$None.of.the.above == 1,"Yes","No")
-
-# High Systolic Blood Pressure
-SysBP <- ifelse(dat$MeanSysBP <= 140,"No","Yes")
-
-# High BMI
-BMI <-ifelse(dat$BMI <= 30,"No","Yes")
-
-# High total Cholesterol
-TotalChol <- ifelse(as.numeric(dat$Chol_unloged) <= 6.5,"No","Yes")
-
-# Low physical activity
-Physical <- ifelse(dat$Exercise.increased.pulse.more.than.2halfhrsawk == 1,"No","Yes")
-
-# Healthy Diet
-Diet <- ifelse(as.numeric(dat$Fruit) > 3 | as.numeric(dat$Vegtables) > 3, "Yes", "No")
-
-# Smoking
-Smoking <- ifelse(dat$Do.you.currently.smoke==1,"Yes","No")
-
-# Low alcohol intake
-Alcohol <- rep(NA,nrow(dat))
-Alcohol[dat$How.often.do.you.drink.alcohol==0] <- "Yes"
-Alcohol[dat$alcoholic.drinks.per.day==1 &    dat$How.often.do.you.drink.alcohol==1]<- "Yes"
-Alcohol[dat$alcoholic.drinks.per.day==2 &    dat$How.often.do.you.drink.alcohol==1]<-"Yes"
-Alcohol[dat$alcoholic.drinks.per.day==3 &    dat$How.often.do.you.drink.alcohol==1]<-"Yes"
-Alcohol[dat$alcoholic.drinks.per.day==4 &    dat$How.often.do.you.drink.alcohol==1]<-"Yes"
-Alcohol[dat$alcoholic.drinks.per.day==5 &    dat$How.often.do.you.drink.alcohol==1]<-"Yes"
-
-Alcohol[dat$alcoholic.drinks.per.day==1 &    dat$How.often.do.you.drink.alcohol==2]<-"Yes"
-Alcohol[dat$alcoholic.drinks.per.day==2 &    dat$How.often.do.you.drink.alcohol==2]<-"Yes"
-
-Alcohol[dat$alcoholic.drinks.per.day==1 &    dat$How.often.do.you.drink.alcohol==3]<-"Yes"
-Alcohol[dat$alcoholic.drinks.per.day==2 &    dat$How.often.do.you.drink.alcohol==3]<-"Yes"
-
-# High alcohol intake
-Alcohol[dat$alcoholic.drinks.per.day==5 &   dat$How.often.do.you.drink.alcohol==1]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==3  &  dat$How.often.do.you.drink.alcohol==2]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==4 &   dat$How.often.do.you.drink.alcohol==2]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==5 &   dat$How.often.do.you.drink.alcohol==2]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==3 &   dat$How.often.do.you.drink.alcohol==3]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==4 &   dat$How.often.do.you.drink.alcohol==3]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==5 &   dat$How.often.do.you.drink.alcohol==3]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==2 &   dat$How.often.do.you.drink.alcohol==4]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==3 &   dat$How.often.do.you.drink.alcohol==4]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==4 &   dat$How.often.do.you.drink.alcohol==4]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day==5 &   dat$How.often.do.you.drink.alcohol==4]<-"No"
-Alcohol[dat$alcoholic.drinks.per.day=="." &    dat$How.often.do.you.drink.alcohol==4]<-"No"
-
-# Depression
-Depression <- ifelse(dat$Depression==1,"Yes","No")
-
-# Diabetes
-Diabetes <-ifelse(dat$T2.Diabetes==1,"Yes","No")
-
-# High HDL
-HDL <- ifelse(dat$HDL_unloged > 2.2, "Yes","No")
-
-# Heart Disease
-HeartDisease <- ifelse(dat$Heart.Disease==1,"Yes","No")
-
-# Kidney Disease
-KidneyDisease <- ifelse(dat$Kidney..Disease==1,"Yes","No")
-
-# APOE
-APOEstatus <- read.csv("Data/APOE_status.csv")
-rownames(APOEstatus) <- APOEstatus$sampleID
-APOEstatus <- APOEstatus[dat$ID,]
-APOE <- ifelse(APOEstatus$e4 == 0,"No","Yes")
-
-# Sex
-SexMale <- ifelse(dat$Sex == 1, "Yes", "No")
-
-# Age < 47
-Age47 <- ifelse(dat$Age < 47, "Yes", "No")
-
-# Age > 53
-Age53 <- ifelse(dat$Age > 53, "Yes", "No")
-
-Y_all <- data.frame(Education,
-                    SysBP,
-                    BMI,
-                    TotalChol,
-                    Physical,
-                    Diet,
-                    Smoking,
-                    Alcohol,
-                    Depression,
-                    Diabetes,
-                    HDL,
-                    HeartDisease,
-                    KidneyDisease,
-                    APOE,
-                    SexMale,
-                    Age47,
-                    Age53
-                    )
-
-rownames(Y_all) <- dat$Basename
-
-Y_test <- Y_all[colnames(X_test),] 
-Y_nonTest <- Y_all[colnames(X_nonTest),] 
-
-save(Y_test, file = "PerFactor/Y_test_factors.RData")
-save(Y_nonTest, file = "PerFactor/Y_nonTest_factors.RData")
-
-#################################################################################
-
-# Prepare correlation data
-
-################################################################################
-
-# Load data
-load("Data/X_test.RData")
-load("Data/X_nonTest.RData")
-load("PerFactor/Y_test_factors.RData")
-load("PerFactor/Y_nonTest_factors.RData")
-
-all(colnames(X_nonTest) == rownames(Y_nonTest))
-all(colnames(X_test) ==  rownames(Y_test))
-
-X_train = X_nonTest
-Y_train = Y_nonTest
-  
-#*****************************************************************************#
-# correlation-based selection
-#*****************************************************************************#
-
-correlations <- matrix(NA, nrow = nrow(X_train), ncol = ncol(Y_train))
-for (i in 1:ncol(Y_train)) {
-  factor <- Y_train[!is.na(Y_train[,i]),i]
-  factor <- ifelse(factor == "Yes",1,0)
-  dataMatrix <- X_train[,!is.na(Y_train[,i])]
-  
-  correlations[,i] <- apply(dataMatrix, 1, 
-                            function(x){cor(x, 
-                                            factor, 
-                                            method = "spearman")})
-}
-rownames(correlations) <- rownames(X_test)
-colnames(correlations) <- colnames(Y_train)
-save(correlations, file = "PerFactor/correlations_factors.RData")
-
-
-# Selected probes
-selectedProbes <- list()
-for (i in 1:ncol(correlations)){
-  selectedProbes[[i]] <- names(tail(sort(abs(correlations[,i])),70000))
-}
-names(selectedProbes) <- colnames(correlations)
-save(selectedProbes, file = "PerFactor/selectedProbes.RData")
-
 ################################################################################
 
 # Model Training
@@ -190,9 +30,11 @@ load("Data/X_nonTest.RData")
 load("PerFactor/Y_test_factors.RData")
 load("PerFactor/Y_nonTest_factors.RData")
 load("PerFactor/selectedProbes.RData")
+selectedProbes <- selectedProbes[-13]
 
 # Test if samples are in correct order
 Y_train <- Y_nonTest[,-13] # ignore kidney disease
+Y_test <- Y_test[,-13] # ignore kidney disease
 X_train <- log2(X_nonTest/(1-X_nonTest))
 X_test <- log2(X_test/(1-X_test))
 all(colnames(X_train) == rownames(Y_train))
@@ -203,18 +45,22 @@ all(colnames(X_test) == rownames(Y_test))
 nfold = 5
 nrep = 5
 
-# Set grid for lambda
-lambdaCV <- exp(seq(log(0.01),log(2.5),length.out = 100))
+# Number of randomly selected predictors
+mtry_CV <- c(100, 500,1000,1500,2000,3000,4000)
 
-# Set grid for alpha
-alphaCV <- seq(0.1,1,length.out = 10)
+# split rule
+splitrule_CV <- "gini"
+
+# minimal node size
+min.node.size_CV = c(3,5,10,15,20)
 
 # Combine into a single data frame
-parameterGrid <- expand.grid(alphaCV, lambdaCV)
-colnames(parameterGrid) <- c(".alpha", ".lambda")
+parameterGrid <- expand.grid(mtry_CV, splitrule_CV, min.node.size_CV)
+colnames(parameterGrid) <- c(".mtry", ".splitrule", ".min.node.size")
 
-# Machine learning method
-MLmethod = "glmnet"
+# Use MSE as performance metric
+MLmethod = "ranger"
+
 
 outputList <- list()
 for (f in 1:ncol(Y_train)){
@@ -289,7 +135,7 @@ for (f in 1:ncol(Y_train)){
 }
 
 names(outputList) <- colnames(Y_train)
-save(outputList, file = "PerFactor/OutputList_factors_Cor.RData")
+save(outputList, file = "PerFactor/RandomForest/OutputList_factors_Cor_RF.RData")
 
 
 ################################################################################
@@ -297,24 +143,25 @@ save(outputList, file = "PerFactor/OutputList_factors_Cor.RData")
 # Model Performance
 
 ################################################################################
-load("ElasticNet/OutputList_factors_Cor.RData")
+load("PerFactor/RandomForest/OutputList_factors_Cor_RF.RData")
 
 PerformanceList <- list()
 for (i in 1:length(outputList)){
   trainResults <- outputList[[i]]
-  perf <- matrix(NA, nrow = 1000, ncol = 25)
+  perf <- matrix(NA, nrow = 35, ncol = 25)
   for (j in 1:length(trainResults)){
     perf[,j] <- trainResults[[j]]$ROC
   }
   optPar <- which.max(rowMeans(perf))
   optPerf <- perf[optPar,]
-  optAlpha <- trainResults[[1]]$alpha[optPar]
-  optLambda <- trainResults[[1]]$lambda[optPar]
+  opt_mtry <- trainResults[[1]]$mtry[optPar]
+  opt_splitrule <- trainResults[[1]]$splitrule[optPar]
+  opt_min.node.size <- trainResults[[1]]$min.node.size[optPar]
   
-  PerformanceList[[i]] <- list(optPerf, optAlpha, optLambda)
+  PerformanceList[[i]] <- list(optPerf, opt_mtry, opt_splitrule, opt_min.node.size)
 }
 names(PerformanceList) <- names(outputList)
-save(PerformanceList, file = "PerFactor/PerformanceList_factors_Cor.RData")
+save(PerformanceList, file = "PerFactor/RandomForest/PerformanceList_factors_Cor_RF.RData")
 
 ################################################################################
 
@@ -338,23 +185,26 @@ X_test <- log2(X_test/(1-X_test))
 all(colnames(X_train) == rownames(Y_train))
 all(colnames(X_test) == rownames(Y_test))
 
-load("PerFactor/PerformanceList_factors_Cor.RData")
+load("PerFactor/RandomForest/PerformanceList_factors_Cor_RF.RData")
 
 ObsPred_all <- list()
 for (f in 1:length(PerformanceList)){
   
-  # Set grid for lambda
-  lambdaCV <- PerformanceList[[f]][[3]]
+  # mtry
+  mtry_CV <- PerformanceList[[f]][[2]]
   
-  # Set grid for alpha
-  alphaCV <- PerformanceList[[f]][[2]]
+  # splitrule
+  splitrule_CV <- PerformanceList[[f]][[3]]
+  
+  # min.node.size
+  min.node.size_CV <- PerformanceList[[f]][[4]]
   
   # Combine into a single data frame
-  parameterGrid <- expand.grid(alphaCV, lambdaCV)
-  colnames(parameterGrid) <- c(".alpha", ".lambda")
+  parameterGrid <- expand.grid(mtry_CV, splitrule_CV, min.node.size_CV)
+  colnames(parameterGrid) <- c(".mtry", ".splitrule", ".min.node.size")
   
   # ML method
-  MLmethod = "glmnet"
+  MLmethod = "ranger"
   
   # Performance metric
   performance_metric = "ROC"
@@ -418,7 +268,7 @@ for (f in 1:length(PerformanceList)){
   ObsPred_all[[f]] <- ObsPred_CV
 }
 names(ObsPred_all) <- colnames(Y_train)
-save(ObsPred_all, file = "PerFactor/ObsPred_all.RData")
+save(ObsPred_all, file = "PerFactor/RandomForest/ObsPred_all_RF.RData")
 
 
 ################################################################################
@@ -436,7 +286,7 @@ for (f in 1:length(ObsPred_all)){
   
   # Get sensitivies and specificities
   plotDF <- data.frame(Sensitivity = roc_list_CV$sensitivities,
-                      Specificity = roc_list_CV$specificities)
+                       Specificity = roc_list_CV$specificities)
   
   # Get AUC
   auc_CV <- auc(roc_list_CV)
@@ -458,6 +308,8 @@ save(finalOutput, file = "PerFactor/finalOutput_CV.RData")
 factorNames <- c("Education", "Systolic BP", "BMI", "Total Chol.", "Physical Act.",
                  "Diet", "Smoking", "Alcohol Intake", "Depression", "Diabetes",
                  "HDL Chol.", "Heart Disease", "APOE", "Sex", "Age < 47", "Age > 53")
+
+# Plot cross-validation performance
 p <- ggplot()
 for (f in 1:length(finalOutput)){
   plotData <- finalOutput[[f]]$AUCplot
@@ -475,7 +327,8 @@ plotCV <- p +
   scale_color_manual(values = c(RColorBrewer::brewer.pal(n = 8, name = "Set2"),
                                 RColorBrewer::brewer.pal(n = 8, name = "Dark2")))
 
-ggsave(plotCV, file = "PerFactor/CVperformance_EN_perFactor.png", width = 8, height = 6)
+# Save plot
+ggsave(plotCV, file = "PerFactor/Random Forest/CVperformance_RF_perFactor.png", width = 8, height = 6)
 
 
 
@@ -509,18 +362,21 @@ all(colnames(X_test) == rownames(Y_test))
 finalOutput_test <- list()
 for (f in 1:length(PerformanceList)){
   
-  # Set grid for lambda
-  lambdaCV <- PerformanceList[[f]][[3]]
+  # mtry
+  mtry_CV <- PerformanceList[[f]][[2]]
   
-  # Set grid for alpha
-  alphaCV <- PerformanceList[[f]][[2]]
+  # splitrule
+  splitrule_CV <- PerformanceList[[f]][[3]]
+  
+  # min.node.size
+  min.node.size_CV <- PerformanceList[[f]][[4]]
   
   # Combine into a single data frame
-  parameterGrid <- expand.grid(alphaCV, lambdaCV)
-  colnames(parameterGrid) <- c(".alpha", ".lambda")
+  parameterGrid <- expand.grid(mtry_CV, splitrule_CV, min.node.size_CV)
+  colnames(parameterGrid) <- c(".mtry", ".splitrule", ".min.node.size")
   
   # ML method
-  MLmethod = "glmnet"
+  MLmethod = "ranger"
   
   # Performance metric
   performance_metric = "ROC"
@@ -534,7 +390,7 @@ for (f in 1:length(PerformanceList)){
   
   # Calculate correlations with factors
   correlations_all <- apply(dataMatrix, 1, 
-                           function(x){cor(x, factor_cor,method = "spearman")})
+                            function(x){cor(x, factor_cor,method = "spearman")})
   
   names(correlations_all) <- rownames(dataMatrix)
   
@@ -548,12 +404,12 @@ for (f in 1:length(PerformanceList)){
   # Actual training
   set.seed(123)
   finalModel <- train(x = t(dataMatrix[finalProbes,]),
-               y = factor(factor1, levels = c("No", "Yes")),
-               metric= performance_metric,
-               method = MLmethod,
-               tuneGrid = parameterGrid,
-               trControl = fitControl,
-               maximize = TRUE)
+                      y = factor(factor1, levels = c("No", "Yes")),
+                      metric= performance_metric,
+                      method = MLmethod,
+                      tuneGrid = parameterGrid,
+                      trControl = fitControl,
+                      maximize = TRUE)
   
   # Get test predictions
   pred <- predict(finalModel, t(X_test[finalProbes,]), type = "prob")
@@ -567,7 +423,7 @@ for (f in 1:length(PerformanceList)){
   
   # Get AUC
   roc_list_test <- roc(response = factor(ObsPred_test$obs, levels = c("No", "Yes")), 
-                     predictor = ObsPred_test$pred)
+                       predictor = ObsPred_test$pred)
   
   # Get sensitivies and specificities
   plotDF <- data.frame(Sensitivity = roc_list_test$sensitivities,
@@ -578,20 +434,22 @@ for (f in 1:length(PerformanceList)){
   
   # Save
   finalOutput_test[[f]] <- list(AUCplot = plotDF,
-                           AUC = as.numeric(auc_test),
-                           threshold = threshold,
-                           ObsPred_test = ObsPred_test)
-
+                                AUC = as.numeric(auc_test),
+                                threshold = threshold,
+                                ObsPred_test = ObsPred_test)
+  
 }
 names(finalOutput_test) <- colnames(Y_train)
-save(finalOutput_test, file = "PerFactor/finalOutput_test.RData")
+save(finalOutput_test, file = "PerFactor/RandomForest/finalOutput_test.RData")
 
-# Performance on test set
 
+
+# Performance in test set:
 
 factorNames <- c("Education", "Systolic BP", "BMI", "Total Chol.", "Physical Act.",
                  "Diet", "Smoking", "Alcohol Intake", "Depression", "Diabetes",
                  "HDL Chol.", "Heart Disease", "APOE", "Sex", "Age < 47", "Age > 53")
+
 p <- ggplot()
 for (f in 1:length(finalOutput_test)){
   plotData <- finalOutput_test[[f]]$AUCplot
@@ -609,40 +467,8 @@ plotTest <- p +
   scale_color_manual(values = c(RColorBrewer::brewer.pal(n = 8, name = "Set2"),
                                 RColorBrewer::brewer.pal(n = 8, name = "Dark2")))
 
-ggsave(plotTest, file = "PerFactor/Testperformance_EN_perFactor.png", width = 8, height = 6)
-
-
-################################################################################
-
-# Predict CAIDE1
-
-################################################################################
-load("PerFactor/finalOutput_test.RData")
-
-Age47 <- finalOutput_test$Age47$ObsPred_test$predClass
-Age53 <- finalOutput_test$Age53$ObsPred_test$predClass
-Age <- rep(3,length(Age47))
-Age[Age47 == "Yes"] <- 0
-Age[Age53 == "Yes"] <- 4
-
-BMI <- ifelse(finalOutput_test$BMI$ObsPred_test$predClass == "Yes",2,0)
-
-Education <- ifelse(finalOutput_test$Education$ObsPred_test$predClass == "Yes",2,0)
-
-Physical <- ifelse(finalOutput_test$Physical$ObsPred_test$predClass == "Yes",1,0)
-
-Sex <- ifelse(finalOutput_test$SexMale$ObsPred_test$predClass == "Yes",1,0)
-
-SysBP <- ifelse(finalOutput_test$SysBP$ObsPred_test$predClass == "Yes",2,0)
-
-TotalChol <- ifelse(finalOutput_test$TotalChol$ObsPred_test$predClass == "Yes",2,0)
-
-predCAIDE1 <- Age + BMI + Education + Physical + Sex + SysBP + TotalChol
-
-load("~/Data/Y_test.RData")
-plot(Y_test$CAIDE, predCAIDE1)
-
-R2(pred = predCAIDE1, obs = Y_test$CAIDE)
+# Save plot
+ggsave(plotTest, file = "PerFactor/Random Forest/Testperformance_RF_perFactor.png", width = 8, height = 6)
 
 
 

@@ -13,6 +13,7 @@ library(tidyverse)
 library(ggpubr)
 library(pROC)
 
+# Set working directory
 setwd("E:/Thesis/EXTEND/Methylation")
 
 ################################################################################
@@ -96,7 +97,7 @@ names(bestModel_CV) <- c(factors, "SexMale","Age47", "Age53", "Smoking")
 ################################################################################
 
 #******************************************************************************#
-# Continuous
+# Continuous combination
 #******************************************************************************#
 load("Y/Y_test.RData")
 perf <- rep(NA, 15)
@@ -147,7 +148,7 @@ perf[1] <- R2(pred = predCAIDE1, obs = Y_test$CAIDE)
 
 
 #******************************************************************************#
-# Categorical
+# Discrete combination
 #******************************************************************************#
 
 # Age
@@ -183,7 +184,7 @@ plotDF <- data.frame(Predicted = predCAIDE1,
 perf[2] <- R2(pred = predCAIDE1, obs = Y_test$CAIDE)
 
 #******************************************************************************#
-# Data-driven
+# Supervised combination
 #******************************************************************************#
 
 methods <- c("EN", "sPLS", "RF")
@@ -208,7 +209,7 @@ for (i in 1:length(methods)){
 ################################################################################
 
 #******************************************************************************#
-# Continuous
+# Continuous combination
 #******************************************************************************#
 
 # Age
@@ -254,7 +255,7 @@ perf[6] <- R2(pred = predCAIDE2, obs = Y_test$CAIDE2)
 
 
 #******************************************************************************#
-# Categorical
+# Discrete combination
 #******************************************************************************#
 
 # Age
@@ -288,7 +289,7 @@ predCAIDE2 <- Age + BMI + Education + Physical + Sex + SysBP + TotalChol
 perf[7] <- R2(pred = predCAIDE2, obs = Y_test$CAIDE2)
 
 #******************************************************************************#
-# Data-driven
+# Supervised combination
 #******************************************************************************#
 
 methods <- c("EN", "sPLS", "RF")
@@ -315,7 +316,7 @@ for (i in 1:length(methods)){
 ################################################################################
 
 #******************************************************************************#
-# Continuous
+# Continuous combination
 #******************************************************************************#
 
 # Diet
@@ -377,7 +378,7 @@ predLIBRA <- Diet + Physical + Smoking + Alcohol + BMI + Depression + Diabetes +
 perf[11] <- R2(pred = predLIBRA, obs = Y_test$LIBRA)
 
 #******************************************************************************#
-# Categorical
+# Discrete combination
 #******************************************************************************#
 
 # Diet
@@ -422,7 +423,7 @@ perf[12] <- R2(pred = predLIBRA, obs = Y_test$LIBRA)
 
 
 #******************************************************************************#
-# Data-driven
+# Supervised combination
 #******************************************************************************#
 
 methods <- c("EN", "sPLS", "RF")
@@ -446,6 +447,7 @@ for (i in 1:length(methods)){
 
 ################################################################################
 
+# Prepare data for plotting
 plotDF <- data.frame(R2 = perf,
                      Method = c("CAIDE1 weights\n(Continuous)", 
                                 "CAIDE1 weights\n(Discrete)", 
@@ -480,10 +482,12 @@ plotDF$Method <- factor(plotDF$Method,
 plotDF$Color <- factor(paste0(plotDF$Score, "_", plotDF$Method),
                        levels = paste0(plotDF$Score, "_", plotDF$Method
                                        ))
-
+# Set colors
 colors <- c(RColorBrewer::brewer.pal(n = 8, name = "Reds")[4:8],
             RColorBrewer::brewer.pal(n = 8, name = "Oranges")[4:8],
             RColorBrewer::brewer.pal(n = 8, name = "PuRd")[4:8])
+
+# Make plot
 p <- ggplot(plotDF) +
   geom_bar(aes(x = Method, y = R2, fill = Score, alpha = Method), stat = "identity", color = "black") +
   facet_grid(rows = vars(Score), scale = "free", space = "free") +
@@ -495,9 +499,10 @@ p <- ggplot(plotDF) +
   scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
   theme(legend.position = "none")
 
+# Save plot
 ggsave(p, file = "CombinationMethods.png", width = 8, height = 6)
 
-
+# Make plot (Supervised methods only)
 p <- ggplot(plotDF[(plotDF$Method == "Random Forest") |
                    (plotDF$Method == "sPLS") |
                    (plotDF$Method == "ElasticNet"), ]) +
@@ -512,4 +517,5 @@ p <- ggplot(plotDF[(plotDF$Method == "Random Forest") |
   scale_fill_manual(values = c("#EF3B2C","#FE9929", "#807DBA")) +
   theme(legend.position = "none")
 
+# Save plot
 ggsave(p, file = "CombinationMethods_supervised.png", width = 8, height = 6)

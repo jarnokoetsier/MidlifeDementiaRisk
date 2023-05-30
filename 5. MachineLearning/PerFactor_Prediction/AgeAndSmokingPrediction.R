@@ -13,6 +13,7 @@ library(tidyverse)
 library(ggpubr)
 library(pROC)
 
+# Load data
 load("~/Data/X_nonTest.RData")
 load("~/PerFactor/Y_nonTest_factors.RData")
 load("~/Data/X_test.RData")
@@ -25,7 +26,7 @@ load("~/PerFactor/Y_test_factors.RData")
 
 ###############################################################################
 
-
+# Smoking score function
 smokingScore<-function(betas){
   
   load("Data/SmokingScoreRefData.rda")
@@ -85,61 +86,67 @@ smokingScore<-function(betas){
 smoking_nonTest <- smokingScore(X_nonTest)
 smoking_test <- smokingScore(X_test)
 
-
-
-# train
+# Performance in training set:
 roc_list <- roc(response = factor(Y_nonTest$Smoking,
                                   levels = c("No", "Yes")), 
                 predictor = smoking_nonTest)
 
+# AUC
 AUC <- as.numeric(auc(roc_list))
 
 AUCplot <- data.frame(Sensitivity = roc_list$sensitivities,
                       Specificity = roc_list$specificities)
 
+# optimal threshold
 Gmean <- sqrt(roc_list$sensitivities*roc_list$specificities)
 threshold <- roc_list$thresholds[which.max(Gmean)]
 
+# Observed versus predicted
 ObsPred_CV <- data.frame(predictedClass = ifelse(predAge_nonTest[,i] < threshold, "Yes", "No"),
                          predictedAge = predAge_nonTest[,i],
                          obs = Y_nonTest$Smoking)
 
+# Combine in list object
 OutputSmoking_CV <- list(AUCplot = AUCplot, 
                          AUC = AUC, 
                          threshold = threshold, 
                          ObsPred_test = ObsPred_CV)
 
-# test
+# Performance in test set
 roc_list <- roc(response = factor(Y_test$Smoking,
                                   levels = c("No", "Yes")), 
                 predictor = smoking_test)
 
+# AUC
 AUC <- as.numeric(auc(roc_list))
 
 AUCplot <- data.frame(Sensitivity = roc_list$sensitivities,
                       Specificity = roc_list$specificities)
 
+# optimal threshold
 Gmean <- sqrt(roc_list$sensitivities*roc_list$specificities)
 threshold <- roc_list$thresholds[which.max(Gmean)]
 
+# Observed versus predicted
 ObsPred_test <- data.frame(predictedClass = ifelse(predAge_test[,i] < threshold, "Yes", "No"),
                            predictedAge = predAge_test[,i],
                            obs = Y_test$Smoking)
 
+# Combine in list object
 OutputSmoking_test <- list(AUCplot = AUCplot, 
                            AUC = AUC, 
                            threshold = threshold, 
                            ObsPred_test = ObsPred_test)
   
   
-
-
-
+# Save performances
 save(OutputSmoking_CV, file = "PerFactor/OutputSmoking_CV.RData")
 save(OutputSmoking_test, file = "PerFactor/OutputSmoking_test.RData")
 
 
-# Make plots
+#*****************************************************************************#
+#   Make plots
+#*****************************************************************************#
 
 # AUC training
 load("PerFactor/OutputSmoking_CV.RData")
@@ -161,13 +168,17 @@ auc_CV_smoking <- c(auc_CV_smoking,finalOutput$Smoking$AUC)
 load("~/PerFactor/Random Forest/finalOutput_CV.RData")
 auc_CV_smoking <- c(auc_CV_smoking,finalOutput$Smoking$AUC)
 
-
+# Prepare data for plotting
 plotDF_smoking <- data.frame(AUC = c(auc_test_smoking,auc_CV_smoking),
                              Model = factor(rep(c("Smoking Score", "ElasticNet*", "Random Forest*"),2),
                                             levels = c("ElasticNet*", "Random Forest*","Smoking Score")),
                              Set = c(rep("Training",3), rep("Test",3))
 )
+
+# Set colors
 color <- c("#1B9E77", "#D95F02", "#E7B10A")
+
+# Make plot
 p <- ggplot(plotDF_smoking) +
   geom_bar(aes(x = Model, y = AUC, fill = Model),
            stat = "identity", position = position_dodge(), color = "grey") +
@@ -196,24 +207,26 @@ ggsave(p, file = "SmokingModels_AUC.png", width = 8, height = 3)
 
 ###############################################################################
 
-#BiocManager::install("wateRmelon")
+# Load packages
 library(wateRmelon)
 library(pROC)
 
+# predicted age in training set
 predAge_nonTest <- agep(X_nonTest, method='all')
 predAge_nonTest <- predAge_nonTest[,c(1,3,5,7,9)]
 save(predAge_nonTest, file = "PerFactor/predAge_nonTest.RData")
 
+# predicted age in test set
 predAge_test <- agep(X_test, method='all')
 predAge_test <- predAge_test[,c(1,3,5,7,9)]
 save(predAge_test, file = "PerFactor/predAge_test.RData")
 
-
+# Load data
 load("PerFactor/predAge_test.RData")
 load("PerFactor/predAge_nonTest.RData")
 modelName <- c("Horvath", "Hannum", "Pheno-Age", "Skin-Blood", "Lin")
 
-
+# Get models' performances in training and test set
 OutputAge47_CV <- list()
 OutputAge53_CV <- list()
 OutputAge47_test <- list()
@@ -323,12 +336,18 @@ names(OutputAge53_CV) <- modelName
 names(OutputAge47_test) <- modelName
 names(OutputAge53_test) <- modelName
 
+# Save performances
 save(OutputAge47_CV, file = "PerFactor/OutputAge47_CV.RData")
 save(OutputAge53_CV, file = "PerFactor/OutputAge53_CV.RData")
 save(OutputAge47_test, file = "PerFactor/OutputAge47_test.RData")
 save(OutputAge53_test, file = "PerFactor/OutputAge53_test.RData")
 
 
+#*****************************************************************************#
+#   Make plots
+#*****************************************************************************#
+
+# Prepare data for plotting
 auc_CV_age47 <- rep(NA, length(modelName))
 auc_CV_age53 <- rep(NA, length(modelName))
 auc_test_age47 <- rep(NA, length(modelName))
@@ -361,9 +380,7 @@ auc_test_age47 <- c(auc_test_age47,finalOutput$Age47$AUC)
 auc_test_age53 <- c(auc_test_age53,finalOutput$Age53$AUC)
 
 
-
-
-
+# AUC in cross-validation
 plotAUC_CV <- data.frame(Model = c(modelName, c("ElasticNet*", "Random Forest*"),
                                 modelName, c("ElasticNet*", "Random Forest*")),
                       Age = c(rep("Age < 47", length(auc_CV_age47)),
@@ -372,6 +389,7 @@ plotAUC_CV <- data.frame(Model = c(modelName, c("ElasticNet*", "Random Forest*")
 )
 plotAUC_CV$Set <- rep("Training", nrow(plotAUC_CV))
 
+# AUC in cross-validation
 plotAUC_test <- data.frame(Model = c(modelName, c("ElasticNet*", "Random Forest*"),
                                    modelName, c("ElasticNet*", "Random Forest*")),
                          Age = c(rep("Age < 47", length(auc_test_age47)),
@@ -381,18 +399,18 @@ plotAUC_test <- data.frame(Model = c(modelName, c("ElasticNet*", "Random Forest*
 plotAUC_test$Set <- rep("Test", nrow(plotAUC_test))
 
 
+# Combine AUC in test and cross-validation into single data frame
 plotAUC <- rbind.data.frame(plotAUC_CV, plotAUC_test)
-
-
-
 plotAUC$Model <- factor(plotAUC$Model,
                         levels = c("ElasticNet*", "Random Forest*",
                                    modelName))
 
 
+# Set colors
 color <- c(RColorBrewer::brewer.pal(n = 7, "Dark2"),
            RColorBrewer::brewer.pal(n = 7, "Set2"))
 
+# Make plot
 p <- ggplot() +
   geom_bar(data = plotAUC, aes(x = Model, y = AUC, alpha = Age, fill = Model),
            stat = "identity", position = position_dodge(), color = "grey") +
@@ -413,20 +431,22 @@ p <- ggplot() +
                                      size = 10,
                                      face = "italic"))
 
+# Save plot
 ggsave(p, file = "AgeModels_AUC.png", width = 8, height = 6)
 
 
 
-
+# Set colors
 color <- c(RColorBrewer::brewer.pal(n = 5, "Dark2"),
            RColorBrewer::brewer.pal(n = 5, "Set2"))
 
-
+# Prepare data
 plotDF <- rbind.data.frame(plotDF_age47, plotDF_age53)
 plotDF$Age <- c(rep("Age < 47",nrow(plotDF_age47)),
                 rep("Age > 53",nrow(plotDF_age53)))
 plotDF$Group <- paste0(plotDF$Age, ", ", plotDF$Model)
 
+# Make ROC curves
 p <- ggplot() +
   geom_path(data = plotDF, aes(y = Sensitivity, x = 1- Specificity,
                                color = Group), 

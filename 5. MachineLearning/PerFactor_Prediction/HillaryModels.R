@@ -12,7 +12,7 @@ message("1. Loading data")
 
 message("1.1 Loading Methylation data - rows to be CpGs and columns to be individuals") 
 
-cpgs <- read.csv("Data/Predictors_Shiny_by_Groups.csv", header = T) 
+cpgs <- read.csv("HillaryModels.csv", header = T) 
 load("~/Data/X_nonTest.RData")
 load("~/Data/Y_nonTest.RData")
 data <- X_nonTest
