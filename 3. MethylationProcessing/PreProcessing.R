@@ -493,6 +493,7 @@ for (i in 1:nrow(corDF)){
   corDF$Correlation[i] <- cor(PCs[,corDF$PCs[i]], meta[,corDF$Meta[i]], method = "spearman")
 }
 
+# Make plot
 p <- ggplot() +
   geom_point(data = corDF, aes(x = PCs, y = Meta, color = Correlation, size = abs(Correlation))) +
   labs(color = "Spearman\nCorrelation", size = "|Spearman\nCorrelation|") +
@@ -510,6 +511,7 @@ p <- ggplot() +
           color="black", fill="#1B9E77", linewidth = 1.5, linetype="solid"
         ))
 
+# Save plot
 ggsave(p,file = "correlationPlot.png", width = 8, height = 6)
 
 

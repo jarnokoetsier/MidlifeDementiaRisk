@@ -70,7 +70,7 @@ all_Y <- dat[dat$Basename %in% intersect_samples,
 all_Y <- inner_join(all_Y, cellType, by = c("Basename" = "ID"))
 all(rownames(all_X) == all_Y$Basename)
 
-# Split data into training and test set:
+# Split data into training and test set (seperately for males and females):
 
 # Male
 nTrain_male <- round(0.8*nrow(all_X[all_Y$Sex == 1,]))
@@ -198,6 +198,8 @@ ggsave(overlap_plot, file = "OverlapPlot.png", width = 8, height = 6)
 #=============================================================================#
 # Age
 #=============================================================================#
+
+# Combine data
 plotData <- rbind.data.frame(Y_test[,1:13], Y_nonTest[,1:13], Y_CAIDE1[,1:13], 
                              Y_CAIDE2[,1:13], Y_LIBRA[,1:13])
 plotData$Set <- c(rep("Test", nrow(Y_test)),
@@ -219,7 +221,7 @@ plot_age <- ggplot(plotData, aes(x = Age, y = Set, fill = Set)) +
 # Save plot
 ggsave(plot_age, file = "Age_TrainingAndTest.png", width = 8, height = 6)
 
-# Two-sample Kolmogorov-Smirnov test
+# Two-sample Kolmogorov-Smirnov test (test whether distribution is significantly different)
 ks.test(Y_test$Age, Y_nonTest$Age)
 ks.test(Y_test$Age, Y_CAIDE1$Age)
 ks.test(Y_test$Age, Y_CAIDE2$Age)
@@ -251,6 +253,7 @@ ggsave(plot_sex, file = "Sex_TrainingAndTest.png", width = 8, height = 6)
 # Cell type composition
 #=============================================================================#
 
+# Collect cell type composition information for plotting
 plotCell <- plotData[,7:12]
 colnames(plotCell) <- c("CD8 T-cells", "CD4 T-cells", "NK cells", "B-cells", 
                         "Monocytes","Neutrophils")
@@ -259,6 +262,7 @@ plotCell$Set <- rep(plotData$Set,6)
 plotCell$ID <- rep(plotData$ID,6)
 plotCell$Test <- rep(plotData$Test,6)
 
+# Make plot
 plot_cell <- ggplot(plotCell, aes(x = key, y = value, fill = Set, color = Set)) +
   geom_point(position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.9), alpha = 0.2) +
   geom_violin(alpha = 0.5, draw_quantiles = 0.5, color = "black", size = 0.5,
@@ -280,21 +284,12 @@ ggsave(plot_cell, file = "Cell_TrainingAndTest.png", width = 10, height = 6)
 # CAIDE1 score
 #=============================================================================#
 
-# Make plot
-plot_caide <- ggplot() +
-  geom_histogram(data = CAIDE[CAIDE$ID %in% Y_CAIDE1$ID,], aes(x = CAIDE, fill = "Train"), bins = 50, alpha = 0.5) +
-  geom_histogram(data = CAIDE[CAIDE$ID %in% Y_test$ID,], aes(x = CAIDE, fill = "Test"), bins = 50, alpha = 0.5) +
-  ylab("Count") +
-  xlab("CAIDE1 Score") +
-  labs(fill = NULL) +
-  scale_fill_brewer(palette = "Set1") +
-  theme_classic() +
-  theme(legend.position = "bottom")
-
+# Prepare data for plotting
 plotData <- CAIDE
 plotData$Set <- rep("Training", nrow(plotData))
 plotData$Set[plotData$ID %in% Y_test$ID] <- "Test"
 
+# Make plot
 plot_caide <- ggplot() + 
   geom_bar(data = plotData[plotData$Set == "Training",], aes(x = CAIDE, fill = Set), 
            position = "identity", width = 0.8, alpha = 0.9, color = "black") +
@@ -307,7 +302,8 @@ plot_caide <- ggplot() +
   theme(legend.position = "bottom",
         legend.title = element_blank())
 
-#ks.test(CAIDE$CAIDE[CAIDE$ID %in% Y_CAIDE1$ID], CAIDE$CAIDE[CAIDE$ID %in% Y_test$ID])
+# Two-sample Kolmogorov-Smirnov test 
+ks.test(CAIDE$CAIDE[CAIDE$ID %in% Y_CAIDE1$ID], CAIDE$CAIDE[CAIDE$ID %in% Y_test$ID])
 
 # Save plot
 ggsave(plot_caide, file = "CAIDE1_TrainingAndTest.png", width = 6, height = 4.5)
@@ -316,11 +312,12 @@ ggsave(plot_caide, file = "CAIDE1_TrainingAndTest.png", width = 6, height = 4.5)
 # CAIDE2 score
 #=============================================================================#
 
-
+# Prepare data for plotting
 plotData <- CAIDE2
 plotData$Set <- rep("Training", nrow(plotData))
 plotData$Set[plotData$ID %in% Y_test$ID] <- "Test"
 
+# Make plot
 plot_caide <- ggplot() + 
   geom_bar(data = plotData[plotData$Set == "Training",], aes(x = CAIDE2, fill = Set), 
            position = "identity", width = 0.8, alpha = 0.9, color = "black") +
@@ -333,7 +330,8 @@ plot_caide <- ggplot() +
   theme(legend.position = "bottom",
         legend.title = element_blank())
 
-#ks.test(CAIDE$CAIDE[CAIDE$ID %in% Y_CAIDE1$ID], CAIDE$CAIDE[CAIDE$ID %in% Y_test$ID])
+# Two-sample Kolmogorov-Smirnov test 
+ks.test(CAIDE$CAIDE[CAIDE$ID %in% Y_CAIDE1$ID], CAIDE$CAIDE[CAIDE$ID %in% Y_test$ID])
 
 # Save plot
 ggsave(plot_caide, file = "CAIDE2_TrainingAndTest.png", width = 6, height = 4.5)
@@ -342,13 +340,13 @@ ggsave(plot_caide, file = "CAIDE2_TrainingAndTest.png", width = 6, height = 4.5)
 # LIBRA score
 #=============================================================================#
 
-ks.test(EPILIBRA$LIBRA[EPILIBRA$ID %in% Y_LIBRA$ID], EPILIBRA$LIBRA[EPILIBRA$ID %in% Y_test$ID])
-
+# Prepare data for plotting
 EPILIBRA$LIBRA <- round(rowSums(EPILIBRA[,10:20]),1)
 plotData <- data.frame(EPILIBRA)
 plotData$Set <- rep("Training", nrow(plotData))
 plotData$Set[plotData$ID %in% Y_test$ID] <- "Test"
 
+# Make plot
 plot_libra <- ggplot() + 
   geom_histogram(data = plotData[plotData$Set == "Training",], aes(x = LIBRA, fill = Set),
                  bins = 12, alpha = 0.9, color = "black") +
@@ -361,6 +359,8 @@ plot_libra <- ggplot() +
   theme(legend.position = "bottom",
         legend.title = element_blank())
 
+# Two-sample Kolmogorov-Smirnov test 
+ks.test(EPILIBRA$LIBRA[EPILIBRA$ID %in% Y_LIBRA$ID], EPILIBRA$LIBRA[EPILIBRA$ID %in% Y_test$ID])
 
 # Save plot
 ggsave(plot_libra, file = "LIBRA_TrainingAndTest.png", width = 6, height = 4.5)

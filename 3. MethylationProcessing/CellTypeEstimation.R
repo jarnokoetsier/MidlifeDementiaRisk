@@ -3,7 +3,11 @@
 # Estimate cell type composition
 
 ###############################################################################
-# Install packages
+# Clear workspace and console
+rm(list = ls())
+cat("\014") 
+
+# Install packages (if needed)
 
 # Bioconductor packages
 BiocManager::install(c("minfi", 
