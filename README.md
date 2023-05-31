@@ -26,12 +26,13 @@ For the early identification of people with increased dementia risk, [LIBRA](htt
 An overview of the applied methodological workflow is shown in figure below and encompasses of the following steps:
 
 ### I. Pre-processing
-1. Pre-processing of **genomics** data ([GenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/GenotypeProcessing))
-2. Pre-processing of **DNA methylation** data ([MethylationProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/MethylationProcessing))
-3. Pre-processing of **phenotype** data ([PhenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/PhenotypeProcessing)), 
+1. Pre-processing of **phenotype** data ([PhenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/1. PhenotypeProcessing)) 
+2. Pre-processing of **genomics** data ([GenotypeProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/2. GenotypeProcessing))
+3. Pre-processing of **DNA methylation** data ([MethylationProcessing](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/3. MethylationProcessing))
+
 
 ### II. Evaluation of Feature Selection Methods
-Evaluation of eight different feature selection methods ([FeatureSelection](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/FeatureSelection)):
+Evaluation of eight different feature selection methods ([FeatureSelection](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/4. FeatureSelection)):
 1. **Variance**-based feature selection
    * &beta;-values
    * M-values
@@ -43,11 +44,11 @@ Evaluation of eight different feature selection methods ([FeatureSelection](http
 5. **Correlation**-based feature selection
 
 ### III. Prediction of Dementia Risk
-Prediction of the **dementia risk** scores, categories, and factors ([MachineLearning](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/MachineLearning)). 
+Prediction of the **dementia risk** scores, categories, and factors ([MachineLearning](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/5. MachineLearning)). 
 
 ### IV. Model Validation & Interpretation
-1. **Biological interpretation** of the best-performing risk factor models ([ModelInterpretation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/ModelInterpretation))
-2. **Validation** of the established models in independent dementia-associated cohorts ([ModelValidation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/ModelValidation)). 
+1. **Biological interpretation** of the best-performing risk factor models ([ModelInterpretation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/6. ModelInterpretation))
+2. **Validation** of the established models in independent dementia-associated cohorts ([ModelValidation](https://github.com/jarnokoetsier/MidlifeDementiaRisk/tree/main/7. ModelValidation)). 
 
 
 ![Workflow](/Images/Workflow.png?raw=true "Workflow")
