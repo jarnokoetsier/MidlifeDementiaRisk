@@ -150,7 +150,6 @@ testPred <- predict(fit_wo, X_test, type = "prob")
 roc_test_wo <- pROC::roc(Y_test$Y, testPred$MCI)
 auc(roc_test_wo)
 
-
 # Actual training
 set.seed(123)
 which(colnames(X_train) == "Age")

@@ -1,5 +1,5 @@
-# Load data
 
+# Load packages
 library(tidyverse)
 library(caret)
 
@@ -78,18 +78,23 @@ sum(duplicated(X_train))
 table(Y_test$Diagnosis)
 table(Y_train$Diagnosis)
 
+# Save training and test set
 save(X_train, file = "PredictCSF/X_train_PredictCSF.RData")
 save(Y_train, file = "PredictCSF/Y_train_PredictCSF.RData")
 save(X_test, file = "PredictCSF/X_test_PredictCSF.RData")
 save(Y_test, file = "PredictCSF/Y_test_PredictCSF.RData")
+
 #*****************************************************************************#
 # correlation-based selection
 #*****************************************************************************#
+
+# Load training and test set
 load("PredictCSF/X_train_PredictCSF.RData")
 load("PredictCSF/Y_train_PredictCSF.RData")
 load("PredictCSF/X_test_PredictCSF.RData")
 load("PredictCSF/Y_test_PredictCSF.RData")
 
+# Perform correlation-based selection
 Y_train1 <- Y_train[,c("Local_PTAU_Abnormal", "Local_TTAU_Abnormal", "Local_AB42_Abnormal")]
 correlations <- matrix(NA, nrow = ncol(X_train), ncol = ncol(Y_train1))
 for (i in 1:ncol(Y_train1)) {
@@ -116,6 +121,8 @@ save(selectedProbes, file = "PredictCSF/selectedProbes.RData")
 # Model Training (ElasticNet)
 
 ################################################################################
+
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -148,7 +155,6 @@ for (r in 1:5){
 rm(temp)
 
 
-
 # Set grid for lambda
 lambdaCV <- exp(seq(log(0.01),log(2.5),length.out = 100))
 
@@ -163,6 +169,7 @@ colnames(parameterGrid) <- c(".alpha", ".lambda")
 MLmethod = "glmnet"
 performance_metric = "ROC"
 
+# Perform machine learning
 CVList <- list()
 for (f in 1:ncol(Y_train1)){
   
@@ -225,6 +232,7 @@ for (f in 1:ncol(Y_train1)){
 names(CVList) <- colnames(Y_train1)
 save(CVList, file = "PredictCSF/CVList.RData")
 
+# Get optimal model performance and corresponding parameters in cross-validation
 PerformanceList <- list()
 for (i in 1:length(CVList)){
   trainResults <- CVList[[i]]
@@ -243,6 +251,7 @@ names(PerformanceList) <- names(CVList)
 save(PerformanceList, file = "PredictCSF/PerformanceList.RData")
 
 
+# Get best models
 bestModels <- list()
 for (f in 1:length(PerformanceList)){
   
@@ -302,26 +311,15 @@ for (f in 1:length(PerformanceList)){
 names(bestModels) <- colnames(Y_train1)
 save(bestModels, file = "PredictCSF/bestModels.RData")
 
+# Evaluate models
 factors <- c("Local_PTAU_Abnormal", "Local_TTAU_Abnormal", "Local_AB42_Abnormal")
 f = 3
 fit <- bestModels[[f]]
 load(paste0("PredictCSF/X_all_", factors[f],".RData"))
 
 test <- predict(fit, X_test_cor, type = "prob")
-plot(test$High, Y_test[,factors[f]])
-
 roc_list <- pROC::roc(Y_test[,factors[f]], test$High)
 pROC::auc(roc_list)
-
-plot(test, Y_test[,factors[f]])
-
-R2(test, Y_test[,factors[f]])
-RMSE(test, Y_test[,factors[f]])
-
-modelDF <- data.frame(obs = Y_test[,factors[f]],
-                      pred = test)
-
-summary(lm(obs ~ pred, data = modelDF))
 
 
 ################################################################################
@@ -329,6 +327,8 @@ summary(lm(obs ~ pred, data = modelDF))
 # Model Training (ElasticNet, no correlation)
 
 ################################################################################
+
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -375,13 +375,13 @@ colnames(parameterGrid) <- c(".alpha", ".lambda")
 # Machine learning method
 MLmethod = "glmnet"
 performance_metric = "ROC"
-
 fitControl <- trainControl(search = "grid", 
                            savePredictions = FALSE,
                            summaryFunction = twoClassSummary,
                            classProbs = TRUE,
                            index = CVindex)
 
+# Model training
 bestModels <- list()
 for (i in 1:ncol(Y_train1)){
   set.seed(123)
@@ -399,27 +399,15 @@ for (i in 1:ncol(Y_train1)){
 names(bestModels) <- colnames(Y_train1)
 save(bestModels, file = "PredictCSF/bestModels_ENnoCor.RData")
 
-
+# Evalute best models
 factors <- c("Local_PTAU_Abnormal", "Local_TTAU_Abnormal", "Local_AB42_Abnormal")
 f = 3
 fit <- bestModels[[f]]
 load(paste0("PredictCSF/X_all_", factors[f],".RData"))
 
 test <- predict(fit, X_test_cor, type = "prob")
-plot(test$High, Y_test[,factors[f]])
-
 roc_list <- pROC::roc(Y_test[,factors[f]], test$High)
 pROC::auc(roc_list)
-
-plot(test, Y_test[,factors[f]])
-
-R2(test, Y_test[,factors[f]])
-RMSE(test, Y_test[,factors[f]])
-
-modelDF <- data.frame(obs = Y_test[,factors[f]],
-                      pred = test)
-
-summary(lm(obs ~ pred, data = modelDF))
 
 
 ################################################################################
@@ -428,12 +416,11 @@ summary(lm(obs ~ pred, data = modelDF))
 
 ################################################################################
 
-
+# Load packages
 library(tidyverse)
 library(caret)
 library(ranger)
 library(e1071)
-
 
 # Clear workspace and console
 rm(list = ls())
@@ -542,6 +529,7 @@ for (f in 1:ncol(Y_train1)){
 names(CVList) <- colnames(Y_train1)
 save(CVList, file = "PredictCSF/CVList_RF.RData")
 
+# Get optimal performances and corresponding parameter values
 PerformanceList <- list()
 for (i in 1:length(CVList)){
   trainResults <- CVList[[i]]
@@ -560,7 +548,7 @@ for (i in 1:length(CVList)){
 names(PerformanceList) <- names(CVList)
 save(PerformanceList, file = "PredictCSF/PerformanceList_RF.RData")
 
-
+# Get best models
 bestModels <- list()
 for (f in 1:length(PerformanceList)){
   
@@ -609,17 +597,16 @@ for (f in 1:length(PerformanceList)){
 names(bestModels) <- colnames(Y_train1)
 save(bestModels, file = "PredictCSF/bestModels_RF.RData")
 
+# Evaluate models
 factors <- c("Local_PTAU_Abnormal", "Local_TTAU_Abnormal", "Local_AB42_Abnormal")
 f = 1
 fit <- bestModels[[f]]
 load(paste0("PredictCSF/X_all_", factors[f],".RData"))
 
 test <- predict(fit, X_test_cor, type = "prob")
-plot(test$High, Y_test[,factors[f]])
-
 roc_list <- pROC::roc(Y_test[,factors[f]], test$High)
 pROC::auc(roc_list)
-plot(roc_list)
+
 
 
 ################################################################################
@@ -627,72 +614,76 @@ plot(roc_list)
 # Make plot
 
 ################################################################################
+
+# Load pROC package
 library(pROC)
-load("PredictCSF/bestModels_RF.RData")
-load("PredictCSF/bestModels.RData")
 
-
-
-score <- c("", "_RF")
-scoreName <- c("ElasticNet", "Random Forest")
+# Get ROC curve for each model in test set
+score <- c( "_ENnoCor","", "_RF")
+scoreName <- c("ElasticNet","Correlation + ElasticNet", "Correlation + Random Forest")
 factors <- c("Local_PTAU_Abnormal", "Local_TTAU_Abnormal", "Local_AB42_Abnormal")
 factorName <- c('p-tau', "t-tau", "amyloid-beta")
 plotDF <- as.data.frame(testDF)
 ROCplot <- NULL
 aucValue <- rep(NA, length(score)*length(factors))
+ci_low <- rep(NA, length(score)*length(factors))
+ci_high <- rep(NA, length(score)*length(factors))
 for (i in 1:length(score)){
   
   # Load best model
   load(paste0("PredictCSF/bestModels",score[i],".RData"))
+  load("PredictCSF/X_test_PredictCSF.RData")
   
- 
   for (f in 1:length(factors)){
     fit <- bestModels[[f]]
-    load(paste0("PredictCSF/X_all_", factors[f],".RData"))
-    test <- predict(fit, X_test_cor, type = "prob")
-    test <- pROC::roc(Y_test[,factors[f]],test$High)
+    if (i == 1){
+      testPred <- predict(fit, X_test, type = "prob")
+    } else{
+      load(paste0("PredictCSF/X_all_", factors[f],".RData"))
+      testPred <- predict(fit, X_test_cor, type = "prob")
+    }
+    test <- pROC::roc(Y_test[,factors[f]],testPred$High, direction = "<")
     temp <- data.frame(Sensitivity = test$sensitivities,
                        Specificity = test$specificities,
-                       Class = paste0(rep(scoreName[i],length(test$specificities)),
-                                      ": ",factorName[f]))
+                       Factor = rep(factorName[f],length(test$specificities)),
+                       Model = rep(scoreName[i], length(test$specificities)))
     
     ROCplot <- rbind.data.frame(ROCplot, temp)
     aucValue[f + (i-1)*3] <- format(round(as.numeric(auc(test)),2),nsmall = 2)
+    ci_low[f + (i-1)*3] <- format(round(ci(test)[1],2),nsmall = 2)
+    ci_high[f + (i-1)*3] <- format(round(ci(test)[3],2),nsmall = 2)
   }
-
-
+  
+  
 }
 
-plotAUC <- data.frame(AUC = paste0("AUC: ",aucValue),
-                      Score = c("ElasticNet: p-tau",
-                                "ElasticNet: t-tau",
-                                "ElasticNet: amyloid-beta",
-                                "Random Forest: p-tau",
-                                "Random Forest: t-tau",
-                                "Random Forest: amyloid-beta"),
+plotAUC <- data.frame(AUC_ci = paste0("AUC: ",aucValue, " (", ci_low, "-", ci_high, ")"),
+                      AUC = paste0("AUC: ",aucValue),
+                      Factor = rep(factorName, 3),
+                      Model = rep(scoreName, each = 3),
                       X = 0.9,
-                      Y = rev(seq(0.05,0.4,length.out = length(aucValue))))
-
-ROCplot$Class <- factor(ROCplot$Class, levels = c("ElasticNet: p-tau",
-                                                  "ElasticNet: t-tau",
-                                                  "ElasticNet: amyloid-beta",
-                                                  "Random Forest: p-tau",
-                                                  "Random Forest: t-tau",
-                                                  "Random Forest: amyloid-beta"))
+                      Y = rep(c(0.050,0.200,0.125), each = 3))
 
 
 
-colors <- rev(c("#E6AB02","#6BAED6","#2171B5","#084594","#EF3B2C","#CB181D", "#99000D"))
-#colors <- rev(c("#E6AB02","#6BAED6","#2171B5","#084594"))
-p <- ggplot(ROCplot) +
+# Set colors
+colorList <- list(c("#4292C6","#2171B5","#084594"),
+                  c("#807DBA","#6A51A3","#4A1486"),
+                  c("#EF3B2C","#CB181D", "#99000D")
+)
+
+# Make plot
+n = 1 # Which CSF biomarker?
+colors <- colorList[[n]]
+p <- ggplot(ROCplot[ROCplot$Factor == factorName[n],]) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", size = 2) +
   geom_path(aes(y = Sensitivity, x = 1- Specificity,
-                color = Class), 
+                color = Model), 
             size = 1.5, linetype = "solid") +
-  geom_text(data = plotAUC, aes(x = X, y = Y, label = AUC, color = Score),
+  geom_text(data = plotAUC[plotAUC$Factor == factorName[n],], aes(x = X, y = Y, label = AUC, color = Model),
             fontface = "bold") +
   scale_color_manual(values = colors) +
-  ggtitle("CSF biomarkers") +
+  ggtitle(paste0(factorName[n], " status")) +
   theme_classic() +
   theme(legend.title = element_blank(),
         legend.position = "right",
@@ -703,4 +694,5 @@ p <- ggplot(ROCplot) +
                                      size = 10,
                                      face = "italic"))
 
-ggsave(p, file = "PredictCSF/ROC_CSFbiomarkers.png", width = 7.5, height = 5)
+# Save plot
+ggsave(p, file = paste0("PredictCSF/ROC_",factorName[n],".png"), width = 7.5, height = 5)
