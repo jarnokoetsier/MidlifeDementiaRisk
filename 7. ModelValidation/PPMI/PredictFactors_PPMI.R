@@ -37,18 +37,9 @@ predictedAge <- agep(t(X_PPMI_imp_B),
 
 predictedScore_factors$Age <- predictedAge$skinblood.skinblood.age
 
+# Save predicted scores
 save(predictedScore_factors, file = "PPMI/predictedScore_factors_PPMI.RData")
 
-
-rownames(metaData_all) <- metaData_all$Basename
-samples <- intersect(metaData_all$Basename, rownames(predictedScore_factors))
-
-metaData_fil <- metaData_all[samples,]
-predictedScore_factors_fil <- predictedScore_factors[samples,]
-
-plot(metaData_fil$EDUCYRS, predictedScore_factors_fil$Education)
-
-cor.test(metaData_fil$EDUCYRS, predictedScore_factors_fil$Education, method = "spearman")
 
 
                      

@@ -35,18 +35,21 @@ pred_sPLS <- predict(fit, predictedScore_factors_fil, type = "prob")
 load("~/PPMI/Fit_EMIF_MCI_RF.RData")
 pred_RF <- predict(fit, predictedScore_factors_fil, type = "prob")
 
+# Make boxplots
 boxplot(pred_RF$MCI ~ as.character(metaData_fil$Class))
 boxplot(pred_CAIDE1 ~ as.character(metaData_fil$Class))
 boxplot(pred_LIBRA ~ as.character(metaData_fil$Class))
 boxplot(predictedScore_factors_fil$Age ~ as.character(metaData_fil$Class))
 boxplot(metaData_fil$age ~ as.character(metaData_fil$Class))
 
+# Perform t-tests
 t.test(pred_CAIDE1 ~ as.character(metaData_fil$Class))
 t.test(pred_LIBRA ~ as.character(metaData_fil$Class))
 t.test(predictedScore_factors_fil$Age ~ as.character(metaData_fil$Class))
 t.test(metaData_fil$age ~ as.character(metaData_fil$Class))
 t.test(pred_RF$MCI ~ as.character(metaData_fil$Class))
 
+# Combine into data frame
 testDF <- cbind.data.frame(predictedScore_factors_fil,
                            pred_CAIDE1,
                            pred_LIBRA,
@@ -54,54 +57,15 @@ testDF <- cbind.data.frame(predictedScore_factors_fil,
                            pred_sPLS = pred_sPLS$MCI,
                            pred_RF = pred_RF$MCI,
                            metaData_fil)
+
+# Adjust for age and sex as covariates
 model <- lm(Class ~ age + sex  + pred_EN, data = testDF)
 summary(model)
 
-model <- glm(Class ~ age + sex + pred_RF, data = testDF,family = binomial)
-summary(model)
+#*****************************************************************************#
+#   Make ROC curves
+#*****************************************************************************#
 
-
-testDF$Class1 <- ifelse(testDF$Class == 1, "Cognitive Impaired", "Control")
-p1 <- ggplot(testDF[!is.na(testDF$Class),]) +
-  geom_point(aes(x = Age, y = pred_CAIDE1, color = Class1, shape = Class1),
-             size = 2, alpha = 0.9) +
-  xlab("Epi-Age") +
-  ylab("Epi-CAIDE1") +
-  scale_color_brewer(palette = "Set1") +
-  theme_bw() +
-  theme(legend.title = element_blank(),
-        legend.position = "bottom")
-
-p2 <- ggplot(testDF[!is.na(testDF$Class),]) +
-  geom_density(aes(x = Age, fill = Class1),
-             size = 1, alpha = 0.8) +
-  xlab(NULL) +
-  ylab("Density") +
-  scale_fill_brewer(palette = "Set1") +
-  theme_void() +
-  theme(legend.title = element_blank(),
-        legend.position = "none")
-
-p3 <- ggplot(testDF[!is.na(testDF$Class),]) +
-  geom_density(aes(x = pred_CAIDE1, fill = Class1),
-               size = 1, alpha = 0.8) +
-  xlab(NULL) +
-  ylab("Density") +
-  coord_flip() +
-  scale_fill_brewer(palette = "Set1") +
-  theme_void() +
-  theme(legend.title = element_blank(),
-        legend.position = "none")
-
-library(patchwork)
-
-p_all <- p2 + plot_spacer() + p1 + p3 +
-  plot_layout(nrow = 2, ncol =2, widths = c(10,2), heights = c(2,10))
-
-ggsave(p_all, file = "Scatter_CI_PPMI.png", width = 7, height = 6)
-
-
-# AUC
 score <- c("pred_EN", "pred_sPLS","pred_RF","pred_CAIDE1", "pred_LIBRA", "Age", "age")
 scoreName <- c("MCI model (EN)","MCI model (sPLS-DA)","MCI model (RF)","Epi-CAIDE1", "Epi-LIBRA", "Epi-Age", "Age")
 testDF$Class1 <- factor(ifelse(testDF$Class == 1, "Cognitive Impaired", "Control"),
@@ -127,7 +91,10 @@ plotAUC <- data.frame(AUC = paste0("AUC: ",aucValue),
 
 ROCplot$Class <- factor(ROCplot$Class, levels = scoreName)
 
+# Set colors
 colors <- rev(c("#E6AB02","#6BAED6","#2171B5","#084594","#EF3B2C","#CB181D", "#99000D"))
+
+# Make plot
 p <- ggplot(ROCplot) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 2) +
   geom_path(aes(y = Sensitivity, x = 1- Specificity,
@@ -147,10 +114,14 @@ p <- ggplot(ROCplot) +
                                      size = 10,
                                      face = "italic"))
 
+# Save plot
 ggsave(p, file = "ROC_CI_PPMI_v2.png", width = 8, height = 5)
 
 
 
+#*****************************************************************************#
+#   Correlations at baseline
+#*****************************************************************************#
 
 predDF <- testDF[,c("pred_EN", "pred_sPLS","pred_RF","pred_CAIDE1", "pred_LIBRA", "Age", "age", "sex")]
 colnames(predDF) <- c("MCI model (EN)","MCI model (sPLS-DA)","MCI model (RF)",
@@ -170,6 +141,7 @@ colnames(obsDF) <- c("A-Beta", "Tau", "p-Tau", "Tau/A-Beta ratio", "p-Tau/A-Beta
                      "Semantic Fluency Score (Fruits)", "STAI Total Score", "STAI State Sub-score", 
                      "STAI Trait Sub-score", "UPSIT Score", "MoCA Score")
 
+# Calculate correlations and significance
 correlation <- matrix(NA, nrow = ncol(predDF), ncol = ncol(obsDF))
 significance <- matrix(NA, nrow = ncol(predDF), ncol = ncol(obsDF))
 for (i in 1:ncol(obsDF)){
@@ -185,6 +157,8 @@ rownames(correlation) <- colnames(predDF)
 colnames(significance) <- colnames(obsDF)
 rownames(significance) <- colnames(predDF)
 
+
+# Format data for plotting
 plotDF_cor <- gather(as.data.frame(correlation))
 plotDF_cor$key2 <- rep(rownames(correlation),ncol(correlation))
 plotDF_sig <- gather(as.data.frame(significance))
@@ -208,6 +182,7 @@ plotDF_all$key <- factor(plotDF_all$key, levels =
 
 plotDF_all$key2 <- factor(plotDF_all$key2, levels = c("MCI model (EN)","MCI model (sPLS-DA)","MCI model (RF)",
                                                       "Epi-CAIDE1", "Epi-LIBRA", "Epi-Age", "Age", "Sex"))
+# Make correlaiton heatmap
 p <- ggplot(plotDF_all) +
   geom_tile(aes(x = key, y = key2, fill = value, color = Sig),
             stat = "identity", width = 0.9, height = 0.9, size = 0.5) +
@@ -231,10 +206,10 @@ p <- ggplot(plotDF_all) +
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   guides(color = "none")
 
-
+# Save plot
 ggsave(p, file = "PPMI_Correlations_baseline.png", width = 9, height = 8)
 
-
+# Other correlations:
 cor.test(1-testDF$Depression, testDF$NP1DPRS, method = "spearman")
 cor.test(1-testDF$Diet, testDF$quip_eat, method = "spearman")
 cor.test(testDF$moca, testDF$Education, method = "spearman")

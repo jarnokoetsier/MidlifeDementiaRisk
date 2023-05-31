@@ -14,22 +14,26 @@ cogcat$PATNO <- as.character(cogcat$PATNO)
 load("PPMI/predictedScore_factors_PPMI.RData")
 load("PPMI/metaData_ppmi.RData")
 
-#cogcat$X0[is.na(cogcat$X0)] <- cogcat$X1[is.na(cogcat$X0)]
-
-
 # Combine scores and meta data
 metaData_all <- metaData_all[(metaData_all$age >= 40) & (metaData_all$age <= 75),]
 samples <- intersect(metaData_all$Basename, rownames(predictedScore_factors))
 rownames(metaData_all) <- metaData_all$Basename
 metaData_fil <- metaData_all[samples,]
 predictedScore_factors_fil <- predictedScore_factors[samples,]
-
 length(unique(metaData_fil$ID))
 
+###############################################################################
 
+# Proportion of cognitive impairment at each time point
+
+###############################################################################
+
+# Get cognitive status at each time point
 test <- inner_join(metaData_fil, cogcat, by = c("PATNO" = "PATNO"))
 table(test$Class, test$CogDecon)
 predictedScore_factors_fil <- predictedScore_factors_fil[test$Basename,]
+
+# Make low and high risk category
 load("~/PPMI/Fit_EMIF_MCI_RF.RData")
 pred_RF <- predict(fit, predictedScore_factors_fil, type = "prob")
 quantile(pred_RF$MCI,0.5)
@@ -37,6 +41,7 @@ quantile(pred_RF$MCI,0.5)
 test1 <- test[pred_RF$MCI < quantile(pred_RF$MCI,0.5),]
 test2 <- test[pred_RF$MCI >= quantile(pred_RF$MCI,0.5),] 
 
+# Format data for plotting
 n_normal_low <- rep(NA, 9)
 n_total_low <- rep(NA, 9)
 ci_up_low <- rep(NA, 9)
@@ -66,7 +71,7 @@ for(j in 1:9){
   ci_down_high[j] <- binom.test(n_normal_high[j], n_total_low[j])$conf.int[[1]]
 }
 
-
+# Combine into data frame
 plotDF <- data.frame(n_normal_low,
                      n_total_low,
                      ci_up_low,
@@ -79,31 +84,15 @@ plotDF <- data.frame(n_normal_low,
                      ratio_high,
                      Time = 0:8)
 
+# Test for significant difference at each time point
 test <- plotDF[plotDF$Time == 0,]
 m <- matrix(c(test$n_normal_low, test$n_total_low - test$n_normal_low,
        test$n_normal_high, test$n_total_high - test$n_normal_high),
        nrow = 2, ncol = 2)
 chisq.test(m)
 
-ggplot(plotDF) +
-  #geom_point(aes(x = Time, y = ratio_low), color = "blue") +
-  #geom_step(aes(x = Time, y = ratio_low), color = "blue") +
-  #geom_segment(aes(x = Time, xend = Time, y = ratio_low, yend = ci_down_low), 
-  #             color = "black", linetype = "dashed") +
-  #geom_segment(aes(x = Time, xend = Time, y = ratio_low, yend = ci_up_low), 
-  #             color = "black", linetype = "dashed") +
-  #geom_point(aes(x = Time, y = ci_down_low), color = "blue", shape = 8) +
-  #geom_point(aes(x = Time, y = ci_up_low), color = "blue", shape = 8) +
-  geom_point(aes(x = Time, y = ratio_high), color = "red") +
-  geom_step(aes(x = Time, y = ratio_high), color = "red") +
-  geom_segment(aes(x = Time, xend = Time, y = ratio_high, yend = ci_down_high), 
-               color = "black", linetype = "dashed") +
-  geom_segment(aes(x = Time, xend = Time, y = ratio_high, yend = ci_up_high), 
-               color = "black", linetype = "dashed") 
-  #geom_point(aes(x = Time, y = ci_down_high), color = "red", shape = 8) +
-  #geom_point(aes(x = Time, y = ci_up_high), color = "red", shape = 8) 
 
-
+# Make plot
 main <- ggplot(plotDF) +
   geom_point(aes(x = Time, y = ratio_low, 
                  color = "Low Risk")) +
@@ -141,8 +130,8 @@ p <- top + main +
   plot_layout(ncol = 1, nrow = 2,
               heights = c(1, 5))
 
+# Save plot
 ggsave(p, file = "TimeAnalysis_PPMI.png", width = 6, height = 6)
-
 
 
 
@@ -151,6 +140,13 @@ ggsave(p, file = "TimeAnalysis_PPMI.png", width = 6, height = 6)
 # Kaplan-Meier
 
 ###############################################################################
+
+
+# Load packages
+library(tidyverse)
+library(caret)
+library(patchwork)
+library(ranger)
 library(survival)
 library(lubridate)
 library(ggsurvfit)
@@ -158,13 +154,6 @@ library(gtsummary)
 library(tidycmprsk)
 library(tidyverse)
 library(tidyverse)
-library(caret)
-
-# Load packages
-library(tidyverse)
-library(caret)
-library(patchwork)
-library(ranger)
 
 # Clear workspace and console
 rm(list = ls())
@@ -211,10 +200,11 @@ pred_RF <- predict(fit, predictedScore_factors_fil, type = "prob")
 predictDF <- data.frame(PATNO = test$PATNO, 
                         pred = pred_RF$MCI)
 
+# Split into low and high risk class
 predictDF$predClass <- ifelse(predictDF$pred < quantile(pred_RF$MCI,0.5),"Low MCI Risk (RF)","High MCI Risk (RF)")
 
 
-
+# Prepare data for analysis
 testDF <- gather(as.data.frame(cogcat[,3:11]))
 testDF$PATNO <- rep(cogcat$PATNO, 9)
 testDF <- testDF[!is.na(testDF$value),]
@@ -243,8 +233,10 @@ kaplanDF$Test <- ifelse(kaplanDF$Status == "Normal",1,2)
 kaplanDF <- inner_join(kaplanDF, predictDF, by = c("PATNO" = "PATNO"))
 
 
+# Perform time analysis
 test <- survfit2(Surv(Time, Test) ~ predClass, data = kaplanDF)
 
+# Prepare data for plotting
 plotDF <- data.frame(
   Time = c(test$time),
   n.risk = c(test$n.risk),
@@ -255,33 +247,10 @@ plotDF <- data.frame(
                  levels = c("Low MCI Risk (RF)", "High MCI Risk (RF)")))
 
 
-p <- ggplot(plotDF) +
-  #geom_point(aes(x = Time, y = surv, group = Class, color = Class), size = 3, shape = 15) +
-  geom_step(aes(x = Time, y = surv, group = Class, color = Class),
-            linewidth = 1.5, alpha = 1) +
-  #geom_text(aes(x = 0.7,y = 0.5, label = paste0("p-value = ", 4e-5)),fontface = "italic", size = 3) +
-  scale_color_manual(values = c("#FD8D3C", "#D94801")) +
-  theme_classic() +
-  ylab("Probability of\nnormal cognition") +
-  xlab("Time (years)") +
-  #ggtitle("Cognitive impairment (PPMI)") +
-  xlim(c(0,8)) +
-  theme(legend.title = element_blank(),
-        legend.position = "right",
-        plot.title = element_text(hjust = 0.5,
-                                 face = "bold",
-                                 size = 16),
-        plot.subtitle = element_text(hjust = 0.5,
-                                     size = 10,
-                                     face = "italic"))
-
-ggsave(p, file = "KaplanMeier_PPMI_MRSonly.png", width = 8, height = 4.5)
-
-
+# Make Kaplan-meier curve
 survdiff(Surv(Time, Test) ~ predClass, data = kaplanDF)
-
-
 kaplanDF$predClass <- factor(kaplanDF$predClass, levels = c("Low MCI Risk (RF)", "High MCI Risk (RF)"))
+
 p <- survfit2(Surv(Time, Test) ~ predClass, data = kaplanDF) %>% 
   ggsurvfit(size = 1.5) +
   add_confidence_interval() +
@@ -302,4 +271,5 @@ p <- survfit2(Surv(Time, Test) ~ predClass, data = kaplanDF) %>%
                                      size = 10,
                                      face = "italic"))
 
+# Save plot
 ggsave(p, file = "KaplanMeier_PPMI_MRSonly.png", width = 8, height = 4.5)

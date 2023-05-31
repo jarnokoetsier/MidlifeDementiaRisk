@@ -1,3 +1,5 @@
+
+# Load packages
 library(tidyverse)
 library(caret)
 library(glmnet)
@@ -9,7 +11,6 @@ library(missMDA)
 # Clear workspace and console
 rm(list = ls())
 cat("\014") 
-
 
 # Load data
 load("~/PPMI/lumi_dpval_PPMI.RData")
@@ -56,10 +57,12 @@ for (p in 1:nPCs_CV){
   save(pred, file = "PPMI/pred_imp.RData")
 }
 
-
+# Evaluate optimal number of PCs
 load("PPMI/pred_imp.RData")
 test <- apply(pred,2,function(x) RMSE(obs = values,pred = x))
 optPC <- which.min(test) # 7 PCs
+
+# Perform imputation with optimal number of PCs
 X_PPMI_imp <- imputePCA(t(X_PPMI_mis),ncp = optPC)$completeObs
 save(X_PPMI_imp, file = "PPMI/X_PPMI_imp.RData")
 
