@@ -1,3 +1,6 @@
+![licence](https://badgen.net/badge/Licence/MIT/purple)
+![status](https://badgen.net/badge/Status/Complete/green)
+
 <h1 align="center">
 DNA Methylation-based Prediction
    <br>
@@ -14,16 +17,9 @@ of Midlife Dementia Risk
 <a href="https://github.com/jarnokoetsier/MidlifeDementiaRisk/blob/main/README.md#Contributors">Contributors</a>
 </p>
 
-![licence](https://badgen.net/badge/Licence/MIT/purple)
-![status](https://badgen.net/badge/Status/Complete/green)
-
+<h3 align="center">
 This repository contains the scripts that were used for the thesis project *DNA Methylation-based Prediction of Midlife Dementia risk* as part of the Master Systems Biology at Maastricht University.
-
-## Content
-1. [Background](#Background)
-2. [Research Questions](#Research-Questions)
-3. [Workflow](#Workflow)
-4. [Contributors](#Contributors)
+</h3>
 
 ## Background
 For the early identification of people with increased dementia risk, [LIBRA](https://onlinelibrary.wiley.com/doi/full/10.1002/gps.4245) and [CAIDE](https://www.sciencedirect.com/science/article/pii/S1474442206705373) midlife dementia risk scores have been developed. As DNA methylation may act as the molecular link between lifestyle/environment and the biological processes governing health and disease, DNA methylation data might be utilized instead to predict a midlife dementia risk. However, the large dimensionality of DNA methylation data makes parameter optimization and model training often computationally infeasible without prior feature selection.
