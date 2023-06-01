@@ -1,10 +1,10 @@
-<p align="center">
+<h1 align="center">
 <b align="center",style="font-size: 30;">DNA METHYLATION</b>
    <br>
 <b align="center",style="font-size: 20;">-based prediction of midlife</b>
    <br>
 <b align="center",style="font-size: 30;">DEMENTIA RISK</b>
-</p>
+</h1>
 
 ---
 
