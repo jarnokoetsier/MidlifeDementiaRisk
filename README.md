@@ -1,6 +1,5 @@
-# DNA Methylation-based Prediction of Midlife Dementia Risk
 <p align="center">
-<h1 align="center">DNA METHYLATION</h1>
+<h2 align="center">DNA METHYLATION</h2>
 <h3 align="center">-based prediction of midlfie</h3>
 <h1 align="center">DEMENTIA RISK</h1>
 </p>
