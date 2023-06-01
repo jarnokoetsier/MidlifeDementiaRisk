@@ -1,12 +1,10 @@
 <h1 align="center">
-<b align="center",style="font-size: 30;">DNA METHYLATION</b>
+**DNA METHYLATION-based**
    <br>
-<b align="center",style="font-size: 20;">-based prediction of midlife</b>
+**based prediction of midlife**
    <br>
-<b align="center",style="font-size: 30;">DEMENTIA RISK</b>
+**DEMENTIA RISK**
 </h1>
-
----
 
 ![licence](https://badgen.net/badge/Licence/MIT/purple)
 ![status](https://badgen.net/badge/Status/Complete/green)
