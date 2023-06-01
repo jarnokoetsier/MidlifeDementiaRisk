@@ -1,9 +1,7 @@
 <h1 align="center">
-**DNA METHYLATION-based**
+DNA Methylation-based Prediction
    <br>
-**based prediction of midlife**
-   <br>
-**DEMENTIA RISK**
+of Midlife Dementia Risk
 </h1>
 
 ![licence](https://badgen.net/badge/Licence/MIT/purple)
