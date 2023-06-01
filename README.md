@@ -4,6 +4,16 @@ DNA Methylation-based Prediction
 of Midlife Dementia Risk
 </h1>
 
+<p align="center">
+[Background](#Background)
+     ·
+[Research Questions](#Research-Questions)
+     ·
+[Workflow](#Workflow)
+     ·
+[Contributors](#Contributors)
+</p>
+
 ![licence](https://badgen.net/badge/Licence/MIT/purple)
 ![status](https://badgen.net/badge/Status/Complete/green)
 
