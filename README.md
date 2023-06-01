@@ -1,7 +1,9 @@
 <p align="center">
-<b align="center",style="font-size: 20;">DNA METHYLATION</b>
-<b align="center",style="font-size: 15;">-based prediction of midlfie</b>
-<b align="center",style="font-size: 20;">DEMENTIA RISK</b>
+<b align="center",style="font-size: 30;">DNA METHYLATION</b>
+   <br>
+<b align="center",style="font-size: 20;">-based prediction of midlife</b>
+   <br>
+<b align="center",style="font-size: 30;">DEMENTIA RISK</b>
 </p>
 
 ---
