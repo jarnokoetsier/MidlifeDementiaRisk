@@ -17,7 +17,7 @@ of Midlife Dementia Risk
 <a href="https://github.com/jarnokoetsier/MidlifeDementiaRisk/blob/main/README.md#Contributors">Contributors</a>
 </p>
 
-<hp align="center">
+<p align="center">
 This repository contains the scripts that were used for the thesis project <i>DNA Methylation-based Prediction of Midlife Dementia risk</i> as part of the Master Systems Biology at Maastricht University.
 </p>
 
