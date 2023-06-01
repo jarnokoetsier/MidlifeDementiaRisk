@@ -5,13 +5,13 @@ of Midlife Dementia Risk
 </h1>
 
 <p align="center">
-[Background](#Background)
+<a href="https://github.com/jarnokoetsier/MidlifeDementiaRisk/blob/main/README.md#Background">Background</a>
      ·
-[Research Questions](#Research-Questions)
+<a href="https://github.com/jarnokoetsier/MidlifeDementiaRisk/blob/main/README.md#Research-Questions">Research Questions</a>
      ·
-[Workflow](#Workflow)
+<a href="https://github.com/jarnokoetsier/MidlifeDementiaRisk/blob/main/README.md#Workflow">Workflow</a>
      ·
-[Contributors](#Contributors)
+<a href="https://github.com/jarnokoetsier/MidlifeDementiaRisk/blob/main/README.md#Contributors">Contributors</a>
 </p>
 
 ![licence](https://badgen.net/badge/Licence/MIT/purple)
